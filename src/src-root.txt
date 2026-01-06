@@ -1,0 +1,4 @@
+a Django project is here.
+
+New apps/sybsysyems should be added via Pull Requests.
+

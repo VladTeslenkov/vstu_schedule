@@ -1,0 +1,6 @@
+Вики и документация - в папке docs/ этого репозитория
+
+Схемы и внутренняя документация - в папке Google Drive
+
+Схемы–расписание
+https://drive.google.com/file/d/1y9Yqgoc_8BTzG7CuchU_I5mAnnR9hyAK/view?usp=drive_link
