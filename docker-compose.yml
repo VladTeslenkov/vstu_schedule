@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres:18-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file: .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build: .
+    image: vstu_schedule:latest 
+    command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --reload # в продакшене убрать --reload
+    volumes:
+      - .:/app        # поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - ./logs:/app/logs
+      - /app/.venv  # скрыть .venv папку внутри контейнера. УБРАТЬ В ПРОДАКШЕНЕ
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    image: vstu_schedule:latest
+    command: celery -A vstu_schedule worker -l info
+    environment:
+      - SERVICE_NAME=worker
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    image: vstu_schedule:latest
+    environment:
+      - SERVICE_NAME=beat
+    command: celery -A vstu_schedule beat -l info -S django
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
