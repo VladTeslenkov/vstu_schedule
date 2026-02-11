@@ -60,6 +60,19 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+  nginx:
+    image: nginx:1.27-alpine
+    restart: always
+    profiles: 
+      - full
+    volumes:
+      - ./.deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/app/static
+      - media_volume:/app/media
+    ports:
+      - "80:80"
+    depends_on:
+      - web
 
 volumes:
   postgres_data:
