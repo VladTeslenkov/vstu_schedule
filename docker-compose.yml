@@ -22,6 +22,8 @@ services:
     build: .
     image: vstu_schedule:latest 
     command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --reload # в продакшене убрать --reload
+    ports:
+      - "8000:8000"
     volumes:
       - .:/app        # поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
       - static_volume:/app/static
