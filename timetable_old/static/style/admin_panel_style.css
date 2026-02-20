@@ -1,0 +1,88 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 20px;
+}
+.container {
+    max-width: 600px;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+.form-group {
+    margin-bottom: 15px;
+}
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+/* Универсальные стили для формы */
+input, select, button {
+    width: calc(100% - 10px);
+    box-sizing: border-box;
+    margin: 5px 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Дополнительно для мобильных устройств */
+@media (max-width: 600px) {
+    input, select, button {
+        width: 100%;           /* Используем всю ширину для маленьких экранов */
+    }
+}
+
+/* Активная кнопка (по умолчанию) */
+button,
+.drop_data_button{
+    background-color: #499f4c; /* Зелёный цвет */
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.15s ease-in-out, background-color 0.15s; /* Анимация */
+}
+
+/* Анимация при наведении, только если кнопка активна */
+button:hover:not(.drop_data_button,[disabled]) {
+    transform: scale(1.02); /* Масштабирование */
+    background-color: #4CAF50;
+}
+
+/* Неактивная кнопка (disabled) */
+button:disabled {
+    background-color: #ccc; /* Серый цвет */
+    color: #777;           /* Тёмно-серый текст */
+    cursor: not-allowed;   /* Запрещённая иконка */
+    transform: none;       /* Убираем анимацию */
+    box-shadow: none;      /* Убираем тень */
+}
+
+.drop_data_button {
+    background-color: #951b1b;
+}
+.drop_data_button:hover {
+    transform: scale(1.02); /* Масштабирование */
+    background-color: #d81919;
+}
+.spinner {
+    text-align: center;
+    margin-top: 10px;
+    font-weight: bold;
+    color: #555;
+    animation: shake 0.5s ease-in-out infinite; /* Анимация тряски */
+}
+
+/* Анимация "тряски" */
+@keyframes shake {
+    0% { transform: translateX(0) translateY(0); }   /* Исходное положение */
+    25% { transform: translateX(-0.5px);} /* Влево */
+    50% { transform: translateX(0.5px); }  /* Вправо */
+    75% { transform: translateX(-0.5px); } /* Влево */
+    100% { transform: translateX(0) translateY(0); }   /* Возврат в исходное положение */
+}
