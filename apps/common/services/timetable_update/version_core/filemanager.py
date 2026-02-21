@@ -1,362 +1,176 @@
-from datetime import datetime
-import os
-from pathlib import Path
-import traceback
-import shutil
+import hashlib
 import logging
+import os
+import shutil
+from datetime import datetime
+from pathlib import Path
 
-from timetable_project.settings import TEMP_DIR, VIS_PATH
-from timetable.models import Resource, FileVersion, Tag, Setting, Storage
+from django.conf import settings
+
+from apps.common.models import Resource, FileVersion, Setting
 from .parser import WebParser
-from .storage_manager import StorageManager
-from .view_changes import ViewChanges
 from .file_data import FileData
 
-# Создаем логгер для текущего модуля
 logger = logging.getLogger(__name__)
 
 
 class FileManager:
-    # TIMETABLE_START_PATH = ["Расписания/Расписание занятий/","Расписания/Расписание экзаменов/"]
+    """
+    Управляет процессом обновления расписания:
+    скачивает файлы с сайта, сравнивает хэши с предыдущими версиями,
+    сохраняет новые файлы локально и создаёт записи в БД.
+    """
+
     TIMETABLE_START_PATH = ["Расписания/Расписание занятий/"]
-    MIN_SEC_DELAY_UPDATE = 5
-    MAX_SEC_DELAY_UPDATE = 10
-    TIMETABLE_LINK = ""
 
-    def __init__(self):
-        # Задать новую директорию временных файлов
-        os.environ["TMPDIR"] = str(TEMP_DIR)
-        # Создать контейнер для хранилищ
-        self.__storages = []
-        # Взять путь к файлам из настроек
+    def __init__(self) -> None:
+        self._temp_dir: Path = settings.TEMP_DIR
+        self._storage_dir: Path = settings.DATA_STORAGE_DIR
+        os.environ["TMPDIR"] = str(self._temp_dir)
+
         try:
-            self.TIMETABLE_LINK = Setting.objects.get(key="analyze_url").value.split(
-                ";"
+            self._timetable_links: list[str] = (
+                Setting.objects.get(key="analyze_url").value.split(";")
             )
-            logger.info(f"Loaded timetable links from settings: {self.TIMETABLE_LINK}")
+            logger.info(f"Loaded timetable links: {self._timetable_links}")
         except Setting.DoesNotExist:
-            # self.TIMETABLE_LINK = ["https://www.vstu.ru/student/raspisaniya/zanyatiy/","https://www.vstu.ru/student/raspisaniya/exam/"]
-            # self.TIMETABLE_LINK = ["http://localhost:8002/"]
-            self.TIMETABLE_LINK = ["https://www.vstu.ru/student/raspisaniya/zanyatiy/"]
-            logger.warning(
-                "Setting 'analyze_url' not found, using default timetable links"
-            )
+            self._timetable_links = ["https://www.vstu.ru/student/raspisaniya/zanyatiy/"]
+            logger.warning("Setting 'analyze_url' not found, using default")
 
-    def add_storage(self, storage: StorageManager):
+    def update_timetable(self) -> None:
         """
-        Добавить новое хранилище.
-        :param storage: Хранилище файлов.
+        Основной метод: обходит все ссылки, скачивает файлы,
+        проверяет изменения по хэшу и сохраняет новые версии.
         """
-        self.__storages.append(storage)
-        logger.debug(f"Added storage: {storage.get_storage_type()}")
+        logger.info("Starting timetable update")
+        used_resource_ids: set[int] = set()
 
-    def update_timetable(self):
-        """
-        Обновляет информацию о расписании
-        :return:
-        """
-        logger.info("Starting timetable update process")
-        used_resource_ids = set()
-        # Получить все файлы с сайта
-        for ind, el in enumerate(self.TIMETABLE_LINK):
-            logger.info(
-                f"Processing timetable link {ind+1}/{len(self.TIMETABLE_LINK)}: {el}"
-            )
-            files = WebParser.get_files_from_webpage(
-                el, FileManager.TIMETABLE_START_PATH[ind]
-            )
-            logger.info(f"Found {len(files)} files from webpage")
+        for ind, link in enumerate(self._timetable_links):
+            logger.info(f"Processing link {ind + 1}/{len(self._timetable_links)}: {link}")
+            files = WebParser.get_files_from_webpage(link, self.TIMETABLE_START_PATH[ind])
+            logger.info(f"Found {len(files)} files")
 
-            # Для всех файлов
             for file_data in files:
-                logger.info(
-                    f"Processing file - Path: {file_data.get_path()}, Name: {file_data.get_name()}"
-                )
+                logger.info(f"Processing: {file_data.get_path()} / {file_data.get_name()}")
 
                 try:
-                    # Скачать файл
-                    file_path = file_data.download_file(TEMP_DIR)
-                    logger.debug(f"Downloaded file to: {file_path}")
-
-                    # Конвертировать xls файл в xlsx файл, если это возможно
-                    file_path = self.convert_xls_to_xlsx(file_path)
-                    logger.debug(f"File after conversion: {file_path}")
-
+                    file_path = file_data.download_file(self._temp_dir)
+                    file_path = self._convert_xls_to_xlsx(file_path)
                 except Exception as e:
-                    logger.error(
-                        f"Error downloading or converting file: {e}", exc_info=True
-                    )
+                    logger.error(f"Failed to download/convert file: {e}", exc_info=True)
                     continue
 
-                # Рассчитать ресурс, которому соответствует файл
-                if ind == 0:
-                    resource = file_data.get_resource("Занятия")
-                else:
-                    resource = file_data.get_resource("Экзамены")
+                resource_type = "Занятия" if ind == 0 else "Экзамены"
 
-                # Рассчитать версию файла
-                file_version = file_data.get_file_version(file_path)
+                try:
+                    resource, file_version = self._process_file(file_data, file_path, resource_type)
+                    if resource:
+                        used_resource_ids.add(resource.id)
+                except Exception as e:
+                    logger.error(f"Failed to process file {file_data.get_name()}: {e}", exc_info=True)
+                finally:
+                    if file_path.is_file():
+                        file_path.unlink()
 
-                # Загрузить файл в хранилища, если подобного ресурса раньше не существовало
-                resource_from_db = Resource.objects.filter(
-                    path=resource.path, name=resource.name
-                ).first()
-                if resource_from_db:
-                    file_version_from_db = FileVersion.objects.filter(
-                        resource_id=resource_from_db.id
-                    ).first()
-
-                if (resource_from_db is None) or (
-                    resource_from_db is not None
-                    and file_version.url != file_version_from_db.url
-                ):
-                    logger.info(f"New resource found or URL changed: {resource.name}")
-
-                    # Сохранить ресурс
-                    resource.save()
-                    # Сохранить информацию о версии
-                    file_version.resource = resource
-                    file_version.save()
-                    # Загрузить файл во все доступные хранилища
-                    self.save_file_to_storages(file_path, resource, file_version)
-                else:
-                    logger.debug(f"Resource already exists: {resource.name}")
-
-                    # Обновить список тегов
-                    tags = [
-                        Tag.objects.get_or_create(name=tag.name, category=tag.category)[
-                            0
-                        ]
-                        for tag in resource.get_not_saved_tags()
-                    ]
-                    resource_from_db.tags.set(tags)
-
-                    # Выбрать уже существующий ресурс
-                    resource = resource_from_db
-                    resource.deprecated = False
-                    resource.save()
-
-                    # Найти последнюю запись с информацией о версии файла
-                    file_version_from_db = (
-                        FileVersion.objects.filter(resource=resource)
-                        .order_by("-last_changed", "-timestamp")
-                        .first()
-                    )
-
-                    # Создать новую версию файла, если запись не найдена или старая версия неактуальная
-                    if (
-                        file_version_from_db is None
-                        or self.need_upload_new_file_version(
-                            file_version, file_version_from_db
-                        )
-                    ):
-                        logger.info(f"Creating new file version for: {resource.name}")
-
-                        # Создать новую запись
-                        file_version.resource = resource
-                        file_version.save()
-
-                        # Загрузить файл во все доступные хранилища
-                        self.save_file_to_storages(file_path, resource, file_version)
-
-                        # Подсветка изменений
-                        self.on_file_version_changed(file_version)
-
-                # Сохранить используемый ресурс
-                used_resource_ids.add(resource.id)
-
-                # Удалить временный файл
-                if file_path.is_file():
-                    file_path.unlink()
-                    logger.debug(f"Temporary file deleted: {file_path}")
-
-        # Если какие-то файлы были проанализированы, то все остальные файлы перевести в статус deprecated
-        if used_resource_ids:
-            deprecated_count = self.make_other_resource_deprecated(used_resource_ids)
+        deprecated_count = self._mark_deprecated(used_resource_ids)
+        if deprecated_count:
             logger.info(f"Marked {deprecated_count} resources as deprecated")
-        else:
-            logger.warning("No files were processed during timetable update")
 
-        logger.info("Timetable update process completed")
+        logger.info("Timetable update completed")
 
-    def _download_from_storage(self, storage: StorageManager, local_path: Path):
+    # ------------------- ПРИВАТНЫЕ МЕТОДЫ ------------------- #
+
+    def _process_file(
+        self, file_data: FileData, file_path: Path, resource_type: str
+    ) -> tuple[Resource | None, FileVersion | None]:
         """
-        Скачивает файл из хранилища во временную директорию
+        Обрабатывает скачанный файл:
+        - получает или создаёт Resource
+        - сравнивает хэш с последней версией
+        - если файл изменился — сохраняет его локально и создаёт FileVersion
         """
-        import requests
+        resource = self._get_or_create_resource(file_data, resource_type)
+        new_version = file_data.get_file_version(file_path)
 
-        logger.debug(
-            f"Downloading file from storage {storage.get_storage_type()} to {local_path}"
+        last_version = (
+            FileVersion.objects.filter(resource=resource)
+            .order_by("-timestamp")
+            .first()
         )
-        response = requests.get(storage.download_url)
-        if response.status_code == 200:
-            with open(local_path, "wb") as f:
-                f.write(response.content)
-            logger.debug(f"Successfully downloaded file to {local_path}")
-        else:
-            error_msg = f"Failed to download file from {storage.download_url}, status code: {response.status_code}"
-            logger.error(error_msg)
-            raise Exception(error_msg)
 
-    def on_file_version_changed(self, file_version: FileVersion):
-        logger.info(f"File version changed detected for: {file_version.resource.name}")
-        # Создаем визуализацию изменений
-        self.create_visualization(file_version)
+        if last_version is not None and last_version.hashsum == new_version.hashsum:
+            logger.info(f"No changes detected for: {resource.name}")
+            return resource, None
 
-    @classmethod
-    def convert_xls_to_xlsx(cls, xls_file_path: Path | str, dell_xls=True):
-        xls_path = Path(xls_file_path)
+        logger.info(f"New version detected for: {resource.name}, saving file")
+        self._save_file_locally(file_path, resource)
 
-        if xls_path.suffix != ".xls":
-            return xls_path
+        new_version.resource = resource
+        new_version.save()
+        logger.info(f"FileVersion created: id={new_version.id}")
 
-        xlsx_path = xls_path.with_suffix(".xlsx")
-        # Нормализуем имя файла (убираем лишние точки)
+        return resource, new_version
 
-        try:
-            from xls2xlsx import XLS2XLSX
+    def _get_or_create_resource(self, file_data: FileData, resource_type: str) -> Resource:
+        """
+        Ищет существующий Resource по пути или создаёт новый.
+        Снимает флаг deprecated если ресурс был помечен устаревшим.
+        """
+        correct_path = file_data.get_correct_path()
+        resource = Resource.objects.filter(path=correct_path).first()
 
-            converter = XLS2XLSX(str(xls_path))
-            converter.to_xlsx(str(xlsx_path))
-            if dell_xls:
-                xls_path.unlink()
-                logger.debug(
-                    f"Converted {xls_path} to {xlsx_path} and deleted original"
-                )
-            else:
-                logger.debug(f"Converted {xls_path} to {xlsx_path}")
-            return xlsx_path
-        except Exception as e:
-            error_msg = f"Error converting XLS to XLSX: {e}"
-            logger.error(error_msg, exc_info=True)
-            return xls_path
+        if resource is None:
+            resource = file_data.get_resource(resource_type)
+            resource.save()
+            logger.debug(f"Created new resource: {resource.name}")
+        elif resource.deprecated:
+            resource.deprecated = False
+            resource.save()
+
+        return resource
+
+    def _save_file_locally(self, file_path: Path, resource: Resource) -> Path:
+        """
+        Сохраняет файл в DATA_STORAGE_DIR по пути ресурса.
+        Возвращает итоговый путь к сохранённому файлу.
+        """
+        dest_dir = self._storage_dir / (resource.path or resource.name)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_file = dest_dir / file_path.name
+        shutil.copy2(file_path, dest_file)
+        logger.debug(f"File saved to: {dest_file}")
+        return dest_file
 
     @staticmethod
-    def need_upload_new_file_version(
-        new_version: FileVersion, last_version: FileVersion
-    ):
-        """
-        Определяет необходимость обновлять версию файла.
-        :param new_version: Новая версия.
-        :param last_version: Предыдущая версия.
-        :return: Результат анализа.
-        """
-        need_update = new_version.hashsum != last_version.hashsum
-        if need_update:
-            logger.debug(
-                f"File version update needed - hashsum changed: {last_version.hashsum} -> {new_version.hashsum}"
+    def _convert_xls_to_xlsx(file_path: Path) -> Path:
+        """Конвертирует .xls в .xlsx через LibreOffice. Если не получилось — возвращает исходный файл."""
+        if file_path.suffix.lower() != ".xls":
+            return file_path
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["libreoffice", "--headless", "--convert-to", "xlsx",
+                 str(file_path), "--outdir", str(file_path.parent)],
+                capture_output=True, timeout=60,
             )
-        return need_update
+            if result.returncode == 0:
+                new_path = file_path.with_suffix(".xlsx")
+                file_path.unlink()
+                logger.debug(f"Converted {file_path.name} -> {new_path.name}")
+                return new_path
+            else:
+                logger.warning(f"LibreOffice conversion failed: {result.stderr.decode()}")
+        except Exception as e:
+            logger.warning(f"XLS conversion error: {e}")
+        return file_path
 
-    def save_file_to_storages(
-        self, file_path: Path | str, resource: Resource, file_version: FileVersion
-    ):
-        """
-        Сохранить файл во всех доступных хранилищах
-        :param file_path:
-        :param resource:
-        :param file_version:
-        :return:
-        """
-        # Приводим путь к файлу к нужному типу
-        file_path = Path(file_path)
-        logger.info(
-            f"Saving file {file_path.name} to {len(self.__storages)} storage(s)"
-        )
-
-        for storage in self.__storages:
-            logger.info(f"Uploading file to storage: {storage.get_storage_type()}")
-            storage.add_new_file_version(file_path, resource, file_version)
-
-    def make_other_resource_deprecated(self, used_resource_ids):
-        resources = Resource.objects.exclude(id__in=used_resource_ids).filter(
-            deprecated=False
-        )
+    @staticmethod
+    def _mark_deprecated(used_resource_ids: set[int]) -> int:
+        """Помечает устаревшими ресурсы, которых не было в текущем обновлении."""
+        resources = Resource.objects.exclude(id__in=used_resource_ids).filter(deprecated=False)
         count = 0
         for resource in resources:
             resource.deprecated = True
             resource.save()
             count += 1
-        return count
-
-    def create_visualization(self, f_version: FileVersion):
-        """
-        Создает визуализацию изменений между версиями файлов для указанного ресурса
-        """
-        logger.info(f"Creating visualization for resource: {f_version.resource.name}")
-        resource = f_version.resource
-
-        # Получаем все версии файла (кроме текущей)
-        file_versions = (
-            FileVersion.objects.filter(resource=resource, storages__isnull=False)
-            .exclude(storages__path__contains="_Виз")
-            .order_by("-last_changed")
-            .distinct()
-        )
-
-        vis_path = VIS_PATH / Path(f"\{resource.name}_Виз.xlsx").name
-
-        if len(file_versions) < 2:
-            logger.info(
-                f"Not enough file versions ({len(file_versions)}) to create visualization for {resource.name}"
-            )
-            return  # Нечего сравнивать
-
-        logger.info(f"Found {len(file_versions)} file versions for comparison")
-
-        # Получаем пути к файлам и даты изменений
-        versions_to_compare = []
-        for version in file_versions:
-            storage = StorageManager.get_google_storage_by_file_version(version)
-            if storage:
-                local_path = TEMP_DIR / Path(storage.path).name
-                if not local_path.exists():
-                    # Скачиваем файл для сравнения
-                    self._download_from_storage(storage, local_path)
-                versions_to_compare.append((str(local_path), version.last_changed))
-
-        if len(versions_to_compare) < 2:
-            logger.warning(
-                f"Not enough downloadable file versions ({len(versions_to_compare)}) for visualization"
-            )
-            return
-
-        # Создаем визуализацию изменений
-        logger.info(f"Creating visualization with {len(versions_to_compare)} versions")
-        ViewChanges.view_changes(
-            file_versions=versions_to_compare, output_file=vis_path, expiration_days=7
-        )
-
-        # Создаем новую версию файла с визуализацией
-        vis_resource = FileData.get_vis_resource(resource)
-        vis_resource.save()
-        logger.info(f"Created visualization resource: {vis_resource.name}")
-
-        # Создаем новую версию файла с визуализацией
-        vis_file_version = FileData.get_vis_file_version(f_version, vis_resource)
-        vis_file_version.save()
-        logger.info(f"Created visualization file version")
-
-        # Загружаем визуализированную версию во все хранилища
-        self.save_file_to_storages(vis_path, vis_resource, vis_file_version)
-
-        # Очищаем временную директорию
-        if TEMP_DIR.exists():
-            cleaned_files = self.clean_temp_directory()
-            logger.debug(f"Cleaned {cleaned_files} temporary files")
-
-    def clean_temp_directory(self):
-        """Очищает временную директорию и возвращает количество удаленных файлов"""
-        count = 0
-        if TEMP_DIR.exists():
-            for item in TEMP_DIR.iterdir():
-                try:
-                    if item.is_file():
-                        item.unlink()
-                        count += 1
-                    elif item.is_dir():
-                        shutil.rmtree(item)
-                        count += 1
-                except Exception as e:
-                    logger.warning(f"Failed to delete temporary item {item}: {e}")
         return count

@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <link rel="icon" href="{% static 'timetable_update/image/icon.png' %}" type="image/x-icon">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Управление системой актуализации расписания ВолгГТУ</title>
+  <link rel="stylesheet" href="{% static 'timetable_update/style/admin_panel_style.css' %}">
+</head>
+<body>
+<div class="container">
+  <h2>Управление системой актуализации расписания</h2>
+
+  <form>
+    <input type="hidden" id="time_update" name="time_update" value="{{ time_update_value }}">
+
+    <div class="form-group">
+      <label for="scanFrequency">Частота сканирования сайта ВолгГТУ (мин):</label>
+      <select id="scanFrequency" name="scanFrequency">
+        <option value="120" {% if time_update_value == "120" %}selected{% endif %}>120</option>
+        <option value="180" {% if time_update_value == "180" %}selected{% endif %}>180</option>
+        <option value="240" {% if time_update_value == "240" %}selected{% endif %}>240</option>
+        <option value="360" {% if time_update_value == "360" %}selected{% endif %}>360</option>
+        <option value="420" {% if time_update_value == "420" %}selected{% endif %}>420</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="rootUrl">Корневая ссылка для анализа:</label>
+      <input type="url" id="rootUrl" placeholder="Введите ссылку"
+             value="https://www.vstu.ru/student/raspisaniya/zanyatiy/" required>
+    </div>
+
+    <button type="button" id="applyChangesButton" disabled>Применить изменения</button>
+  </form>
+
+  <hr>
+
+  <h3>Очистка системы:</h3>
+  <div class="form-group">
+    <label for="dataLocation">Выбрать элемент системы:</label>
+    <select id="dataLocation">
+      {% for clear_type in clear_types %}
+        <option value="{{ clear_type }}">{{ clear_type }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="button" onclick="requestDataCleansing()" id="dropDataButton" class="drop_data_button">Очистить</button>
+  <div id="dataCleanSpinner" class="spinner" style="display: none;">Идёт очистка...</div>
+
+  <hr>
+
+  <h3>Обновление расписания:</h3>
+  <div class="form-group">
+    <button type="button" onclick="requestTimetableUpdate()" id="updateTimetableButton">
+      Запустить обновление расписания
+    </button>
+  </div>
+  <div id="timetableUpdateSpinner" class="spinner" style="display: none;">Идёт обновление...</div>
+</div>
+
+<script src="{% static 'timetable_update/src/admin_panel.js' %}"></script>
+</body>
+</html>
