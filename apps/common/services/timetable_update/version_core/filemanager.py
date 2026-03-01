@@ -55,7 +55,7 @@ class FileManager:
 
                 try:
                     file_path = file_data.download_file(self._temp_dir)
-                    file_path = self._convert_xls_to_xlsx(file_path)
+                    # file_path = self._convert_xls_to_xlsx(file_path)
                 except Exception as e:
                     logger.error(f"Failed to download/convert file: {e}", exc_info=True)
                     continue

@@ -48,7 +48,7 @@ def admin_panel(request: HttpRequest) -> HttpResponse:
         "clear_types": CLEAR_TYPES,
         "time_update_value": time_update,
     }
-    return render(request, "admin_panel.html", context)
+    return render(request, "timetable_update/admin_panel.html", context)
 
 
 # ======================== НАСТРОЙКИ ========================

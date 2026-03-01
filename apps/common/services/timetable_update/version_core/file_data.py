@@ -168,11 +168,20 @@ class FileData:
             return cls.__get_excel_file_hash(file_path)
         return cls.__get_bin_file_hash(file_path)
 
-    @staticmethod
-    def __get_excel_file_hash(file_path: Path) -> str:
-        wb = load_workbook(str(file_path), data_only=True)
-        data = [tuple(row) for sheet in wb.worksheets for row in sheet.iter_rows(values_only=True)]
-        return hashlib.sha256(str(data).encode("utf-8")).hexdigest()
+    @classmethod
+    def __get_excel_file_hash(cls, file_path: Path) -> str:
+        if file_path.suffix.lower() == '.xls':
+            import xlrd
+            wb = xlrd.open_workbook(str(file_path))
+            data = []
+            for sheet in wb.sheets():
+                for row in range(sheet.nrows):
+                    data.append(tuple(sheet.row_values(row)))
+            return hashlib.sha256(str(data).encode("utf-8")).hexdigest()
+        else:
+            wb = load_workbook(str(file_path), data_only=True)
+            data = [tuple(row) for sheet in wb.worksheets for row in sheet.iter_rows(values_only=True)]
+            return hashlib.sha256(str(data).encode("utf-8")).hexdigest()
 
     @staticmethod
     def __get_bin_file_hash(file_path: Path) -> str:

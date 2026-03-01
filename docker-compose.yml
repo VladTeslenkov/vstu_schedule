@@ -20,16 +20,16 @@ services:
 
   web:
     build: .
-    image: vstu_schedule:latest 
+    image: vstu_schedule:latest
     command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --reload # в продакшене убрать --reload
     ports:
       - "8000:8000"
     volumes:
-      - .:/app        # поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
+      - .:/app # поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
       - static_volume:/app/static
       - media_volume:/app/media
       - ./logs:/app/logs
-      - /app/.venv  # скрыть .venv папку внутри контейнера. УБРАТЬ В ПРОДАКШЕНЕ
+      - /app/.venv # скрыть .venv папку внутри контейнера. УБРАТЬ В ПРОДАКШЕНЕ
     env_file: .env
     depends_on:
       db:
@@ -63,8 +63,6 @@ services:
   nginx:
     image: nginx:1.27-alpine
     restart: always
-    profiles: 
-      - full
     volumes:
       - ./.deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - static_volume:/app/static
