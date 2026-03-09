@@ -3,6 +3,7 @@
 /* ===== КОНСТАНТЫ ===== */
 const CSRF = getCsrf();
 const BASE = "/panel/";
+const MONITOR_BASE = "/panel/timetable_update/";
 const POLL_INTERVAL_MS = 2000;
 const AUTO_REFRESH_MS = 30_000;
 
@@ -16,12 +17,50 @@ document.addEventListener("DOMContentLoaded", () => {
   loadData();
   setInterval(loadData, AUTO_REFRESH_MS);
   initSettingsForm();
+  resumePendingTask();
 });
+
+/* ===== ВОССТАНОВЛЕНИЕ ЗАДАЧИ ПОСЛЕ ПЕРЕЗАГРУЗКИ ===== */
+function resumePendingTask() {
+  const taskId = sessionStorage.getItem("pendingTaskId");
+  const taskType =
+    sessionStorage.getItem("pendingTaskType") || "update_timetable";
+  if (!taskId) return;
+
+  const statusElemId =
+    taskType === "update_timetable" ? "taskStatus" : "clearStatus";
+  showStatus(statusElemId, "running", "⏳ Операция выполняется...");
+
+  if (taskType === "update_timetable") {
+    document.getElementById("runTaskBtn").disabled = true;
+  }
+
+  pollTask(
+    taskId,
+    taskType,
+    statusElemId,
+    () => {
+      sessionStorage.removeItem("pendingTaskId");
+      sessionStorage.removeItem("pendingTaskType");
+      if (taskType === "update_timetable") {
+        document.getElementById("runTaskBtn").disabled = false;
+      }
+      loadData();
+    },
+    () => {
+      sessionStorage.removeItem("pendingTaskId");
+      sessionStorage.removeItem("pendingTaskType");
+      if (taskType === "update_timetable") {
+        document.getElementById("runTaskBtn").disabled = false;
+      }
+    },
+  );
+}
 
 /* ===== ЗАГРУЗКА ДАННЫХ ===== */
 async function loadData() {
   try {
-    const res = await fetch(`${BASE}monitor/stats`);
+    const res = await fetch(`${MONITOR_BASE}monitor/stats`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
@@ -56,7 +95,10 @@ function renderScheduler(sch, lastUpdateTime) {
     setText("schInterval", "—");
     setText("schLastRun", "—");
     setText("schRunCount", "—");
-    setText("schLastUpdate", lastUpdateTime ? fmtDatetime(lastUpdateTime) : "—");
+    setText(
+      "schLastUpdate",
+      lastUpdateTime ? fmtDatetime(lastUpdateTime) : "—",
+    );
     return;
   }
 
@@ -64,7 +106,10 @@ function renderScheduler(sch, lastUpdateTime) {
   badge.className = sch.enabled ? "badge badge--success" : "badge badge--warn";
 
   setText("schInterval", sch.interval ?? "—");
-  setText("schLastRun", sch.last_run_at ? fmtDatetime(sch.last_run_at) : "Ещё не запускался");
+  setText(
+    "schLastRun",
+    sch.last_run_at ? fmtDatetime(sch.last_run_at) : "Ещё не запускался",
+  );
   setText("schRunCount", sch.total_run_count ?? 0);
   setText("schLastUpdate", lastUpdateTime ? fmtDatetime(lastUpdateTime) : "—");
 }
@@ -72,7 +117,9 @@ function renderScheduler(sch, lastUpdateTime) {
 /* ===== РЕСУРСЫ ===== */
 function filterResources(filter, btn) {
   currentFilter = filter;
-  document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+  document
+    .querySelectorAll(".filter-tab")
+    .forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
   renderResources(allResources, filter);
 }
@@ -80,28 +127,36 @@ function filterResources(filter, btn) {
 function renderResources(resources, filter) {
   const tbody = document.getElementById("resourcesBody");
   let list = resources;
-  if (filter === "active") list = resources.filter(r => !r.deprecated);
-  if (filter === "deprecated") list = resources.filter(r => r.deprecated);
+  if (filter === "active") list = resources.filter((r) => !r.deprecated);
+  if (filter === "deprecated") list = resources.filter((r) => r.deprecated);
 
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Нет данных</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = list.map(r => `
+  tbody.innerHTML = list
+    .map(
+      (r) => `
     <tr>
       <td title="${esc(r.name)}">${esc(r.name)}</td>
       <td title="${esc(r.path || "")}" class="hash">${esc(r.path || "—")}</td>
       <td>${r.last_update ? fmtDatetime(r.last_update) : "—"}</td>
-      <td>${r.deprecated
-        ? '<span class="pill pill--deprecated">Устарел</span>'
-        : '<span class="pill pill--active">Актуален</span>'}</td>
+      <td>${
+        r.deprecated
+          ? '<span class="pill pill--deprecated">Устарел</span>'
+          : '<span class="pill pill--active">Актуален</span>'
+      }</td>
       <td>
-        ${r.path
-          ? `<button class="btn btn--ghost btn--sm" onclick="downloadResource(${r.id})">↓ Скачать</button>`
-          : ""}
+        ${
+          r.has_file
+            ? `<button class="btn btn--ghost btn--sm" onclick="downloadResource(${r.id})">Скачать</button>`
+            : '<span style="font-size:11px;opacity:0.4">нет файла</span>'
+        }
       </td>
-    </tr>`).join("");
+    </tr>`,
+    )
+    .join("");
 }
 
 /* ===== ИСТОРИЯ ВЕРСИЙ ===== */
@@ -111,20 +166,24 @@ function renderVersions(versions) {
     tbody.innerHTML = `<tr><td colspan="4" class="empty-row">Нет данных</td></tr>`;
     return;
   }
-  tbody.innerHTML = versions.map(v => `
+  tbody.innerHTML = versions
+    .map(
+      (v) => `
     <tr>
       <td title="${esc(v.resource__name || "")}">${esc(v.resource__name || "—")}</td>
       <td>${v.timestamp ? fmtDatetime(v.timestamp) : "—"}</td>
       <td class="hash">${esc(v.hashsum_short || "—")}…</td>
       <td class="hash">${esc(v.mimetype || "—")}</td>
-    </tr>`).join("");
+    </tr>`,
+    )
+    .join("");
 }
 
 /* ===== ЗАПУСК ОБНОВЛЕНИЯ ===== */
 async function runUpdate() {
   const btn = document.getElementById("runTaskBtn");
   btn.disabled = true;
-  showStatus("taskStatus", "running", "⏳ Запускаем задачу обновления...");
+  showStatus("taskStatus", "running", "Запускаем задачу обновления...");
 
   try {
     const res = await fetch(`${BASE}update_timetable`, {
@@ -136,19 +195,43 @@ async function runUpdate() {
     const taskId = data.id || data.task_id;
 
     if (!taskId) {
-      showStatus("taskStatus", "error", "Ошибка запуска: " + (data.error_message || "нет task_id"));
+      showStatus(
+        "taskStatus",
+        "error",
+        "Ошибка запуска: " + (data.error_message || "нет task_id"),
+      );
       btn.disabled = false;
       return;
     }
 
-    showStatus("taskStatus", "running", "⏳ Задача запущена, ожидаем результат...");
-    pollTask(taskId, "taskStatus", () => {
-      btn.disabled = false;
-      loadData();
-    }, () => btn.disabled = false);
+    sessionStorage.setItem("pendingTaskId", taskId);
+    sessionStorage.setItem("pendingTaskType", "update_timetable");
 
+    showStatus(
+      "taskStatus",
+      "running",
+      "Задача запущена, ожидаем результат...",
+    );
+    pollTask(
+      taskId,
+      "update_timetable",
+      "taskStatus",
+      () => {
+        sessionStorage.removeItem("pendingTaskId");
+        sessionStorage.removeItem("pendingTaskType");
+        btn.disabled = false;
+        loadData();
+      },
+      () => {
+        sessionStorage.removeItem("pendingTaskId");
+        sessionStorage.removeItem("pendingTaskType");
+        btn.disabled = false;
+      },
+    );
   } catch (e) {
     showStatus("taskStatus", "error", "Ошибка сети: " + e.message);
+    sessionStorage.removeItem("pendingTaskId");
+    sessionStorage.removeItem("pendingTaskType");
     btn.disabled = false;
   }
 }
@@ -174,11 +257,14 @@ function initSettingsForm() {
 async function applySettings() {
   const btn = document.getElementById("applySettingsBtn");
   btn.disabled = true;
-  showStatus("settingsStatus", "running", "⏳ Сохраняем настройки...");
+  showStatus("settingsStatus", "running", "Сохраняем настройки...");
 
   try {
     const formData = new FormData();
-    formData.append("scanFrequency", document.getElementById("scanFrequency").value);
+    formData.append(
+      "scanFrequency",
+      document.getElementById("scanFrequency").value,
+    );
     formData.append("rootUrl", document.getElementById("rootUrl").value);
 
     const res = await fetch(`${BASE}settings`, {
@@ -189,13 +275,17 @@ async function applySettings() {
     const data = await res.json();
 
     if (data.status === "success") {
-      showStatus("settingsStatus", "success", "✓ Настройки сохранены");
-      // Обновляем базовые значения чтобы кнопка снова стала неактивной
-      window.MONITOR_CTX.timeUpdate = document.getElementById("scanFrequency").value;
+      showStatus("settingsStatus", "success", "Настройки сохранены");
+      window.MONITOR_CTX.timeUpdate =
+        document.getElementById("scanFrequency").value;
       window.MONITOR_CTX.analyzeUrl = document.getElementById("rootUrl").value;
       loadData();
     } else {
-      showStatus("settingsStatus", "error", "Ошибка: " + (data.error_message || "неизвестная ошибка"));
+      showStatus(
+        "settingsStatus",
+        "error",
+        "Ошибка: " + (data.error_message || "неизвестная ошибка"),
+      );
       btn.disabled = false;
     }
   } catch (e) {
@@ -206,12 +296,19 @@ async function applySettings() {
 
 /* ===== ОЧИСТКА ===== */
 async function runClear() {
-  const component = document.querySelector('input[name="clearTarget"]:checked')?.value;
+  const component = document.querySelector(
+    'input[name="clearTarget"]:checked',
+  )?.value;
   if (!component) return;
 
-  if (!confirm(`Вы уверены? Будет очищено: "${component}". Это действие необратимо.`)) return;
+  if (
+    !confirm(
+      `Вы уверены? Будет очищено: "${component}". Это действие необратимо.`,
+    )
+  )
+    return;
 
-  showStatus("clearStatus", "running", `⏳ Очищаем: ${component}...`);
+  showStatus("clearStatus", "running", `Очищаем: ${component}...`);
 
   try {
     const formData = new FormData();
@@ -231,8 +328,23 @@ async function runClear() {
       return;
     }
 
-    pollTask(taskId, "clearStatus", () => loadData(), () => {});
+    sessionStorage.setItem("pendingTaskId", taskId);
+    sessionStorage.setItem("pendingTaskType", "manage_storage");
 
+    pollTask(
+      taskId,
+      "manage_storage",
+      "clearStatus",
+      () => {
+        sessionStorage.removeItem("pendingTaskId");
+        sessionStorage.removeItem("pendingTaskType");
+        loadData();
+      },
+      () => {
+        sessionStorage.removeItem("pendingTaskId");
+        sessionStorage.removeItem("pendingTaskType");
+      },
+    );
   } catch (e) {
     showStatus("clearStatus", "error", "Ошибка сети: " + e.message);
   }
@@ -240,19 +352,16 @@ async function runClear() {
 
 /* ===== СКАЧИВАНИЕ ФАЙЛА ===== */
 function downloadResource(resourceId) {
-  window.location.href = `${BASE}monitor/download/${resourceId}/`;
+  window.location.href = `${MONITOR_BASE}monitor/download/${resourceId}/`;
 }
 
 /* ===== POLLING ===== */
-function pollTask(taskId, statusElemId, onSuccess, onError) {
+function pollTask(taskId, endpoint, statusElemId, onSuccess, onError) {
   if (pollTimer) clearInterval(pollTimer);
 
   pollTimer = setInterval(async () => {
     try {
-      // Определяем endpoint по контексту — для обновления vs очистки используем разные
-      // Но оба поддерживают GET ?task_id=...
-      // Пробуем update_timetable, если не тот — manage_storage
-      const res = await fetch(`${BASE}update_timetable?task_id=${taskId}`);
+      const res = await fetch(`${BASE}${endpoint}?task_id=${taskId}`);
       const data = await res.json();
 
       if (data.status === "running") return;
@@ -261,10 +370,14 @@ function pollTask(taskId, statusElemId, onSuccess, onError) {
       pollTimer = null;
 
       if (data.status === "success") {
-        showStatus(statusElemId, "success", "✓ Операция выполнена успешно");
+        showStatus(statusElemId, "success", "Операция выполнена успешно");
         onSuccess();
       } else {
-        showStatus(statusElemId, "error", "✗ Ошибка: " + (data.error_message || "неизвестная ошибка"));
+        showStatus(
+          statusElemId,
+          "error",
+          "Ошибка: " + (data.error_message || "неизвестная ошибка"),
+        );
         onError();
       }
     } catch (e) {
@@ -292,18 +405,25 @@ function setText(id, val) {
 
 function esc(str) {
   return String(str)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function fmtDatetime(iso) {
   if (!iso) return "—";
   try {
     return new Date(iso).toLocaleString("ru-RU", {
-      day: "2-digit", month: "2-digit", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
-  } catch { return iso; }
+  } catch {
+    return iso;
+  }
 }
 
 function getCsrf() {

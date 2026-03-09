@@ -160,6 +160,7 @@ class FileData:
         new_path.append(self.__faculty)
         new_path.append(self.__education_form)
         new_path.append(self.__get_course_string(self.__course))
+        new_path.append(self.__correct_name_from_path)  
         return self.elements_to_path(new_path)
 
     @classmethod
@@ -271,11 +272,17 @@ class FileData:
         parts = cls.split_string_by_delimiters(name.lower())
         result = []
         for i, part in enumerate(parts):
-            if any(cw in part for cw in cls._COURSE_WORDS) and i + 1 < len(parts):
-                try:
-                    result.extend(cls.__parse_course_string(parts[i + 1]))
-                except Exception:
-                    pass
+            if any(cw in part for cw in cls._COURSE_WORDS):
+                # Ищем число в текущей части (например "5курс" или "курс5")
+                digits = re.findall(r'\d+', part)
+                if digits:
+                    result.extend(int(d) for d in digits if 1 <= int(d) <= 6)
+                # Ищем число в следующей части
+                elif i + 1 < len(parts):
+                    try:
+                        result.extend(cls.__parse_course_string(parts[i + 1]))
+                    except Exception:
+                        pass
         return sorted(set(result))
 
     @staticmethod

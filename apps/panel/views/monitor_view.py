@@ -12,9 +12,6 @@ from apps.common.models import Resource, FileVersion, Setting
 logger = logging.getLogger(__name__)
 
 
-# ======================== МОНИТОРИНГ ========================
-
-
 @login_required
 def monitoring_panel(request: HttpRequest) -> HttpResponse:
     """Страница мониторинга состояния процесса скачивания расписания."""
@@ -69,6 +66,7 @@ def monitoring_stats(request: HttpRequest) -> JsonResponse:
     )
     for r in resources:
         r["last_update"] = r["last_update"].isoformat() if r["last_update"] else None
+        r["has_file"] = _resource_has_file(r["path"])
 
     return JsonResponse({
         "stats": {
@@ -101,11 +99,13 @@ def download_resource(request: HttpRequest, resource_id: int) -> FileResponse | 
     if not resource.path:
         raise Http404("Путь к файлу не задан")
 
-    resource_dir = settings.DATA_STORAGE_DIR / resource.path
-    if not resource_dir.exists():
-        raise Http404("Директория ресурса не найдена в хранилище")
+    clean_path = resource.path.lstrip("/")
+    resource_dir = settings.DATA_STORAGE_DIR / clean_path
 
-    # Самый новый файл в директории ресурса
+    if not resource_dir.exists() or not resource_dir.is_dir():
+        logger.warning(f"Resource dir not found: {resource_dir} (resource_id={resource_id})")
+        raise Http404(f"Директория ресурса не найдена в хранилище: {clean_path}")
+
     files = sorted(
         (f for f in resource_dir.iterdir() if f.is_file()),
         key=lambda f: f.stat().st_mtime,
@@ -127,7 +127,19 @@ def download_resource(request: HttpRequest, resource_id: int) -> FileResponse | 
     )
 
 
-# ======================== ВСПОМОГАТЕЛЬНОЕ ========================
+
+
+def _resource_has_file(path: str | None) -> bool:
+    """Проверяет, есть ли реальные файлы в директории ресурса."""
+    if not path:
+        return False
+    try:
+        resource_dir = settings.DATA_STORAGE_DIR / path.lstrip("/")
+        if not resource_dir.is_dir():
+            return False
+        return any(f.is_file() for f in resource_dir.iterdir())
+    except Exception:
+        return False
 
 
 def _get_scheduler_info() -> dict:

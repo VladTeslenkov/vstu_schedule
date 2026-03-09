@@ -21,15 +21,16 @@ services:
   web:
     build: .
     image: vstu_schedule:latest
-    command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --reload # в продакшене убрать --reload
+    command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --reload
     ports:
       - "8000:8000"
     volumes:
-      - .:/app # поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
+      - .:/app
       - static_volume:/app/static
       - media_volume:/app/media
       - ./logs:/app/logs
-      - /app/.venv # скрыть .venv папку внутри контейнера. УБРАТЬ В ПРОДАКШЕНЕ
+      - data_volume:/app/data
+      - /app/.venv
     env_file: .env
     depends_on:
       db:
@@ -42,6 +43,8 @@ services:
     command: celery -A vstu_schedule worker -l info
     environment:
       - SERVICE_NAME=worker
+    volumes:
+      - data_volume:/app/data
     env_file: .env
     depends_on:
       db:
@@ -60,6 +63,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
   nginx:
     image: nginx:1.27-alpine
     restart: always
@@ -76,3 +80,4 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
+  data_volume:
