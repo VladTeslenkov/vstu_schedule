@@ -55,7 +55,7 @@ class FileManager:
 
                 try:
                     file_path = file_data.download_file(self._temp_dir)
-                    # file_path = self._convert_xls_to_xlsx(file_path)
+                    file_path = self._convert_xls_to_xlsx(file_path)
                 except Exception as e:
                     logger.error(f"Failed to download/convert file: {e}", exc_info=True)
                     continue
@@ -143,26 +143,20 @@ class FileManager:
 
     @staticmethod
     def _convert_xls_to_xlsx(file_path: Path) -> Path:
-        """Конвертирует .xls в .xlsx через LibreOffice. Если не получилось — возвращает исходный файл."""
+        """Конвертирует .xls в .xlsx через xls2xlsx. Если не .xls — возвращает исходный файл."""
         if file_path.suffix.lower() != ".xls":
             return file_path
         try:
-            import subprocess
-            result = subprocess.run(
-                ["libreoffice", "--headless", "--convert-to", "xlsx",
-                 str(file_path), "--outdir", str(file_path.parent)],
-                capture_output=True, timeout=60,
-            )
-            if result.returncode == 0:
-                new_path = file_path.with_suffix(".xlsx")
-                file_path.unlink()
-                logger.debug(f"Converted {file_path.name} -> {new_path.name}")
-                return new_path
-            else:
-                logger.warning(f"LibreOffice conversion failed: {result.stderr.decode()}")
+            from xls2xlsx import XLS2XLSX
+            new_path = file_path.with_suffix(".xlsx")
+            x2x = XLS2XLSX(str(file_path))
+            x2x.to_xlsx(str(new_path))
+            file_path.unlink()
+            logger.debug(f"Converted {file_path.name} -> {new_path.name}")
+            return new_path
         except Exception as e:
-            logger.warning(f"XLS conversion error: {e}")
-        return file_path
+            logger.warning(f"XLS conversion error for {file_path.name}: {e}")
+            return file_path
 
     @staticmethod
     def _mark_deprecated(used_resource_ids: set[int]) -> int:
