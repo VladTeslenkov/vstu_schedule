@@ -210,3 +210,5 @@ LOGGING = {
         },
     },
 }
+
+LOGIN_URL = "/panel/login/"

@@ -60,7 +60,7 @@ function resumePendingTask() {
 /* ===== ЗАГРУЗКА ДАННЫХ ===== */
 async function loadData() {
   try {
-    const res = await fetch(`${MONITOR_BASE}monitor/stats`);
+    const res = await fetch(`${MONITOR_BASE}stats`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 

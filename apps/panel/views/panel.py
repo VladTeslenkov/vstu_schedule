@@ -1,10 +1,8 @@
 import logging
-import os
 
 from celery.result import AsyncResult
-from django.conf import settings
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 
@@ -26,39 +24,17 @@ def admin_login(request: HttpRequest) -> HttpResponse:
         user = authenticate(request, username=username, password=password)
         if user is not None and user.is_staff:
             login(request, user)
-            return redirect("admin_panel")
-        return render(request, "admin_login.html", {"error": "Неверные учётные данные или нет доступа"})
-    return render(request, "admin_login.html")
-
-
-# ======================== ПАНЕЛЬ ========================
-
-
-@login_required
-def admin_panel(request: HttpRequest) -> HttpResponse:
-    """Главная страница панели управления."""
-    if not request.user.is_staff:
-        return redirect("admin_login")
-
-    time_update = "180"
-    if Setting.objects.filter(key="time_update").exists():
-        time_update = Setting.objects.get(key="time_update").value
-
-    context = {
-        "clear_types": CLEAR_TYPES,
-        "time_update_value": time_update,
-    }
-    return render(request, "timetable_update/admin_panel.html", context)
+            return redirect("monitoring_panel")
+        return render(request, "timetable_update/admin_login.html", {"error": "Неверные учётные данные или нет доступа"})
+    return render(request, "timetable_update/admin_login.html")
 
 
 # ======================== НАСТРОЙКИ ========================
 
 
-@login_required
+@staff_member_required
 def set_system_params(request: HttpRequest) -> JsonResponse:
     """Сохраняет системные параметры: интервал обновления и URL анализа."""
-    if not request.user.is_staff:
-        return JsonResponse({"status": "error", "error_message": "Доступ запрещён"}, status=403)
     if request.method != "POST":
         return JsonResponse({"status": "error", "error_message": "Метод не поддерживается"}, status=405)
 
@@ -111,18 +87,14 @@ def _task_status_response(task_id: str) -> JsonResponse:
 # ======================== ЗАДАЧИ ========================
 
 
-@login_required
+@staff_member_required
 def run_update_timetable(request: HttpRequest) -> JsonResponse | HttpResponse:
     """
     POST — запускает задачу обновления расписания.
     GET ?task_id=... — возвращает статус запущенной задачи.
     """
-    if not request.user.is_staff:
-        return JsonResponse({"status": "error", "error_message": "Доступ запрещён"}, status=403)
-
     if request.method == "POST":
         from apps.panel.tasks import update_timetable as update_task
-        from celery import Celery  # noqa
         result = update_task.delay()  # type: ignore[union-attr]
         logger.info(f"update_timetable launched: task_id={result.id}")
         return JsonResponse({"status": "running", "id": result.id}, status=202)
@@ -133,15 +105,12 @@ def run_update_timetable(request: HttpRequest) -> JsonResponse | HttpResponse:
     return HttpResponse(status=400)
 
 
-@login_required
+@staff_member_required
 def manage_storage(request: HttpRequest) -> JsonResponse | HttpResponse:
     """
     POST — запускает задачу очистки хранилища.
     GET ?task_id=... — возвращает статус задачи.
     """
-    if not request.user.is_staff:
-        return JsonResponse({"status": "error", "error_message": "Доступ запрещён"}, status=403)
-
     if request.method == "POST" and request.POST.get("action") == "dell":
         component = request.POST.get("component", "")
         from apps.panel.tasks import clear_storage_task
