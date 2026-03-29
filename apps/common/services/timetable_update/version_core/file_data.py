@@ -14,6 +14,11 @@ from .stringlistanalyzer import StringListAnalyzer
 
 logger = logging.getLogger(__name__)
 
+_CONFIG_PATH = Path(__file__).resolve().parents[4] / "apps" / "common" / "config" / "file_data_config.json"
+
+with _CONFIG_PATH.open(encoding="utf-8") as _f:
+    _CONFIG = json.load(_f)
+
 
 class FileData:
     """
@@ -23,19 +28,13 @@ class FileData:
 
     _CONFIDENCE_VALUE = 0.8
 
-    _DEGREE_WORDS = ["бакалавриат", "специалитет", "магистратура", "аспирантура", "степень"]
-    _EDUCATION_FORM_WORDS = ["форма", "очная", "очно-заочная", "заочная"]
-    _FACULTY_WORDS = [
-        "факультет", "автоматизированных", "систем", "транспорта", "вооружений",
-        "автомобильного", "технологии", "конструкционных", "материалов", "пищевых",
-        "производств", "экономика", "управление", "электроника", "вычислительная",
-        "техника", "xимико-технологический", "иностранный", "вечерний",
-        "технологический", "инженерный", "кадры",
-    ]
-    _WORDS_TO_DELETE = ["автосохраненный", "копия"]
-    _COURSE_WORDS = ["курс", "год"]
-    _SENTENCE_DELIMITERS = ["_", " ", "(", ")", ",", ".", '"']
-    _EXCEL_EXTENSION = [".xls", ".xlsx", ".xlsm"]
+    _DEGREE_WORDS: list[str] = _CONFIG["degree_words"]
+    _EDUCATION_FORM_WORDS: list[str] = _CONFIG["education_form_words"]
+    _FACULTY_WORDS: list[str] = _CONFIG["faculty_words"]
+    _WORDS_TO_DELETE: list[str] = _CONFIG["words_to_delete"]
+    _COURSE_WORDS: list[str] = _CONFIG["course_words"]
+    _SENTENCE_DELIMITERS: list[str] = _CONFIG["sentence_delimiters"]
+    _EXCEL_EXTENSION: list[str] = _CONFIG["excel_extensions"]
 
     def __init__(self, path: str, url: str, last_update: str) -> None:
         self.__path = path
@@ -160,7 +159,6 @@ class FileData:
         new_path.append(self.__faculty)
         new_path.append(self.__education_form)
         new_path.append(self.__get_course_string(self.__course))
-        new_path.append(self.__correct_name_from_path)  
         return self.elements_to_path(new_path)
 
     @classmethod
@@ -272,17 +270,11 @@ class FileData:
         parts = cls.split_string_by_delimiters(name.lower())
         result = []
         for i, part in enumerate(parts):
-            if any(cw in part for cw in cls._COURSE_WORDS):
-                # Ищем число в текущей части (например "5курс" или "курс5")
-                digits = re.findall(r'\d+', part)
-                if digits:
-                    result.extend(int(d) for d in digits if 1 <= int(d) <= 6)
-                # Ищем число в следующей части
-                elif i + 1 < len(parts):
-                    try:
-                        result.extend(cls.__parse_course_string(parts[i + 1]))
-                    except Exception:
-                        pass
+            if any(cw in part for cw in cls._COURSE_WORDS) and i + 1 < len(parts):
+                try:
+                    result.extend(cls.__parse_course_string(parts[i + 1]))
+                except Exception:
+                    pass
         return sorted(set(result))
 
     @staticmethod
