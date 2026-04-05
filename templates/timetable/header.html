@@ -1,0 +1,91 @@
+<form action="" method="post" id="header-form">
+    {% csrf_token %}
+    <header>
+        <div class="main-filters-container">
+            <div class="date-filter-container" id="date-filter-container">
+                <select class="date-select" name="date" id="date-select" onchange="on_date_select_change()">
+                    <option value="today" {% if selected.date == "today" %} selected {% endif %}>На сегодня</option>
+                    <option value="tomorrow" {% if selected.date == "tomorrow" %} selected {% endif %}>На завтра</option>
+                    <option value="this_week" {% if selected.date == "this_week" %} selected {% endif %}>На эту неделю</option>
+                    <option value="next_week" {% if selected.date == "next_week" %} selected {% endif %}>На следующую неделю</option>
+                    <option value="single_date" {% if selected.date == "single_date" %} selected {% endif %}>На дату</option>
+                    <option value="range_date" {% if selected.date == "range_date" %} selected {% endif %}>На диапазон дат</option>
+                </select>
+
+                <div class="specified-date-container" id="specified-date-container" style="display: none;">
+                    <input type="date" name="left_date" id="left-date" value="{{ selected.left_date }}" style="width: 100%;">
+                    <input type="date" name="right_date" id="right-date" value="{{ selected.right_date }}" style="display: none;">
+                </div>
+            </div>
+
+            <select class="group-pillbox" name="group[]" multiple="multiple">
+                {% for group in groups %}
+                    <option value="{{ group }}" {% if group in selected.group %} selected {% endif %}>{{ group }}</option>
+                {% endfor %}
+            </select>
+
+            <select class="teacher-pillbox" name="teacher[]" multiple="multiple">
+                {% for teacher in teachers %}
+                    <option value="{{ teacher }}" {% if teacher in selected.teacher %} selected {% endif %}>{{ teacher }}</option>
+                {% endfor %}
+            </select>
+
+            <select class="place-pillbox" name="place[]" multiple="multiple">
+                {% for place in places %}
+                    <option value="{{ place }}" {% if place in selected.place %} selected {% endif %}>{{ place }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" id="submit-button" onclick="this.form.submit()" style="margin-left: 20px;">Показать</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button type="button" id="more-filters-button" onclick="update_filters_visibility()">
+                {% if addition_filters_visible == "1" %}
+                    Меньше фильтров
+                {% else %}
+                    Больше фильтров
+                {% endif %}
+            </button>
+            <button type="button" onclick="drop_filters()" style="margin-left: 20px;">Сбросить фильтры</button>
+            <input type="hidden" id="filters-visibility-state" name="addition_filters_visible" value={{ addition_filters_visible }}>
+        </div>
+        
+        <div class="addition-filters-container" id="addition-filters-container"
+        {% if addition_filters_visible == "1" %}
+            style="display: flex;"
+        {% else %}
+            style="display: none;"
+        {% endif %}
+        >
+            <div style="display: flex; margin-top: auto; margin-bottom: auto;">
+                <input type="checkbox" id="show-calendar-checkbox" name="calendar_visibility"
+                    {% if calendar_visibile == "1" %}
+                        checked
+                    {% endif %}
+                >
+                <label for="show-calendar-checkbox">Показывать календарь</label><br>
+            </div>
+            
+            <select class="subject-pillbox" name="subject[]" multiple="multiple">
+                {% for subject in subjects %}
+                    <option value="{{ subject }}" {% if subject in selected.subject %} selected {% endif %}>{{ subject }}</option>
+                {% endfor %}
+            </select>
+
+            <select class="kind-pillbox" name="kind[]" multiple="multiple">
+                {% for kind in kinds %}
+                    <option value="{{ kind }}" {% if kind in selected.kind %} selected {% endif %}>{{ kind }}</option>
+                {% endfor %}
+            </select>
+
+            <select class="time-slot-pillbox" name="time_slot[]" multiple="multiple">
+                {% for time_slot in time_slots %}
+                    <option value="{{ time_slot }}" {% if time_slot|is_time_slot_already_selected:selected.time_slot %} selected {% endif %}>{{ time_slot }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </header>
+</form>
+
+<script>on_date_select_change();</script>

@@ -1,0 +1,85 @@
+{% for entry, row_spans, calendar in data %}
+    <div class="schedule-date-info">
+        <p>{{ entry.0.abstract_event.abstract_day.name }}</p>
+        <p>{{ entry.0.date }}</p>
+    </div>
+
+    <div style="display: flex;">
+        {% if calendar_visibile == "1" %}
+            {% include "timetable/calendarTable.html" %}
+        {% endif %}
+
+        <table class="entries-table">
+            <thead>
+                <tr>
+                    <th id="c1h{{ forloop.counter }}">
+                        <button onclick="change_visibility('c1', '{{ forloop.counter }}')">Время</button>
+                    </th>
+                    <th id="c2h{{ forloop.counter }}">
+                        <button onclick="change_visibility('c2', '{{ forloop.counter }}')">Предмет</button>
+                    </th>
+                    <th id="c3h{{ forloop.counter }}">
+                        <button onclick="change_visibility('c3', '{{ forloop.counter }}')">Группа</button>
+                    </th>
+                    <th id="c4h{{ forloop.counter }}">
+                        <button onclick="change_visibility('c4', '{{ forloop.counter }}')">Преподаватель</button>
+                    </th>
+                    <th id="c5h{{ forloop.counter }}">
+                        <button onclick="change_visibility('c5', '{{ forloop.counter }}')">Аудитория</button>
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for event in entry %}
+                    <tr name="r{{ forloop.parentloop.counter }}">
+                        <td name="c1d{{ forloop.parentloop.counter }}" {% if event.is_event_canceled %} class="canceled-cell" {% endif %}>
+                            {{ event.time_slot_override.start_time }} - {{ event.time_slot_override.end_time }}
+                        </td>
+                        {% if row_spans|get_list_item:forloop.counter != 0 %}
+                            <td 
+                                {% if entry|is_full_row_canceled:forloop.counter %} class="canceled-cell" {% endif %} 
+                                name="c2d{{ forloop.parentloop.counter }}" rowspan="{{ row_spans|get_list_item:forloop.counter }}"
+                            >
+                                {{ event.subject_override }}
+                                {% if event.kind_override %}
+                                    <br><i>{{ event.kind_override }}</i>
+                                {% endif %}
+                                {% if event.abstract_event.holds_on_date %}
+                                    {% if not event.kind_override %}
+                                        <br>
+                                    {% endif %}
+                                    <i>только {{ event.abstract_event.holds_on_date }}</i>
+                                {% endif %}
+                            </td>
+                            <td 
+                                {% if entry|is_full_row_canceled:forloop.counter %} class="canceled-cell" {% endif %} 
+                                name="c3d{{ forloop.parentloop.counter }}" rowspan="{{ row_spans|get_list_item:forloop.counter }}"
+                            >
+                                {% for group in event.get_groups.all %}
+                                    {{ group.name }}<br>
+                                {% endfor %}
+                            </td>
+                            <td 
+                                {% if entry|is_full_row_canceled:forloop.counter %} class="canceled-cell" {% endif %}
+                                name="c4d{{ forloop.parentloop.counter }}" rowspan="{{ row_spans|get_list_item:forloop.counter }}"
+                            >
+                                {% for teacher in event.get_teachers.all %}
+                                    {{ teacher.name }}<br>
+                                {% endfor %}
+                            </td>
+                            <td 
+                                {% if entry|is_full_row_canceled:forloop.counter %} class="canceled-cell" {% endif %}
+                                name="c5d{{ forloop.parentloop.counter }}" rowspan="{{ row_spans|get_list_item:forloop.counter }}"
+                            >
+                                {% for place in event.places_override.all %}
+                                    {{ place }}<br>
+                                {% endfor %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endfor %}
