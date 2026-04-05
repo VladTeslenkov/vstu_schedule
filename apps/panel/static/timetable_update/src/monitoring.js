@@ -352,7 +352,7 @@ async function runClear() {
 
 /* ===== СКАЧИВАНИЕ ФАЙЛА ===== */
 function downloadResource(resourceId) {
-  window.location.href = `${MONITOR_BASE}monitor/download/${resourceId}/`;
+  window.location.href = `${MONITOR_BASE}download/${resourceId}/`;
 }
 
 /* ===== POLLING ===== */

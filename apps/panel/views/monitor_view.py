@@ -63,6 +63,11 @@ def monitoring_stats(request: HttpRequest) -> JsonResponse:
     )
     for r in resources:
         r["last_update"] = r["last_update"].isoformat() if r["last_update"] else None
+        if r["path"]:
+            resource_dir = settings.DATA_STORAGE_DIR / r["path"].strip("/")
+            r["has_file"] = resource_dir.exists() and any(resource_dir.rglob("*"))
+        else:
+            r["has_file"] = False
 
     return JsonResponse({
         "stats": {
