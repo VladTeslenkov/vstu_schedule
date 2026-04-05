@@ -1,8 +1,6 @@
-import hashlib
 import logging
 import os
 import shutil
-from datetime import datetime
 from pathlib import Path
 
 from django.conf import settings
@@ -17,7 +15,7 @@ logger = logging.getLogger(__name__)
 class FileManager:
     """
     Управляет процессом обновления расписания:
-    скачивает файлы с сайта, сравнивает хэши с предыдущими версиями,
+    скачивает файлы с сайта, сравнивает с предыдущими версиями,
     сохраняет новые файлы локально и создаёт записи в БД.
     """
 
@@ -40,7 +38,7 @@ class FileManager:
     def update_timetable(self) -> None:
         """
         Основной метод: обходит все ссылки, скачивает файлы,
-        проверяет изменения по хэшу и сохраняет новые версии.
+        проверяет изменения и сохраняет новые версии.
         """
         logger.info("Starting timetable update")
         used_resource_ids: set[int] = set()
@@ -63,7 +61,7 @@ class FileManager:
                 resource_type = "Занятия" if ind == 0 else "Экзамены"
 
                 try:
-                    resource, file_version = self._process_file(file_data, file_path, resource_type)
+                    resource = self._process_file(file_data, file_path, resource_type)
                     if resource:
                         used_resource_ids.add(resource.id)
                 except Exception as e:
@@ -82,58 +80,62 @@ class FileManager:
 
     def _process_file(
         self, file_data: FileData, file_path: Path, resource_type: str
-    ) -> tuple[Resource | None, FileVersion | None]:
+    ) -> Resource | None:
         """
         Обрабатывает скачанный файл:
         - получает или создаёт Resource
-        - сравнивает хэш с последней версией
-        - если файл изменился — сохраняет его локально и создаёт FileVersion
+        - сравнивает URL и хэш с последней версией
+        - если файл изменился — сохраняет локально и создаёт FileVersion
         """
-        resource = self._get_or_create_resource(file_data, resource_type)
+        new_resource = file_data.get_resource(resource_type)
         new_version = file_data.get_file_version(file_path)
+
+        resource_from_db = Resource.objects.filter(
+            path=new_resource.path, name=new_resource.name
+        ).first()
+
+        # Новый ресурс — сохраняем сразу
+        if resource_from_db is None:
+            logger.info(f"New resource: {new_resource.name}")
+            new_resource.save()
+            new_version.resource = new_resource
+            new_version.save()
+            self._save_file_locally(file_path, new_resource)
+            return new_resource
+
+        # Ресурс существует — снимаем deprecated если был
+        resource = resource_from_db
+        if resource.deprecated:
+            resource.deprecated = False
+            resource.save()
 
         last_version = (
             FileVersion.objects.filter(resource=resource)
-            .order_by("-timestamp")
+            .order_by("-last_changed", "-timestamp")
             .first()
         )
 
-        if last_version is not None and last_version.hashsum == new_version.hashsum:
+        # URL изменился или версий ещё нет — создаём новую версию
+        if last_version is None or last_version.url != new_version.url:
+            logger.info(f"URL changed or no version exists for: {resource.name}")
+            new_version.resource = resource
+            new_version.save()
+            self._save_file_locally(file_path, resource)
+            return resource
+
+        # URL тот же — проверяем хэш
+        if last_version.hashsum != new_version.hashsum:
+            logger.info(f"Hash changed for: {resource.name}")
+            new_version.resource = resource
+            new_version.save()
+            self._save_file_locally(file_path, resource)
+        else:
             logger.info(f"No changes detected for: {resource.name}")
-            return resource, None
-
-        logger.info(f"New version detected for: {resource.name}, saving file")
-        self._save_file_locally(file_path, resource)
-
-        new_version.resource = resource
-        new_version.save()
-        logger.info(f"FileVersion created: id={new_version.id}")
-
-        return resource, new_version
-
-    def _get_or_create_resource(self, file_data: FileData, resource_type: str) -> Resource:
-        """
-        Ищет существующий Resource по пути или создаёт новый.
-        Снимает флаг deprecated если ресурс был помечен устаревшим.
-        """
-        correct_path = file_data.get_correct_path()
-        resource = Resource.objects.filter(path=correct_path).first()
-
-        if resource is None:
-            resource = file_data.get_resource(resource_type)
-            resource.save()
-            logger.debug(f"Created new resource: {resource.name}")
-        elif resource.deprecated:
-            resource.deprecated = False
-            resource.save()
 
         return resource
 
     def _save_file_locally(self, file_path: Path, resource: Resource) -> Path:
-        """
-        Сохраняет файл в DATA_STORAGE_DIR по пути ресурса.
-        Возвращает итоговый путь к сохранённому файлу.
-        """
+        """Сохраняет файл в DATA_STORAGE_DIR по пути ресурса."""
         dest_dir = self._storage_dir / (resource.path or resource.name)
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_file = dest_dir / file_path.name

@@ -7,14 +7,14 @@ from pathlib import Path
 from urllib.parse import unquote
 
 import requests
-from openpyxl import load_workbook
+from django.conf import settings
 
 from apps.common.models import Resource, FileVersion, Tag
 from .stringlistanalyzer import StringListAnalyzer
 
 logger = logging.getLogger(__name__)
 
-_CONFIG_PATH = Path(__file__).resolve().parents[4] / "apps" / "common" / "config" / "file_data_config.json"
+_CONFIG_PATH = settings.BASE_DIR / "apps" / "common" / "config" / "file_data_config.json"
 
 with _CONFIG_PATH.open(encoding="utf-8") as _f:
     _CONFIG = json.load(_f)
@@ -58,12 +58,8 @@ class FileData:
         return self.__mimetype_from_url
 
     def get_file_name(self) -> str:
-        """Возвращает краткое имя файла для сохранения на диск."""
-        name = self.__name_from_url_with_mimetype
-        words = name.split()
-        abbr = "".join(word[0].upper() for word in words)
-        suffix = Path(name).suffix
-        return abbr + suffix
+        """Возвращает оригинальное имя файла из URL для сохранения на диск."""
+        return self.__name_from_url_with_mimetype
 
     def get_correct_path(self) -> str:
         path = self.__correct_path
@@ -163,15 +159,7 @@ class FileData:
 
     @classmethod
     def __get_file_hash(cls, file_path: Path) -> str:
-        if file_path.suffix in cls._EXCEL_EXTENSION:
-            return cls.__get_excel_file_hash(file_path)
         return cls.__get_bin_file_hash(file_path)
-
-    @classmethod
-    def __get_excel_file_hash(cls, file_path: Path) -> str:
-        wb = load_workbook(str(file_path), data_only=True)
-        data = [tuple(row) for sheet in wb.worksheets for row in sheet.iter_rows(values_only=True)]
-        return hashlib.sha256(str(data).encode("utf-8")).hexdigest()
 
     @staticmethod
     def __get_bin_file_hash(file_path: Path) -> str:
@@ -267,7 +255,7 @@ class FileData:
     @classmethod
     def _get_course_list(cls, name: str) -> list[int]:
         """Извлекает список номеров курсов из имени файла."""
-        parts = cls.split_string_by_delimiters(name.lower())
+        parts = [p for p in cls.split_string_by_delimiters(name.lower()) if p.strip()]
         result = []
         for i, part in enumerate(parts):
             if any(cw in part for cw in cls._COURSE_WORDS) and i + 1 < len(parts):

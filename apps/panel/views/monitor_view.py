@@ -92,12 +92,16 @@ def download_resource(request: HttpRequest, resource_id: int) -> FileResponse | 
     if not resource.path:
         raise Http404("Путь к файлу не задан")
 
-    resource_dir = settings.DATA_STORAGE_DIR / resource.path
+    # Нормализуем путь — убираем ведущий/завершающий слэш
+    resource_path = resource.path.strip("/")
+    resource_dir = settings.DATA_STORAGE_DIR / resource_path
+
     if not resource_dir.exists():
         raise Http404("Директория ресурса не найдена в хранилище")
 
+    # Ищем все файлы рекурсивно
     files = sorted(
-        (f for f in resource_dir.iterdir() if f.is_file()),
+        (f for f in resource_dir.rglob("*") if f.is_file()),
         key=lambda f: f.stat().st_mtime,
         reverse=True,
     )
@@ -105,6 +109,8 @@ def download_resource(request: HttpRequest, resource_id: int) -> FileResponse | 
         raise Http404("Файлы в директории ресурса отсутствуют")
 
     file_path: Path = files[0]
+    # Отдаём файл под оригинальным именем ресурса
+    original_name = resource.name + file_path.suffix
     content_type, _ = mimetypes.guess_type(str(file_path))
     content_type = content_type or "application/octet-stream"
 
@@ -112,7 +118,7 @@ def download_resource(request: HttpRequest, resource_id: int) -> FileResponse | 
     return FileResponse(
         open(file_path, "rb"),
         as_attachment=True,
-        filename=file_path.name,
+        filename=original_name,
         content_type=content_type,
     )
 
