@@ -2,8 +2,8 @@
 
 /* ===== КОНСТАНТЫ ===== */
 const CSRF = getCsrf();
-const BASE = "/panel/";
-const MONITOR_BASE = "/panel/timetable_update/";
+/** Базовый префикс API обновления расписания (см. apps.panel.urls) */
+const TIMETABLE_UPDATE_API = "/panel/timetable_update/";
 const POLL_INTERVAL_MS = 2000;
 const AUTO_REFRESH_MS = 30_000;
 
@@ -60,7 +60,7 @@ function resumePendingTask() {
 /* ===== ЗАГРУЗКА ДАННЫХ ===== */
 async function loadData() {
   try {
-    const res = await fetch(`${MONITOR_BASE}stats`);
+    const res = await fetch(`${TIMETABLE_UPDATE_API}stats/`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
@@ -186,7 +186,7 @@ async function runUpdate() {
   showStatus("taskStatus", "running", "Запускаем задачу обновления...");
 
   try {
-    const res = await fetch(`${BASE}update_timetable`, {
+    const res = await fetch(`${TIMETABLE_UPDATE_API}update_timetable/`, {
       method: "POST",
       headers: { "X-CSRFToken": CSRF },
       body: new FormData(),
@@ -267,7 +267,7 @@ async function applySettings() {
     );
     formData.append("rootUrl", document.getElementById("rootUrl").value);
 
-    const res = await fetch(`${BASE}settings`, {
+    const res = await fetch(`${TIMETABLE_UPDATE_API}settings/`, {
       method: "POST",
       headers: { "X-CSRFToken": CSRF },
       body: formData,
@@ -315,7 +315,7 @@ async function runClear() {
     formData.append("action", "dell");
     formData.append("component", component);
 
-    const res = await fetch(`${BASE}manage_storage`, {
+    const res = await fetch(`${TIMETABLE_UPDATE_API}manage_storage/`, {
       method: "POST",
       headers: { "X-CSRFToken": CSRF },
       body: formData,
@@ -352,7 +352,7 @@ async function runClear() {
 
 /* ===== СКАЧИВАНИЕ ФАЙЛА ===== */
 function downloadResource(resourceId) {
-  window.location.href = `${MONITOR_BASE}download/${resourceId}/`;
+  window.location.href = `${TIMETABLE_UPDATE_API}download/${resourceId}/`;
 }
 
 /* ===== POLLING ===== */
@@ -361,7 +361,9 @@ function pollTask(taskId, endpoint, statusElemId, onSuccess, onError) {
 
   pollTimer = setInterval(async () => {
     try {
-      const res = await fetch(`${BASE}${endpoint}?task_id=${taskId}`);
+      const res = await fetch(
+        `${TIMETABLE_UPDATE_API}${endpoint}/?task_id=${taskId}`,
+      );
       const data = await res.json();
 
       if (data.status === "running") return;

@@ -21,15 +21,18 @@ services:
   web:
     build: .
     image: vstu_schedule:latest
+    # В продакшене убрать --reload
     command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --reload
     ports:
       - "8000:8000"
     volumes:
+      # Поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
       - .:/app
       - static_volume:/app/static
       - media_volume:/app/media
       - ./logs:/app/logs
       - data_volume:/app/data
+      # Скрыть .venv хоста внутри контейнера. УБРАТЬ В ПРОДАКШЕНЕ
       - /app/.venv
     env_file: .env
     depends_on:
@@ -64,6 +67,7 @@ services:
       redis:
         condition: service_healthy
 
+  # Опциональный фронт: docker compose --profile prod up — nginx на :80 перед приложением
   nginx:
     image: nginx:1.27-alpine
     restart: always

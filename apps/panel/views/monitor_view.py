@@ -7,7 +7,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 
-from apps.common.models import Resource, FileVersion, Setting
+from apps.common.models import FileVersion, Resource, Setting
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +26,14 @@ def monitoring_panel(request: HttpRequest) -> HttpResponse:
         or "https://www.vstu.ru/student/raspisaniya/zanyatiy/"
     )
 
-    return render(request, "timetable_update/monitoring.html", {
-        "time_update_value": time_update,
-        "analyze_url_value": analyze_url,
-    })
+    return render(
+        request,
+        "timetable_update/monitoring.html",
+        {
+            "time_update_value": time_update,
+            "analyze_url_value": analyze_url,
+        },
+    )
 
 
 @staff_member_required
@@ -49,8 +53,16 @@ def monitoring_stats(request: HttpRequest) -> JsonResponse:
     recent_versions = list(
         FileVersion.objects.select_related("resource")
         .order_by("-timestamp")[:20]
-        .values("id", "timestamp", "last_changed", "mimetype", "hashsum",
-                "resource__name", "resource__path", "resource__deprecated")
+        .values(
+            "id",
+            "timestamp",
+            "last_changed",
+            "mimetype",
+            "hashsum",
+            "resource__name",
+            "resource__path",
+            "resource__deprecated",
+        )
     )
     for v in recent_versions:
         v["timestamp"] = v["timestamp"].isoformat() if v["timestamp"] else None
@@ -58,8 +70,9 @@ def monitoring_stats(request: HttpRequest) -> JsonResponse:
         v["hashsum_short"] = v["hashsum"][:12] if v["hashsum"] else None
 
     resources = list(
-        Resource.objects.order_by("deprecated", "-last_update")
-        .values("id", "name", "path", "deprecated", "last_update")
+        Resource.objects.order_by("deprecated", "-last_update").values(
+            "id", "name", "path", "deprecated", "last_update"
+        )
     )
     for r in resources:
         r["last_update"] = r["last_update"].isoformat() if r["last_update"] else None
@@ -69,18 +82,20 @@ def monitoring_stats(request: HttpRequest) -> JsonResponse:
         else:
             r["has_file"] = False
 
-    return JsonResponse({
-        "stats": {
-            "total_resources": total_resources,
-            "active_resources": active_resources,
-            "deprecated_resources": deprecated_resources,
-            "total_versions": total_versions,
-            "last_update_time": last_update_time,
-        },
-        "scheduler": _get_scheduler_info(),
-        "recent_versions": recent_versions,
-        "resources": resources,
-    })
+    return JsonResponse(
+        {
+            "stats": {
+                "total_resources": total_resources,
+                "active_resources": active_resources,
+                "deprecated_resources": deprecated_resources,
+                "total_versions": total_versions,
+                "last_update_time": last_update_time,
+            },
+            "scheduler": _get_scheduler_info(),
+            "recent_versions": recent_versions,
+            "resources": resources,
+        }
+    )
 
 
 @staff_member_required
@@ -92,7 +107,7 @@ def download_resource(request: HttpRequest, resource_id: int) -> FileResponse | 
     try:
         resource = Resource.objects.get(id=resource_id)
     except Resource.DoesNotExist:
-        raise Http404("Ресурс не найден")
+        raise Http404("Ресурс не найден") from None
 
     if not resource.path:
         raise Http404("Путь к файлу не задан")
@@ -135,6 +150,7 @@ def _get_scheduler_info() -> dict:
     """Возвращает информацию о периодической задаче из Celery Beat."""
     try:
         from django_celery_beat.models import PeriodicTask
+
         task = PeriodicTask.objects.filter(name="Автообновление расписания").first()
         if not task:
             return {"configured": False}
