@@ -85,7 +85,7 @@ class EventPlace(CommonModel):
         return f"{self.building} {self.room}"
 
     def get_absolute_url(self):
-        return reverse("admin:api_eventplace_change", args=[self.pk])
+        return reverse("admin:common_eventplace_change", args=[self.pk])
 
 
 class EventKind(CommonModel):
@@ -283,7 +283,7 @@ class EventParticipant(CommonModel):
         return f"{self.name} ({self.role})"
 
     def get_absolute_url(self):
-        return reverse("admin:api_eventparticipant_change", args=[self.pk])
+        return reverse("admin:common_eventparticipant_change", args=[self.pk])
 
 
 class AbstractEventChanges(CommonModel):
@@ -457,10 +457,6 @@ class AbstractEvent(CommonModel):
         # Calling here because need updated AbstractEvent reference inside Events
         refresh_related_events(self, update_m2m=False)
 
-
-    def get_absolute_url(self):
-        return reverse("admin:api_abstractevent_change", args=[self.pk])
-
     @property
     def department(self):
         """Returns Event Department
@@ -476,6 +472,9 @@ class AbstractEvent(CommonModel):
         """Filter and returns teachers from participants 
         """
         return self.participants.filter(role__in=[EventParticipant.Role.TEACHER, EventParticipant.Role.ASSISTANT])
+    
+    def get_absolute_url(self):
+        return reverse("admin:common_abstractevent_change", args=[self.pk])
 
     def generate_changes_on_creating(self):
         """Create AbstractEventChange model

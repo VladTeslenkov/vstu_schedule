@@ -16,13 +16,17 @@ from apps.common.services.timetable.utilities.model_helpers import (
     is_abstract_event_already_exists,
 )
 from apps.common.services.timetable.utilities.normalizers import (
+    normalize_kind_name,
+    normalize_participant_name,
     normalize_place_building_and_room,
     normalize_scope,
+    normalize_subject_name,
     normalize_time_slot_display_name,
 )
 from apps.common.services.timetable.utilities.utilities import (
     get_number_from_month_name,
     get_scope_from_label,
+    replace_roman_with_arabic_numerals,
 )
 from apps.common.services.timetable.write.factories import (
     create_abstract_event,
@@ -32,18 +36,6 @@ from apps.common.services.timetable.write.factories import (
 
 class EventImporterLegacy:
     SUBJECT_NORMALIZATION_CAPITALIZE = False
-
-    @staticmethod
-    def _normalize_subject_name(name : str) -> str:
-        return name.strip()
-
-    @staticmethod
-    def _normalize_kind_name(kind : str) -> str:
-        return kind.strip().capitalize()
-
-    @staticmethod
-    def _normalize_participant_name(name : str) -> str:
-        return name.strip()
 
     @classmethod
     def _collect_reference_data(cls, entries) -> dict:
@@ -58,17 +50,17 @@ class EventImporterLegacy:
         time_slots : set[str] = set()
 
         for entry in entries:
-            subjects.add(cls._normalize_subject_name(entry["subject"]))
-            kinds.add(cls._normalize_kind_name(entry["kind"]))
+            subjects.add(normalize_subject_name(entry["subject"]))
+            kinds.add(normalize_kind_name(entry["kind"]))
 
             for teacher_name in entry.get("participants", {}).get("teachers", []):
-                normalized_teacher_name = cls._normalize_participant_name(teacher_name)
+                normalized_teacher_name = normalize_participant_name(teacher_name)
 
                 if normalized_teacher_name:
                     teacher_names.add(normalized_teacher_name)
 
             for group_name in entry.get("participants", {}).get("student_groups", []):
-                normalized_group_name = cls._normalize_participant_name(group_name)
+                normalized_group_name = normalize_participant_name(group_name)
 
                 if normalized_group_name:
                     group_names.add(normalized_group_name)
@@ -242,7 +234,7 @@ class EventImporterLegacy:
         """Applies data from loaded JSON on database
         """
         
-        schedule = cls.find_schedule(title)
+        schedule = cls.find_schedule(replace_roman_with_arabic_numerals(title))
         reference_data = cls._collect_reference_data(entries)
         cls._ensure_reference_data(reference_data)
         reference_lookup = cls._build_reference_lookup(reference_data)
@@ -398,12 +390,12 @@ class EventImporterLegacy:
         week_id = entry["week"]
         week_day_index = entry["week_day_index"]
 
-        kind_name = cls._normalize_kind_name(entry["kind"])
+        kind_name = normalize_kind_name(entry["kind"])
         kind = reference_lookup["kinds"].get(kind_name)
         if kind is None:
             raise EventKind.DoesNotExist(f"Тип события '{kind_name}' не найден после подготовки справочников.")
 
-        subject_name = cls._normalize_subject_name(entry["subject"])
+        subject_name = normalize_subject_name(entry["subject"])
         subject = reference_lookup["subjects"].get(subject_name)
         if subject is None:
             raise Subject.DoesNotExist(f"Предмет '{subject_name}' не найден после подготовки справочников.")
@@ -412,7 +404,7 @@ class EventImporterLegacy:
         missing_participants = []
 
         for teacher_name in entry.get("participants", {}).get("teachers", []):
-            normalized = cls._normalize_participant_name(teacher_name)
+            normalized = normalize_participant_name(teacher_name)
             participant = reference_lookup["participants"].get(normalized)
             if participant:
                 participants.append(participant)
@@ -420,7 +412,7 @@ class EventImporterLegacy:
                 missing_participants.append(normalized)
 
         for group_name in entry.get("participants", {}).get("student_groups", []):
-            normalized = cls._normalize_participant_name(group_name)
+            normalized = normalize_participant_name(group_name)
             participant = reference_lookup["participants"].get(normalized)
             if participant:
                 participants.append(participant)
@@ -545,18 +537,29 @@ class EventImporterLegacy:
         # 4 курс
         # 4курса
         # 4   курса
-        COURSE_REG_EX = r"(\d)\s*курса?"
+        # 1ый курс
+        # 5-ого курса
+        # 3-го курса
+        COURSE_REG_EX = r"(\d)(\-?[а-яА-ЯёЁ]*)?\s*курса?"
+
         # ФЭВТ
         # ТК
         # курсФЭВТна
         # TODO: ФАСТиВ
         FACULTY_REG_EX = r"[А-ЯЁ]{2,}"
+
         # 2 семестр
         # 2семестр
         # 2   семестр
-        SEMESTER_REG_EX = r"(\d)\s*семестр"
+        # 2-ой семестр
+        # 2-й семестр
+        # 1ый семестр
+        SEMESTER_REG_EX = r"(\d)(\-?[а-яА-ЯёЁ]*)?\s*семестра?"
+
         # 2024-2025
+        # 2024 -  2025
         FULL_YEARS_REG_EX = r"(\d{4}\s*-\s*\d{4})"
+
         # Бакалавры
         # бакалавриат
         # магистратура

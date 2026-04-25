@@ -1,5 +1,5 @@
 from django.utils.html import format_html
-from django.utils.safestring import SafeText
+from django.utils.safestring import SafeText, mark_safe
 
 from apps.common.models import AbstractEvent
 
@@ -28,8 +28,8 @@ def check_abstract_event(abstract_event : AbstractEvent) -> tuple[bool, SafeText
             is_anything_found = True
 
             message += m
-            message += format_html("<br>")
-    message = format_html(message[:-4])
+            message += mark_safe("<br>")
+    message = mark_safe(message[:-4])
 
     return is_anything_found, message
 
@@ -52,14 +52,14 @@ def check_for_participants_duplicate(abstract_event : AbstractEvent) -> tuple[bo
         if not other_aes.exists():
             return False, None
         
-        return_message = format_html(PARTICIPANTS_BASE_MESSAGE)
+        return_message = mark_safe(PARTICIPANTS_BASE_MESSAGE)
         
         for ae in other_aes:
-            p_urls = format_html("")
+            p_urls = mark_safe("")
             
             for p in abstract_event.participants.filter(pk__in=ae.participants.values_list("pk", flat=True)):
                 p_urls += format_html(PARTICIPANT_MESSAGE_TEMPLATE, p.get_absolute_url(), str(p.name))
-            p_urls = format_html(p_urls[:-2])
+            p_urls = mark_safe(p_urls[:-2])
             
             return_message += format_html(DUPLICATE_MESSAGE_TEMPLATE, ae.get_absolute_url(), str(ae), p_urls)
 
@@ -84,14 +84,14 @@ def check_for_places_duplicate(abstract_event : AbstractEvent) -> tuple[bool, Sa
         if not other_aes.exists():
             return False, None
         
-        return_message = format_html(PLACES_BASE_MESSAGE)
+        return_message = mark_safe(PLACES_BASE_MESSAGE)
         
         for ae in other_aes:
-            p_urls = format_html("")
+            p_urls = mark_safe("")
             
             for p in abstract_event.places.filter(pk__in=ae.places.values_list("pk", flat=True)):
                 p_urls += format_html(PLACE_MESSAGE_TEMPLATE, p.get_absolute_url(), str(p))
-            p_urls = format_html(p_urls[:-2])
+            p_urls = mark_safe(p_urls[:-2])
             
             return_message += format_html(DUPLICATE_MESSAGE_TEMPLATE, ae.get_absolute_url(), str(ae), p_urls)
 
