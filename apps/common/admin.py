@@ -2,7 +2,7 @@ from typing import Any, ClassVar, cast
 
 from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseBase, HttpResponseRedirect
 from django.urls import path
 from django.utils import timezone
 
@@ -330,19 +330,42 @@ class AbstractEventChangesAdmin(BaseAdmin):
 
         return response
 
-    def changelist_view(self, request, extra_context = None):
-        """Allows user to interact with specified actions without selecting models
-        """
+    def _get_requested_action_name(self, request: HttpRequest) -> str | None:
+        try:
+            action_index = int(request.POST.get("index", 0))
+        except ValueError:
+            action_index = 0
 
-        if "action" in request.POST and request.POST["action"] in ["export_not_exported", "delete_exported"]:
-            post = request.POST.copy()
+        try:
+            return request.POST.getlist("action")[action_index]
+        except IndexError:
+            return None
 
-            # makes request never empty
-            post.update({ admin.helpers.ACTION_CHECKBOX_NAME : "0" })
+    def response_action(self, request: HttpRequest, queryset) -> HttpResponse | None:
+        action_name = self._get_requested_action_name(request)
+        if action_name not in self.actions_without_selection or request.POST.getlist(
+            ACTION_CHECKBOX_NAME
+        ):
+            return super().response_action(request, queryset)
 
-            request._set_post(post) # TODO: это не очень хорошо
+        data = request.POST.copy()
+        data.pop(ACTION_CHECKBOX_NAME, None)
+        data.pop("index", None)
+        data.update({"action": action_name})
 
-        return super(AbstractEventChangesAdmin, self).changelist_view(request, extra_context)
+        action_form = self.action_form(data, auto_id=None)
+        action_form.fields["action"].choices = self.get_action_choices(request)
+        if not action_form.is_valid():
+            return super().response_action(request, queryset)
+
+        action = self.get_actions(request).get(action_form.cleaned_data["action"])
+        if action is None:
+            return super().response_action(request, queryset)
+
+        response = action[0](self, request, queryset)
+        if isinstance(response, HttpResponseBase):
+            return cast(HttpResponse, response)
+        return HttpResponseRedirect(request.get_full_path())
 
 
 @admin.register(AbstractEvent)
