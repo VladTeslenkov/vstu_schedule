@@ -18,48 +18,47 @@ from apps.common.services.timetable.utilities.utilities import (
 
 
 @register.filter
-def get_list_item(list_ : list, i : int) -> int:
+def get_list_item(list_ : list, i : int) -> int | None:
     """Used to get list element from templates
     """
-
     try:
         # i - 1 because template counter starts from 1
         return list_[i - 1]
     except IndexError:
         return None
-    
+
 @register.filter
 def is_full_row_canceled(entry_events : list[Event], i : int) -> bool:
     """Used to make canceled full table row
     in situations where row consists of two Events
     """
-    
+
     try:
         # i - 1 because template counter starts from 1
 
         # if next Event is the same
         # full cancel when both Events canceled
         if (
-            is_events_follow_each_other(entry_events[i - 1], entry_events[i]) and 
+            is_events_follow_each_other(entry_events[i - 1], entry_events[i]) and
             is_similar_events(entry_events[i - 1], entry_events[i])
         ):
             return entry_events[i - 1].is_event_canceled and entry_events[i].is_event_canceled
-        
-        # Otherwise when next Event different 
+
+        # Otherwise when next Event different
         return entry_events[i - 1].is_event_canceled
     except IndexError:
         # Out of range
         # Current event the last one
         return entry_events[i - 1].is_event_canceled
-    
+
 @register.filter
 def is_time_slot_already_selected(time_slot : str, selected_time_slots : str|list[str]) -> bool:
     """Used to checks is given time slots considered as selected
-    
+
     Created to prevent situations where
     '8:30' sets selected as '18:30'
     """
-    
+
     if type(selected_time_slots) is list:
         return time_slot in selected_time_slots
     else:
@@ -80,7 +79,7 @@ def index(request):
             selected["left_date"] = request.POST.get("left_date") or ""
         else:
             selected["left_date"] = ""
-        
+
         if "right_date" in request.POST:
             selected["right_date"] = request.POST.get("right_date") or ""
         else:

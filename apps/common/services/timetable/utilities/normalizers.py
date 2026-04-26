@@ -5,13 +5,13 @@ def normalize_place_building_and_room(building_and_room : str) -> tuple[str, str
     """Take Place building and room and convert it into acceptable format
 
     Place must be in format: {building}{room} separated by
-    ' ' or ',' or '-'         
-    
+    ' ' or ',' or '-'
+
     Returns None if no room given
 
     If no building given, first string will be empty: ("", {room})
     """
-    
+
     if building_and_room is None:
         return None
 
@@ -19,7 +19,7 @@ def normalize_place_building_and_room(building_and_room : str) -> tuple[str, str
 
     if not place:
         return None
-    
+
     # SPACE should be always the last one
     for separator in [",", "-", " "]:
         if separator in place:
@@ -29,7 +29,7 @@ def normalize_place_building_and_room(building_and_room : str) -> tuple[str, str
 
             if room:
                 return building, room
-            
+
             return None
 
     return "", place
@@ -53,18 +53,18 @@ def normalize_time_slot_display_name(display_name : str) -> tuple[str, str, str]
 
     if display_name is None:
         return None
-    
+
     time_slot = display_name.strip()
 
     if not time_slot:
         return None
-    
+
     # check for alt_name format
     match_ = re.search(ALT_NAME_REG_EX, time_slot)
 
     if match_:
         return match_[0], "", ""
-    
+
     time_slot = time_slot.replace(".", ":")
 
     for separator in ["-", " "]:
@@ -72,7 +72,7 @@ def normalize_time_slot_display_name(display_name : str) -> tuple[str, str, str]
             start_time, end_time = time_slot.split(separator, 1)
 
             return "", start_time.strip(), end_time.strip()
-    
+
     return "", time_slot, ""
 
 def normalize_subject_name(name : str) -> str:

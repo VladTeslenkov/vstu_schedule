@@ -1,4 +1,4 @@
-from django.db.models.signals import m2m_changed, pre_delete, pre_init, pre_save
+from django.db.models.signals import m2m_changed, post_init, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -18,33 +18,71 @@ from apps.common.services.timetable.write.factories import (
 )
 
 
-@receiver(pre_save, sender=CommonModel)
 def update_datemodified(sender, instance, **kwargs):
+    update_fields = kwargs.get("update_fields")
+    if update_fields is not None and set(update_fields) == {"dateaccessed"}:
+        return
+
+    now = timezone.now()
+
     if instance.pk:
-        original = sender.objects.get(pk=instance.pk)
+        fields = [
+            field
+            for field in instance._meta.concrete_fields
+            if field.name not in {"datemodified", "dateaccessed"}
+        ]
+        original = (
+            sender.objects.filter(pk=instance.pk)
+            .values(*(field.attname for field in fields))
+            .first()
+        )
+
+        if original is None:
+            instance.datemodified = now
+            return
+
         has_changes = any(
-            getattr(original, field) != getattr(instance, field)
-            for field in instance._meta.get_fields()
-            if field.name != 'datemodified'
+            original[field.attname] != getattr(instance, field.attname) for field in fields
         )
         if has_changes:
-            instance.datemodified = timezone.now()
+            instance.datemodified = now
     else:
-        instance.datemodified = timezone.now()
+        instance.datemodified = now
 
 
-@receiver(pre_init, sender=CommonModel)
-def update_dateaccessed(sender, *args, **kwargs):
-    instance = kwargs.get('instance')
-    if instance and instance.pk:
-        instance.dateaccessed = timezone.now()
-        instance.save(update_fields=['dateaccessed'])
+def update_dateaccessed(sender, instance, **kwargs):
+    if not instance.pk:
+        return
+
+    instance.dateaccessed = timezone.now()
+
+
+def _common_model_subclasses(model):
+    for subclass in model.__subclasses__():
+        yield subclass
+        yield from _common_model_subclasses(subclass)
+
+
+def register_common_model_signals():
+    for model in _common_model_subclasses(CommonModel):
+        if model._meta.abstract:
+            continue
+
+        pre_save.connect(
+            update_datemodified,
+            sender=model,
+            dispatch_uid=f"apps.common.update_datemodified.{model._meta.label_lower}",
+        )
+        post_init.connect(
+            update_dateaccessed,
+            sender=model,
+            dispatch_uid=f"apps.common.update_dateaccessed.{model._meta.label_lower}",
+        )
 
 
 @receiver(m2m_changed, sender=AbstractEvent.participants.through)
 def participants_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
-    """Writes AbstractEvent participants changes and update related Events
-    """
+    """Writes AbstractEvent participants changes and update related Events"""
 
     if action == "pre_add" or action == "pre_remove":
         if not instance.changes:
@@ -57,15 +95,16 @@ def participants_changed(sender, instance, action, reverse, model, pk_set, **kwa
         refresh_related_events(instance, update_non_m2m=False)
 
         instance.changes.group = AbstractEventChanges.str_from_participants(instance.get_groups())
-        instance.changes.final_teachers = AbstractEventChanges.str_from_participants(instance.get_teachers())
+        instance.changes.final_teachers = AbstractEventChanges.str_from_participants(
+            instance.get_teachers()
+        )
 
         instance.changes.save()
 
 
 @receiver(m2m_changed, sender=AbstractEvent.places.through)
 def places_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
-    """Writes AbstractEvent places changes and update related Events
-    """
+    """Writes AbstractEvent places changes and update related Events"""
 
     if action == "pre_add" or action == "pre_remove":
         if not instance.changes:
@@ -94,7 +133,7 @@ def on_abstract_event_pre_save(sender, instance, **kwargs):
 
 
 @receiver(pre_delete, sender=AbstractEvent)
-def on_abstract_event_delete(sender, instance, **kwargs): 
+def on_abstract_event_delete(sender, instance, **kwargs):
     if instance.changes and instance.changes.is_created and not instance.changes.is_exported:
         instance.changes.delete()
 
@@ -120,7 +159,7 @@ def on_event_cancel_date_override(sender, instance, **kwargs):
     if previous_cancel.date != instance.date:
         from apps.common.selectors import Selector
 
-        reader = Selector({"event_cancel" : previous_cancel})
+        reader = Selector({"event_cancel": previous_cancel})
         reader.find_models(Event)
 
         for e in reader.get_found_models():
@@ -131,7 +170,7 @@ def on_event_cancel_date_override(sender, instance, **kwargs):
 def on_event_cancel_delete(sender, instance, **kwargs):
     from apps.common.selectors import Selector
 
-    reader = Selector({"event_cancel" : instance})
+    reader = Selector({"event_cancel": instance})
     reader.find_models(Event)
     for e in reader.get_found_models():
         apply_event_cancel(None, e)
@@ -151,7 +190,7 @@ def on_date_override_source_override(sender, instance, **kwargs):
     if previous_override.day_source != instance.day_source:
         from apps.common.selectors import Selector
 
-        reader = Selector({"date_override" : previous_override})
+        reader = Selector({"date_override": previous_override})
         reader.find_models(Event)
         for e in reader.get_found_models():
             apply_day_date_override(None, e)
@@ -161,30 +200,35 @@ def on_date_override_source_override(sender, instance, **kwargs):
 def on_day_date_override_delete(sender, instance, **kwargs):
     from apps.common.selectors import Selector
 
-    reader = Selector({"date_override" : instance})
+    reader = Selector({"date_override": instance})
 
     reader.find_models(Event)
 
     for e in reader.get_found_models():
-            apply_day_date_override(None, e)
+        apply_day_date_override(None, e)
 
 
 @receiver(m2m_changed, sender=Event.participants_override.through)
 def participants_override_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
-    if (action == "post_add" or action == "post_remove") \
-        and not instance.is_event_overriden and \
-            list(instance.participants_override.all()) != list(instance.abstract_event.participants.all()):
-            instance.is_event_overriden = True
-            instance.save()
+    if (
+        (action == "post_add" or action == "post_remove")
+        and not instance.is_event_overriden
+        and list(instance.participants_override.all())
+        != list(instance.abstract_event.participants.all())
+    ):
+        instance.is_event_overriden = True
+        instance.save()
 
 
 @receiver(m2m_changed, sender=Event.places_override.through)
 def places_override_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
-    if (action == "post_add" or action == "post_remove") and \
-        not instance.is_event_overriden and \
-            list(instance.places_override.all()) != list(instance.abstract_event.places.all()):
-            instance.is_event_overriden = True
-            instance.save()
+    if (
+        (action == "post_add" or action == "post_remove")
+        and not instance.is_event_overriden
+        and list(instance.places_override.all()) != list(instance.abstract_event.places.all())
+    ):
+        instance.is_event_overriden = True
+        instance.save()
 
 
 @receiver(pre_save, sender=Event)
@@ -196,21 +240,29 @@ def on_event_save(sender, instance, **kwargs):
         previous_event = Event.objects.get(pk=instance.pk)
 
         # check for override by non m2m fields
-        if not instance.is_event_overriden and (instance.kind_override != instance.abstract_event.kind or \
-                instance.subject_override != instance.abstract_event.subject or \
-                instance.time_slot_override != instance.abstract_event.time_slot or \
-                (instance.is_event_canceled and not instance.event_cancel)):
-                instance.is_event_overriden = True
+        if not instance.is_event_overriden and (
+            instance.kind_override != instance.abstract_event.kind
+            or instance.subject_override != instance.abstract_event.subject
+            or instance.time_slot_override != instance.abstract_event.time_slot
+            or (instance.is_event_canceled and not instance.event_cancel)
+        ):
+            instance.is_event_overriden = True
 
     instance.check_date_interactions()
 
     # if Event was created or date changed
     # need to check for event canceling
-    if created or previous_event.date != instance.date:
+    if created or previous_event is None or previous_event.date != instance.date:
         instance.check_canceling()
 
     # if EventCancel was manualy setted in Event
     # but is_event_canceled not checked
     # make Event canceled
-    if not created and not instance.is_event_canceled and not previous_event.event_cancel and instance.event_cancel:
+    if (
+        not created
+        and not instance.is_event_canceled
+        and previous_event is not None
+        and not previous_event.event_cancel
+        and instance.event_cancel
+    ):
         instance.is_event_canceled = True

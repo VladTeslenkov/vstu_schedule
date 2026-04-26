@@ -1,9 +1,10 @@
 from collections import defaultdict
 from datetime import timedelta
+from typing import cast
 
 from django.db.models import QuerySet
 
-from apps.common.models import Event
+from apps.common.models import AbstractEvent, Event
 from apps.common.selectors import Selector
 from apps.common.services.timetable.read.filters import (
     DateFilter,
@@ -23,27 +24,21 @@ from apps.common.services.timetable.write.factories import (
     calculate_semester_filling_parameters,
 )
 
+CalendarData = tuple[list[str], list[list[int | str]]]
+EventGroup = list[Event]
+RowSpans = list[int]
+TableDataRow = tuple[EventGroup, RowSpans, CalendarData]
 
-def make_table_data(filters : dict) -> list[
-        tuple[
-            list[Event], 
-            list[int], 
-            list[
-                tuple[
-                    list[str], 
-                    list[list[int|str]]
-                ]
-            ]
-        ]
-    ]:
+
+def make_table_data(filters : dict) -> list[TableDataRow]:
     """Used to get filtered and formated data ready to visualisation
     """
-    
+
     reader = Selector()
     # Currently working ONLY with ACTIVE Schedules
-    # TODO: selector for ARCHIVE and other Schdules 
+    # TODO: selector for ARCHIVE and other Schdules
     reader.add_filter(ScheduleFilter.is_active())
-    
+
     if filters["date"] == "today":
         reader.add_filter(DateFilter.today())
     elif filters["date"] == "tomorrow":
@@ -65,7 +60,7 @@ def make_table_data(filters : dict) -> list[
 
     if filters["subject"]:
         reader.add_filter(SubjectFilter.by_name(filters["subject"]))
-        
+
     if filters["kind"]:
         reader.add_filter(KindFilter.by_name(filters["kind"]))
 
@@ -82,12 +77,13 @@ def make_table_data(filters : dict) -> list[
     row_spans = make_row_spans(entries)
     calendar = make_calendar(entries)
 
-    return list(zip(entries, row_spans, calendar))
+    return list(zip(entries, row_spans, calendar, strict=True))
 
-def format_events(events : QuerySet) -> list[Event]:
+
+def format_events(events : QuerySet) -> list[EventGroup]:
     """Format events by grouping them and ordering by date
     """
-    
+
     events = events.order_by("time_slot_override__start_time", "date")
 
     # grouping found events by date
@@ -97,17 +93,13 @@ def format_events(events : QuerySet) -> list[Event]:
         grouped_events[e.date].append(e)
 
     # ordering groups of events by date
-    ordered_grouped_events = []
+    return [event_group for _, event_group in sorted(grouped_events.items())]
 
-    for e in sorted(grouped_events.items()):
-        ordered_grouped_events.append(e[1])
 
-    return ordered_grouped_events
-
-def make_row_spans(entries : list[Event]) -> list[int]:
+def make_row_spans(entries : list[EventGroup]) -> list[RowSpans]:
     """Returns a list of table row spans
     """
-    
+
     row_spans = []
 
     for entry in entries:
@@ -121,14 +113,14 @@ def make_row_spans(entries : list[Event]) -> list[int]:
                 row_spans[len(row_spans) - 1].append(0)
                 prev_event_expanded = False
                 continue
-                            
+
             # skip last row
             if i + 1 >= len(entry):
                 row_spans[len(row_spans) - 1].append(1)
                 continue
 
             if (
-                is_events_follow_each_other(entry[i], entry[i + 1]) and 
+                is_events_follow_each_other(entry[i], entry[i + 1]) and
                 is_similar_events(entry[i], entry[i + 1])
             ):
                 row_spans[len(row_spans) - 1].append(2)
@@ -138,30 +130,31 @@ def make_row_spans(entries : list[Event]) -> list[int]:
 
     return row_spans
 
-def make_calendar(entries : list[Event]
-    ) -> list[tuple[list[str], list[list[int|str]]]]:
+
+def make_calendar(entries : list[EventGroup]) -> list[CalendarData]:
     """Makes and returns calendar for given entries
 
     Calendar format:
     [
         [
-            ['Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь', 'Январь'], 
+            ['Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь', 'Январь'],
             [
-                [1, 13, 10, 8, 5], 
-                [15, 27, 24, 22, 19], 
+                [1, 13, 10, 8, 5],
+                [15, 27, 24, 22, 19],
                 [29, '', '', '', '']
             ]
         ]
     ]
     """
-    
+
     calendar = []
 
     for entry in entries:
         months = []
         month_days = []
         dates = []
-        _, end_date, date, repetition_period = calculate_semester_filling_parameters(entry[0].abstract_event)
+        abstract_event = cast(AbstractEvent, entry[0].abstract_event)
+        _, end_date, date, repetition_period = calculate_semester_filling_parameters(abstract_event)
 
         while date < end_date:
             if date.month not in months:
@@ -170,28 +163,28 @@ def make_calendar(entries : list[Event]
                 if dates:
                     month_days.append(dates)
                     dates = []
-                
+
             dates.append(date.day)
-            
+
             date += timedelta(days=repetition_period)
-        
+
         if dates:
             month_days.append(dates)
             dates = []
 
-        calendar.append([])
-        calendar[len(calendar) - 1].append(get_name_from_month_number(months))
-        calendar[len(calendar) - 1].append(format_days(month_days))
+        month_names = cast(list[str], get_name_from_month_number(months))
+        calendar.append((month_names, format_days(month_days)))
 
         # calendar can be builded from first event each day
         continue
 
     return calendar
 
+
 def format_days(days : list[list[int]]) -> list[list[int|str]]:
     """Transforms days order from column into row oriented
     """
-    
+
     max_days_count = 0
     formated_days = []
 
