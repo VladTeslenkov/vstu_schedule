@@ -1,4 +1,3 @@
-
 from django.test import TestCase
 
 from apps.common.models import (
@@ -60,7 +59,7 @@ class TestLogic(TestCase):
         ReferenceImporter.import_department_reference(DEPARTMENT_REFERENCE_DATA)
         ReferenceImporter.import_schedule(SCHEDULE_REFERENCE_DATA, True)
 
-    '''
+    """
     def test_get_calendar(self):
         SCHEDULE = Schedule.objects.get(
             schedule_template__metadata__faculty="ФАКУЛЬТ", 
@@ -100,4 +99,4 @@ class TestLogic(TestCase):
         ABS_EVENT.participants.set(PARTICIPANTS)
         ABS_EVENT.places.set(PLACES)
 
-        '''
+        """

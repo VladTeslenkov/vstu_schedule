@@ -30,9 +30,8 @@ RowSpans = list[int]
 TableDataRow = tuple[EventGroup, RowSpans, CalendarData]
 
 
-def make_table_data(filters : dict) -> list[TableDataRow]:
-    """Used to get filtered and formated data ready to visualisation
-    """
+def make_table_data(filters: dict) -> list[TableDataRow]:
+    """Used to get filtered and formated data ready to visualisation"""
 
     reader = Selector()
     # Currently working ONLY with ACTIVE Schedules
@@ -49,7 +48,11 @@ def make_table_data(filters : dict) -> list[TableDataRow]:
         reader.add_filter(DateFilter.next_week())
     elif filters["date"] == "single_date" and filters["left_date"] != "":
         reader.add_filter(DateFilter.from_singe_date(filters["left_date"]))
-    elif filters["date"] == "range_date" and filters["left_date"] != "" and filters["right_date"] != "":
+    elif (
+        filters["date"] == "range_date"
+        and filters["left_date"] != ""
+        and filters["right_date"] != ""
+    ):
         reader.add_filter(DateFilter.from_date(filters["left_date"], filters["right_date"]))
 
     if filters["group"]:
@@ -70,7 +73,11 @@ def make_table_data(filters : dict) -> list[TableDataRow]:
     reader.find_models(Event)
 
     if filters["teacher"]:
-        entries = format_events(reader.get_found_models().filter(**ParticipantFilter.by_name(filters["teacher"])).distinct())
+        entries = format_events(
+            reader.get_found_models()
+            .filter(**ParticipantFilter.by_name(filters["teacher"]))
+            .distinct()
+        )
     else:
         entries = format_events(reader.get_found_models())
 
@@ -80,9 +87,8 @@ def make_table_data(filters : dict) -> list[TableDataRow]:
     return list(zip(entries, row_spans, calendar, strict=True))
 
 
-def format_events(events : QuerySet) -> list[EventGroup]:
-    """Format events by grouping them and ordering by date
-    """
+def format_events(events: QuerySet) -> list[EventGroup]:
+    """Format events by grouping them and ordering by date"""
 
     events = events.order_by("time_slot_override__start_time", "date")
 
@@ -96,9 +102,8 @@ def format_events(events : QuerySet) -> list[EventGroup]:
     return [event_group for _, event_group in sorted(grouped_events.items())]
 
 
-def make_row_spans(entries : list[EventGroup]) -> list[RowSpans]:
-    """Returns a list of table row spans
-    """
+def make_row_spans(entries: list[EventGroup]) -> list[RowSpans]:
+    """Returns a list of table row spans"""
 
     row_spans = []
 
@@ -119,9 +124,8 @@ def make_row_spans(entries : list[EventGroup]) -> list[RowSpans]:
                 row_spans[len(row_spans) - 1].append(1)
                 continue
 
-            if (
-                is_events_follow_each_other(entry[i], entry[i + 1]) and
-                is_similar_events(entry[i], entry[i + 1])
+            if is_events_follow_each_other(entry[i], entry[i + 1]) and is_similar_events(
+                entry[i], entry[i + 1]
             ):
                 row_spans[len(row_spans) - 1].append(2)
                 prev_event_expanded = True
@@ -131,7 +135,7 @@ def make_row_spans(entries : list[EventGroup]) -> list[RowSpans]:
     return row_spans
 
 
-def make_calendar(entries : list[EventGroup]) -> list[CalendarData]:
+def make_calendar(entries: list[EventGroup]) -> list[CalendarData]:
     """Makes and returns calendar for given entries
 
     Calendar format:
@@ -181,21 +185,20 @@ def make_calendar(entries : list[EventGroup]) -> list[CalendarData]:
     return calendar
 
 
-def format_days(days : list[list[int]]) -> list[list[int|str]]:
-    """Transforms days order from column into row oriented
-    """
+def format_days(days: list[list[int]]) -> list[list[int | str]]:
+    """Transforms days order from column into row oriented"""
 
     max_days_count = 0
     formated_days = []
 
     for d in days:
-        if (len(d) > max_days_count):
+        if len(d) > max_days_count:
             max_days_count = len(d)
 
     for i in range(max_days_count):
         row = []
         for d in days:
-            if (i >= len(d)):
+            if i >= len(d):
                 row.append("")
                 continue
             row.append(d[i])

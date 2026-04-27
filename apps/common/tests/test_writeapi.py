@@ -79,7 +79,7 @@ class TestWriteAPI(TestCase):
             schedule_template__metadata__faculty="ФАКУЛЬТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.MASTER,
             metadata__course=1,
-            metadata__semester=2
+            metadata__semester=2,
         )
         KIND = EventKind.objects.create(name="Лекция")
         SUBJECT = Subject.objects.create(name="ПРЕДМЕТ")
@@ -89,29 +89,25 @@ class TestWriteAPI(TestCase):
                 name="Преподаватель И.О.",
                 role=EventParticipant.Role.TEACHER,
                 is_group=False,
-                department=DEPARTMENT
+                department=DEPARTMENT,
             ),
             EventParticipant.objects.create(
                 name="Группа-123",
                 role=EventParticipant.Role.STUDENT,
                 is_group=True,
-                department=DEPARTMENT
-            )
+                department=DEPARTMENT,
+            ),
         ]
         PLACES = [EventPlace.objects.create(building="КОРПУС", room="123")]
         ABS_EVENT = AbstractEvent.objects.create(
             kind=KIND,
             subject=SUBJECT,
             abstract_day=AbstractDay.objects.get(day_number=9),
-            time_slot=TimeSlot.objects.get(
-                alt_name="1-2",
-                start_time="08:30",
-                end_time="10:00"
-            ),
-            schedule=SCHEDULE
+            time_slot=TimeSlot.objects.get(alt_name="1-2", start_time="08:30", end_time="10:00"),
+            schedule=SCHEDULE,
         )
         ABS_EVENT.participants.set(PARTICIPANTS)
         ABS_EVENT.places.set(PLACES)
 
-        #TODO
+        # TODO
         # print(WriteAPI.get_semester_filling_parameters(ABS_EVENT))

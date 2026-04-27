@@ -1,7 +1,7 @@
 import re
 
 
-def normalize_place_building_and_room(building_and_room : str) -> tuple[str, str]|None:
+def normalize_place_building_and_room(building_and_room: str) -> tuple[str, str] | None:
     """Take Place building and room and convert it into acceptable format
 
     Place must be in format: {building}{room} separated by
@@ -34,7 +34,8 @@ def normalize_place_building_and_room(building_and_room : str) -> tuple[str, str
 
     return "", place
 
-def normalize_time_slot_display_name(display_name : str) -> tuple[str, str, str]|None:
+
+def normalize_time_slot_display_name(display_name: str) -> tuple[str, str, str] | None:
     """Take time slot display name and convert it into acceptable format
 
     Display name must be present
@@ -42,7 +43,7 @@ def normalize_time_slot_display_name(display_name : str) -> tuple[str, str, str]
         as start time: HH:MM or HH.MM
         as start and end times: START_TIME-END_TIME or START_TIME END_TIME
 
-    Returns time slot display name structured as (ALT_NAME, START_TIME, END_TIME) 
+    Returns time slot display name structured as (ALT_NAME, START_TIME, END_TIME)
     and formated as (\\d-\\d HH:MM HH:MM). Empty values equals ''
     """
 
@@ -75,16 +76,20 @@ def normalize_time_slot_display_name(display_name : str) -> tuple[str, str, str]
 
     return "", time_slot, ""
 
-def normalize_subject_name(name : str) -> str:
+
+def normalize_subject_name(name: str) -> str:
     return name.strip()
 
-def normalize_kind_name(kind : str) -> str:
+
+def normalize_kind_name(kind: str) -> str:
     return kind.strip().capitalize()
 
-def normalize_participant_name(name : str) -> str:
+
+def normalize_participant_name(name: str) -> str:
     return name.strip()
 
-def format_participant_name(surname : str, name : str, patronymic : str) -> str:
+
+def format_participant_name(surname: str, name: str, patronymic: str) -> str:
     """Makes EventParticipant name from given parameters in format:
     SURNAME N.P. (where N - first char of name and P - first char of patronymic)
 
@@ -93,8 +98,9 @@ def format_participant_name(surname : str, name : str, patronymic : str) -> str:
     return "{surname} {name}{patronymic}".format(
         surname=surname,
         name=f"{name[0]}." if name else "",
-        patronymic=f"{patronymic[0]}." if patronymic else ""
+        patronymic=f"{patronymic[0]}." if patronymic else "",
     )
 
-def normalize_scope(scope : str):
+
+def normalize_scope(scope: str):
     return scope.strip().capitalize()

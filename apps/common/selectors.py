@@ -10,12 +10,12 @@ from apps.common.models import (
 
 
 class Selector:
-    filter_query : dict[str, Any]
-    q_filters : list[Q]
-    filters_order : list[tuple[Literal["q"], Q] | tuple[Literal["dict"], list[str]]]
-    found_models : QuerySet
+    filter_query: dict[str, Any]
+    q_filters: list[Q]
+    filters_order: list[tuple[Literal["q"], Q] | tuple[Literal["dict"], list[str]]]
+    found_models: QuerySet
 
-    def __init__(self, filter_query : filters.FilterQuery | None = None):
+    def __init__(self, filter_query: filters.FilterQuery | None = None):
         self.filter_query = {}
         self.q_filters = []
         self.filters_order = []
@@ -23,7 +23,7 @@ class Selector:
         if filter_query:
             self.add_filter(filter_query)
 
-    def add_filter(self, filter_query : filters.FilterQuery):
+    def add_filter(self, filter_query: filters.FilterQuery):
         """Updates filter query by adding new filter
 
         Allows user manualy append filters in format {'field_name' : value}
@@ -41,7 +41,7 @@ class Selector:
 
         raise TypeError(f"Unsupported filter type: {type(filter_query)!r}")
 
-    def remove_filter(self, index : int):
+    def remove_filter(self, index: int):
         if index < 0 or index >= len(self.filters_order):
             return
 
@@ -65,9 +65,8 @@ class Selector:
         self.q_filters = []
         self.filters_order = []
 
-    def find_models(self, model : type[CommonModel]):
-        """Finds filtered models
-        """
+    def find_models(self, model: type[CommonModel]):
+        """Finds filtered models"""
         self.found_models = cast(Any, model).objects.filter(*self.q_filters, **self.filter_query)
 
     def get_found_models(self) -> QuerySet:
