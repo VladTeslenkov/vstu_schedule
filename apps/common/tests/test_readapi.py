@@ -101,7 +101,7 @@ class TestReadAPI(TestCase):
         TIME_SLOT = TimeSlot.objects.get(alt_name="1-2")
         DATE_ = datetime.strptime("1.02.2025", "%d.%m.%Y").date()
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФЭВТ", 
+            schedule_template__metadata__faculty="ФЭВТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
             metadata__course=4,
             metadata__semester=2

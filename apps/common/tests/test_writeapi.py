@@ -76,7 +76,7 @@ class TestWriteAPI(TestCase):
 
     def test_get_semester_filling_parameters(self):
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФАКУЛЬТ", 
+            schedule_template__metadata__faculty="ФАКУЛЬТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.MASTER,
             metadata__course=1,
             metadata__semester=2
@@ -104,8 +104,8 @@ class TestWriteAPI(TestCase):
             subject=SUBJECT,
             abstract_day=AbstractDay.objects.get(day_number=9),
             time_slot=TimeSlot.objects.get(
-                alt_name="1-2", 
-                start_time="08:30", 
+                alt_name="1-2",
+                start_time="08:30",
                 end_time="10:00"
             ),
             schedule=SCHEDULE
