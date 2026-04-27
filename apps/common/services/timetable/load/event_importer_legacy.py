@@ -13,6 +13,11 @@ from apps.common.models import (
     TimeSlot,
 )
 from apps.common.services.timetable.read.filters import TimeSlotFilter
+from apps.common.services.timetable.utilities import (
+    get_number_from_month_name,
+    get_scope_from_label,
+    replace_roman_with_arabic_numerals,
+)
 from apps.common.services.timetable.utilities.model_helpers import (
     is_abstract_event_already_exists,
 )
@@ -23,11 +28,6 @@ from apps.common.services.timetable.utilities.normalizers import (
     normalize_scope,
     normalize_subject_name,
     normalize_time_slot_display_name,
-)
-from apps.common.services.timetable.utilities.utilities import (
-    get_number_from_month_name,
-    get_scope_from_label,
-    replace_roman_with_arabic_numerals,
 )
 from apps.common.services.timetable.write.factories import (
     create_abstract_event,

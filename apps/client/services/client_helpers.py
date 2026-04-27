@@ -15,7 +15,7 @@ from apps.common.services.timetable.read.filters import (
     SubjectFilter,
     TimeSlotFilter,
 )
-from apps.common.services.timetable.utilities.utilities import (
+from apps.common.services.timetable.utilities import (
     get_name_from_month_number,
     is_events_follow_each_other,
     is_similar_events,

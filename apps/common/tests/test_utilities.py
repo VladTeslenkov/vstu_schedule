@@ -3,14 +3,14 @@ from django.test import TestCase
 from apps.common.models import (
     ScheduleTemplateMetadata,
 )
-from apps.common.services.timetable.utilities.normalizers import (
-    normalize_place_building_and_room,
-    normalize_time_slot_display_name,
-)
-from apps.common.services.timetable.utilities.utilities import (
+from apps.common.services.timetable.utilities import (
     get_name_from_month_number,
     get_scope_from_label,
     replace_roman_with_arabic_numerals,
+)
+from apps.common.services.timetable.utilities.normalizers import (
+    normalize_place_building_and_room,
+    normalize_time_slot_display_name,
 )
 
 """python manage.py test apps.common.tests.test_utilities

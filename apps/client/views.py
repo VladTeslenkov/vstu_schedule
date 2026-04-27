@@ -3,6 +3,10 @@ from django.template.defaulttags import register
 
 from apps.client.services.client_helpers import make_table_data
 from apps.common.models import Event
+from apps.common.services.timetable.utilities import (
+    is_events_follow_each_other,
+    is_similar_events,
+)
 from apps.common.services.timetable.utilities.model_helpers import (
     get_all_groups,
     get_all_kinds,
@@ -10,10 +14,6 @@ from apps.common.services.timetable.utilities.model_helpers import (
     get_all_subjects,
     get_all_teachers,
     get_all_time_slots,
-)
-from apps.common.services.timetable.utilities.utilities import (
-    is_events_follow_each_other,
-    is_similar_events,
 )
 
 

@@ -13,6 +13,9 @@ from apps.common.models import (
     ScheduleTemplateMetadata,
     Subject,
 )
+from apps.common.services.timetable.utilities import (
+    get_scope_from_label,
+)
 from apps.common.services.timetable.utilities.model_helpers import (
     is_department_already_exists,
     is_participant_already_exists,
@@ -22,9 +25,6 @@ from apps.common.services.timetable.utilities.model_helpers import (
 from apps.common.services.timetable.utilities.normalizers import (
     format_participant_name,
     normalize_place_building_and_room,
-)
-from apps.common.services.timetable.utilities.utilities import (
-    get_scope_from_label,
 )
 
 
