@@ -22,7 +22,7 @@ def export_abstract_event_changes(abs_event_changes) -> HttpResponse|None:
 
     row = 2
     for aec in abs_event_changes:
-        for changes in aec.export():
+        for changes in aec.get_export_data():
             for i in range(len(changes)):
                 worksheet.write(row, i, changes[i])
 
