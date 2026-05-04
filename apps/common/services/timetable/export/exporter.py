@@ -2,10 +2,13 @@ import io
 from datetime import datetime
 
 import xlsxwriter  # TODO: replace with openpyxl
+from django.db.models import QuerySet
 from django.http import HttpResponse
 
+from apps.common.models import AbstractEventChanges
 
-def export_abstract_event_changes(abs_event_changes) -> HttpResponse | None:
+
+def export_abstract_event_changes(abs_event_changes: QuerySet[AbstractEventChanges]) -> HttpResponse | None:
     """Makes XLS file for given AbstractEventChanges"""
 
     if not abs_event_changes.exists():
@@ -29,7 +32,7 @@ def export_abstract_event_changes(abs_event_changes) -> HttpResponse | None:
 
     row = 2
     for aec in abs_event_changes:
-        for changes in aec.export():
+        for changes in aec.get_export_data():
             for i in range(len(changes)):
                 worksheet.write(row, i, changes[i])
 
