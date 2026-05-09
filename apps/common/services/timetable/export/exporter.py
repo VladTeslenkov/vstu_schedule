@@ -8,7 +8,9 @@ from django.http import HttpResponse
 from apps.common.models import AbstractEventChanges
 
 
-def export_abstract_event_changes(abs_event_changes: QuerySet[AbstractEventChanges]) -> HttpResponse | None:
+def export_abstract_event_changes(
+    abs_event_changes: QuerySet[AbstractEventChanges],
+) -> HttpResponse | None:
     """Makes XLS file for given AbstractEventChanges"""
 
     if not abs_event_changes.exists():
