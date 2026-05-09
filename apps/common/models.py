@@ -1,10 +1,11 @@
 # ruff: noqa: DJ001
-from typing import Self
+from typing import ClassVar, Self
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+
 
 class Tag(models.Model):
     """Тег, связанный с ресурсами расписания."""
@@ -17,7 +18,7 @@ class Tag(models.Model):
         db_table = "tag"
         verbose_name = "Тег"
         verbose_name_plural = "Теги"
-        constraints = [
+        constraints: ClassVar = [
             models.UniqueConstraint(fields=["name", "category"], name="unique_name_category")
         ]
 
@@ -45,16 +46,17 @@ class Resource(models.Model):
     )
     deprecated = models.BooleanField(default=False, verbose_name="Ресурс устарел")
 
+    class Meta:
+        db_table = "resource"
+        verbose_name = "Ресурс"
+        verbose_name_plural = "Ресурсы"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._pending_tags: list["Tag"] = []
+        self._pending_tags: list[Tag] = []
 
-    def add_tags(self, *tags: "Tag") -> None:
-        for tag in tags:
-            if Tag.objects.filter(id=tag.id).exists():
-                self.tags.add(tag)
-            else:
-                self._pending_tags.append(tag)
+    def __str__(self) -> str:
+        return f"{self.name} ({self.path})"
 
     def save(self, *args, **kwargs) -> None:
         super().save(*args, **kwargs)
@@ -63,13 +65,12 @@ class Resource(models.Model):
             self.tags.add(saved_tag)
         self._pending_tags.clear()
 
-    class Meta:
-        db_table = "resource"
-        verbose_name = "Ресурс"
-        verbose_name_plural = "Ресурсы"
-
-    def __str__(self) -> str:
-        return f"{self.name} ({self.path})"
+    def add_tags(self, *tags: "Tag") -> None:
+        for tag in tags:
+            if Tag.objects.filter(id=tag.id).exists():
+                self.tags.add(tag)
+            else:
+                self._pending_tags.append(tag)
 
 
 class FileVersion(models.Model):
@@ -87,10 +88,16 @@ class FileVersion(models.Model):
         related_name="versions",
         verbose_name="Ресурс",
     )
-    mimetype = models.CharField(max_length=45, null=True, blank=True, default=None, verbose_name="Расширение файла")
-    url = models.TextField(null=True, blank=True, default=None, verbose_name="URL источника на сайте")
+    mimetype = models.CharField(
+        max_length=45, null=True, blank=True, default=None, verbose_name="Расширение файла"
+    )
+    url = models.TextField(
+        null=True, blank=True, default=None, verbose_name="URL источника на сайте"
+    )
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Дата обнаружения версии")
-    last_changed = models.DateTimeField(null=True, blank=True, default=None, verbose_name="Дата изменения по данным сайта")
+    last_changed = models.DateTimeField(
+        null=True, blank=True, default=None, verbose_name="Дата изменения по данным сайта"
+    )
     hashsum = models.CharField(max_length=255, verbose_name="SHA-256 хэш содержимого файла")
 
     class Meta:
@@ -116,6 +123,8 @@ class Setting(models.Model):
 
     def __str__(self) -> str:
         return f"{self.key}: {self.value}"
+
+
 class CommonModel(models.Model):
     idnumber = models.CharField(
         unique=True,

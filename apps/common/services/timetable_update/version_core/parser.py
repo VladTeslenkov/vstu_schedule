@@ -1,8 +1,9 @@
 import logging
 import re
+from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from .file_data import FileData
 
@@ -54,6 +55,9 @@ class WebParser:
 
         # Проходим по элементам контента
         for element in content.descendants:
+            if not isinstance(element, Tag):
+                continue
+
             # Проверяем заголовок уровня 3
             if element.name == "h3":
                 # Запоминаем заголовок 3 уровня
@@ -85,7 +89,7 @@ class WebParser:
         return files
 
     @classmethod
-    def __find_files_from_li(cls, li, web_url, current_path):
+    def __find_files_from_li(cls, li: Tag, web_url: str, current_path: str) -> list[FileData]:
         """
         Получает все файлы из элемента <li>
         :param li: Элемента <li>
@@ -96,14 +100,17 @@ class WebParser:
         files = []
         link_tag = li.find("a", href=True)
         if link_tag:
+            href = link_tag.get("href")
+            if not isinstance(href, str):
+                return files
+
             # Получаем имя ссылки
-            link_name = link_tag.text.strip()
+            link_name = link_tag.get_text(strip=True)
             # Получаем URL ссылки
-            link_url = requests.compat.urljoin(web_url, link_tag["href"])
+            link_url = urljoin(web_url, href)
 
             # Проверяем, что ссылка ведёт на файл
             if cls.is_file_with_extension(link_url, [".xls", ".xlsx", ".doc", ".docx"]):
-
                 # Добавляем новую директорию в путь
                 current_path = cls.__add_to_path(current_path, link_name, True)
 
@@ -133,7 +140,7 @@ class WebParser:
         return files
 
     @staticmethod
-    def __get_page_content(url: str):
+    def __get_page_content(url: str) -> Tag:
         """
         Получает основной контент с Web страницы
         :param url: ссылка Web страницы
@@ -150,7 +157,7 @@ class WebParser:
 
         # Получение основного контента на странице
         content_wrapper = soup.find(class_="content-wrapper")
-        if not content_wrapper:
+        if not isinstance(content_wrapper, Tag):
             raise Exception(f"Can't find main content on web page. URL: {url}")
 
         # Логируем успешное получение контента
@@ -203,14 +210,11 @@ class WebParser:
         return path
 
     @staticmethod
-    def is_file_with_extension(file_path, extensions):
+    def is_file_with_extension(file_path: str, extensions: list[str]) -> bool:
         """
         Проверяет соответствие файла одному из расширений в списке
         :param file_path: Путь к файлу
         :param extensions: Список доступных разширений
         :return: Соответствие файла расширению
         """
-        for extension in extensions:
-            if file_path.endswith(extension):
-                return True
-        return False
+        return any(file_path.endswith(extension) for extension in extensions)

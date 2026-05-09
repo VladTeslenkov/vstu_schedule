@@ -11,6 +11,7 @@ def run_timetable_update() -> None:
     logger.info("Запуск обновления расписания")
 
     from django.conf import settings
+
     from apps.common.services.timetable_update.version_core.filemanager import FileManager
 
     # Убедиться, что нужные директории существуют

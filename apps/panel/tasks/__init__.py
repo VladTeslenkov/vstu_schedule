@@ -2,7 +2,7 @@ import json
 import logging
 
 from celery import shared_task
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +17,13 @@ def update_timetable(self) -> dict:
     logger.info(f"Task started: update_timetable [id={self.request.id}]")
     try:
         from apps.common.services.timetable_update.update_timetable import run_timetable_update
+
         run_timetable_update()
         logger.info("Task update_timetable completed")
         return {"status": "success"}
     except Exception as exc:
         logger.error(f"Task update_timetable failed: {exc}", exc_info=True)
-        raise self.retry(exc=exc, max_retries=0)
+        raise self.retry(exc=exc, max_retries=0) from exc
 
 
 @shared_task(bind=True, name="panel.tasks.clear_storage")
@@ -36,12 +37,13 @@ def clear_storage_task(self, component: str) -> dict:
     logger.info(f"Task started: clear_storage [component={component!r}, id={self.request.id}]")
     try:
         from apps.common.services.timetable_update.clear_storage import clear_storage_by_component
+
         clear_storage_by_component(component)
         logger.info(f"Task clear_storage completed: {component!r}")
         return {"status": "success", "component": component}
     except Exception as exc:
         logger.error(f"Task clear_storage failed: {exc}", exc_info=True)
-        raise self.retry(exc=exc, max_retries=0)
+        raise self.retry(exc=exc, max_retries=0) from exc
 
 
 def configure_periodic_update(interval_minutes: int) -> None:

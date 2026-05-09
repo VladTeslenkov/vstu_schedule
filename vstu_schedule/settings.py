@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Пути для сервиса обновления расписания
 TEMP_DIR = BASE_DIR / "temp"
 DATA_STORAGE_DIR = BASE_DIR / "data"
-load_dotenv(BASE_DIR / ".env.local") # ignored in docker
+load_dotenv(BASE_DIR / ".env.local")  # ignored in docker
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/

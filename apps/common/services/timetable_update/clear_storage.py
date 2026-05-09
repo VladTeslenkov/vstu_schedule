@@ -3,7 +3,7 @@ import shutil
 
 from django.conf import settings
 
-from apps.common.models import Resource, FileVersion, Tag
+from apps.common.models import FileVersion, Resource, Tag
 
 logger = logging.getLogger(__name__)
 

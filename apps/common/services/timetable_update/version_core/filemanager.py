@@ -2,12 +2,14 @@ import logging
 import os
 import shutil
 from pathlib import Path
+from typing import ClassVar
 
 from django.conf import settings
 
-from apps.common.models import Resource, FileVersion, Setting
-from .parser import WebParser
+from apps.common.models import FileVersion, Resource, Setting
+
 from .file_data import FileData
+from .parser import WebParser
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ class FileManager:
     сохраняет новые файлы локально и создаёт записи в БД.
     """
 
-    TIMETABLE_START_PATH = ["Расписания/Расписание занятий/"]
+    TIMETABLE_START_PATH: ClassVar = ["Расписания/Расписание занятий/"]
 
     def __init__(self) -> None:
         self._temp_dir: Path = settings.TEMP_DIR
@@ -27,8 +29,8 @@ class FileManager:
         os.environ["TMPDIR"] = str(self._temp_dir)
 
         try:
-            self._timetable_links: list[str] = (
-                Setting.objects.get(key="analyze_url").value.split(";")
+            self._timetable_links: list[str] = Setting.objects.get(key="analyze_url").value.split(
+                ";"
             )
             logger.info(f"Loaded timetable links: {self._timetable_links}")
         except Setting.DoesNotExist:
@@ -65,7 +67,9 @@ class FileManager:
                     if resource:
                         used_resource_ids.add(resource.id)
                 except Exception as e:
-                    logger.error(f"Failed to process file {file_data.get_name()}: {e}", exc_info=True)
+                    logger.error(
+                        f"Failed to process file {file_data.get_name()}: {e}", exc_info=True
+                    )
                 finally:
                     if file_path.is_file():
                         file_path.unlink()
@@ -150,6 +154,7 @@ class FileManager:
             return file_path
         try:
             from xls2xlsx import XLS2XLSX
+
             new_path = file_path.with_suffix(".xlsx")
             x2x = XLS2XLSX(str(file_path))
             x2x.to_xlsx(str(new_path))

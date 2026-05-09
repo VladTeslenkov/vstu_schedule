@@ -22,10 +22,14 @@ def admin_login(request: HttpRequest) -> HttpResponse:
         username = request.POST.get("username")
         password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
-        if user is not None and user.is_staff:
+        if user is not None and getattr(user, "is_staff", False):
             login(request, user)
             return redirect("monitoring_panel")
-        return render(request, "timetable_update/admin_login.html", {"error": "Неверные учётные данные или нет доступа"})
+        return render(
+            request,
+            "timetable_update/admin_login.html",
+            {"error": "Неверные учётные данные или нет доступа"},
+        )
     return render(request, "timetable_update/admin_login.html")
 
 
@@ -36,7 +40,9 @@ def admin_login(request: HttpRequest) -> HttpResponse:
 def set_system_params(request: HttpRequest) -> JsonResponse:
     """Сохраняет системные параметры: интервал обновления и URL анализа."""
     if request.method != "POST":
-        return JsonResponse({"status": "error", "error_message": "Метод не поддерживается"}, status=405)
+        return JsonResponse(
+            {"status": "error", "error_message": "Метод не поддерживается"}, status=405
+        )
 
     try:
         scan_frequency = request.POST.get("scanFrequency")
@@ -50,6 +56,7 @@ def set_system_params(request: HttpRequest) -> JsonResponse:
             setting.save()
 
             from apps.panel.tasks import configure_periodic_update
+
             configure_periodic_update(minutes)
 
         if root_url:
@@ -60,7 +67,9 @@ def set_system_params(request: HttpRequest) -> JsonResponse:
 
         return JsonResponse({"status": "success"})
     except ValueError:
-        return JsonResponse({"status": "error", "error_message": "Некорректное значение частоты"}, status=400)
+        return JsonResponse(
+            {"status": "error", "error_message": "Некорректное значение частоты"}, status=400
+        )
     except Exception as e:
         logger.error(f"set_system_params error: {e}", exc_info=True)
         return JsonResponse({"status": "error", "error_message": str(e)}, status=500)
@@ -95,6 +104,7 @@ def run_update_timetable(request: HttpRequest) -> JsonResponse | HttpResponse:
     """
     if request.method == "POST":
         from apps.panel.tasks import update_timetable as update_task
+
         result = update_task.delay()  # type: ignore[union-attr]
         logger.info(f"update_timetable launched: task_id={result.id}")
         return JsonResponse({"status": "running", "id": result.id}, status=202)
@@ -114,6 +124,7 @@ def manage_storage(request: HttpRequest) -> JsonResponse | HttpResponse:
     if request.method == "POST" and request.POST.get("action") == "dell":
         component = request.POST.get("component", "")
         from apps.panel.tasks import clear_storage_task
+
         result = clear_storage_task.delay(component)  # type: ignore[union-attr]
         logger.info(f"clear_storage launched: component={component!r}, task_id={result.id}")
         return JsonResponse({"status": "running", "id": result.id}, status=202)

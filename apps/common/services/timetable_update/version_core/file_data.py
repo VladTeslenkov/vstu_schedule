@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import re
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
@@ -9,7 +10,8 @@ from urllib.parse import unquote
 import requests
 from django.conf import settings
 
-from apps.common.models import Resource, FileVersion, Tag
+from apps.common.models import FileVersion, Resource, Tag
+
 from .stringlistanalyzer import StringListAnalyzer
 
 logger = logging.getLogger(__name__)
@@ -111,7 +113,9 @@ class FileData:
         self.__mimetype_from_path = self.__get_mimetype(self.__path)
         self.__correct_name_from_path = self.get_correct_file_name(self.__name_from_path)
 
-        self.__name_from_url_with_mimetype = self.get_file_name_from_path(self.__url, dell_mimetype=False)
+        self.__name_from_url_with_mimetype = self.get_file_name_from_path(
+            self.__url, dell_mimetype=False
+        )
         self.__name_from_url = self.get_file_name_from_path(self.__url)
         self.__mimetype_from_url = self.__get_mimetype(self.__url)
         self.__correct_name_from_url = self.get_correct_file_name(self.__name_from_url)
@@ -123,13 +127,17 @@ class FileData:
         self.__correct_path = self.__calc_correct_path(self.__path)
 
     def _get_json(self, type_timetable: str) -> str:
-        return json.dumps({
-            "type_timetable": type_timetable,
-            "degree": self.__degree,
-            "education_form": self.__education_form,
-            "faculty": self.__faculty,
-            "course": self.__course,
-        }, indent=4, ensure_ascii=False)
+        return json.dumps(
+            {
+                "type_timetable": type_timetable,
+                "degree": self.__degree,
+                "education_form": self.__education_form,
+                "faculty": self.__faculty,
+                "course": self.__course,
+            },
+            indent=4,
+            ensure_ascii=False,
+        )
 
     def _get_tags(self, type_timetable: str) -> list[Tag]:
         tags = [Tag(name=type_timetable, category="type_timetable")]
@@ -141,8 +149,10 @@ class FileData:
         ]:
             tags.append(Tag(name=value or "Неопределено", category=category))
 
-        for course in (self.__course or ["Неопределено"]):
-            tags.append(Tag(name=str(course), category="course"))
+        tags.extend(
+            Tag(name=str(course), category="course")
+            for course in (self.__course or ["Неопределено"])
+        )
 
         return tags
 
@@ -173,7 +183,9 @@ class FileData:
         """Скачивает файл по URL и сохраняет в указанную директорию."""
         response = requests.get(self.__url, timeout=30)
         if response.status_code != 200:
-            raise Exception(f"File download error. Status: {response.status_code}, URL: {self.__url}")
+            raise Exception(
+                f"File download error. Status: {response.status_code}, URL: {self.__url}"
+            )
 
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
@@ -216,7 +228,9 @@ class FileData:
         return re.split("|".join(map(re.escape, delimiters)), string)
 
     @classmethod
-    def elements_to_path(cls, elements: list[str], base_path: str = "", is_file: bool = False) -> str:
+    def elements_to_path(
+        cls, elements: list[str], base_path: str = "", is_file: bool = False
+    ) -> str:
         result = base_path
         for i, el in enumerate(elements):
             is_last = i + 1 >= len(elements)
@@ -259,10 +273,8 @@ class FileData:
         result = []
         for i, part in enumerate(parts):
             if any(cw in part for cw in cls._COURSE_WORDS) and i + 1 < len(parts):
-                try:
+                with suppress(Exception):
                     result.extend(cls.__parse_course_string(parts[i + 1]))
-                except Exception:
-                    pass
         return sorted(set(result))
 
     @staticmethod
@@ -296,15 +308,21 @@ class FileData:
 
     @classmethod
     def __get_degree_word_count(cls, string: str) -> int:
-        analyzer = StringListAnalyzer(cls.split_string_by_delimiters(string.lower()), cls._DEGREE_WORDS)
+        analyzer = StringListAnalyzer(
+            cls.split_string_by_delimiters(string.lower()), cls._DEGREE_WORDS
+        )
         return len(analyzer.get_strings_by_ratio_in_range(cls._CONFIDENCE_VALUE, 1))
 
     @classmethod
     def __get_education_form_word_count(cls, string: str) -> int:
-        analyzer = StringListAnalyzer(cls.split_string_by_delimiters(string.lower()), cls._EDUCATION_FORM_WORDS)
+        analyzer = StringListAnalyzer(
+            cls.split_string_by_delimiters(string.lower()), cls._EDUCATION_FORM_WORDS
+        )
         return len(analyzer.get_strings_by_ratio_in_range(cls._CONFIDENCE_VALUE, 1))
 
     @classmethod
     def __get_faculty_word_count(cls, string: str) -> int:
-        analyzer = StringListAnalyzer(cls.split_string_by_delimiters(string.lower()), cls._FACULTY_WORDS)
+        analyzer = StringListAnalyzer(
+            cls.split_string_by_delimiters(string.lower()), cls._FACULTY_WORDS
+        )
         return len(analyzer.get_strings_by_ratio_in_range(cls._CONFIDENCE_VALUE, 1))
