@@ -1,4 +1,3 @@
-import hashlib
 import json
 import logging
 import re
@@ -8,6 +7,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 import requests
+import xxhash
 from django.conf import settings
 
 from apps.common.models import FileVersion, Resource, Tag
@@ -173,11 +173,11 @@ class FileData:
 
     @staticmethod
     def __get_bin_file_hash(file_path: Path) -> str:
-        sha256 = hashlib.sha256()
+        file_hash = xxhash.xxh3_64()
         with file_path.open("rb") as f:
             for chunk in iter(lambda: f.read(4096), b""):
-                sha256.update(chunk)
-        return sha256.hexdigest()
+                file_hash.update(chunk)
+        return file_hash.hexdigest()
 
     def download_file(self, directory: Path | str, chunk_size: int = 8192) -> Path:
         """Скачивает файл по URL и сохраняет в указанную директорию."""

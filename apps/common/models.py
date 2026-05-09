@@ -98,7 +98,7 @@ class FileVersion(models.Model):
     last_changed = models.DateTimeField(
         null=True, blank=True, default=None, verbose_name="Дата изменения по данным сайта"
     )
-    hashsum = models.CharField(max_length=255, verbose_name="SHA-256 хэш содержимого файла")
+    hashsum = models.CharField(max_length=255, verbose_name="Контрольная сумма содержимого файла")
 
     class Meta:
         db_table = "file_version"

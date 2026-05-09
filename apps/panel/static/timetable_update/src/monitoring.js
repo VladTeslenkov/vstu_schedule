@@ -172,7 +172,7 @@ function renderVersions(versions) {
     <tr>
       <td title="${esc(v.resource__name || "")}">${esc(v.resource__name || "—")}</td>
       <td>${v.timestamp ? fmtDatetime(v.timestamp) : "—"}</td>
-      <td class="hash">${esc(v.hashsum_short || "—")}…</td>
+      <td class="hash">${esc(v.hashsum_hex || v.hashsum || "—")}</td>
       <td class="hash">${esc(v.mimetype || "—")}</td>
     </tr>`,
     )

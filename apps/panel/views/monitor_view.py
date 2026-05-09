@@ -67,7 +67,7 @@ def monitoring_stats(request: HttpRequest) -> JsonResponse:
     for v in recent_versions:
         v["timestamp"] = v["timestamp"].isoformat() if v["timestamp"] else None
         v["last_changed"] = v["last_changed"].isoformat() if v["last_changed"] else None
-        v["hashsum_short"] = v["hashsum"][:12] if v["hashsum"] else None
+        v["hashsum_hex"] = v["hashsum"] or None
 
     resources = list(
         Resource.objects.order_by("deprecated", "-last_update").values(

@@ -19,6 +19,7 @@ dependencies = [
     "redis>=7.1.0",
     "vstu-xls",
     "xlsxwriter>=3.2.9",
+    "xxhash>=3.7.0",
 ]
 [dependency-groups]
 dev = [
