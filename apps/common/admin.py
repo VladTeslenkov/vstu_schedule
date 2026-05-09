@@ -341,31 +341,22 @@ class AbstractEventChangesAdmin(BaseAdmin):
         except IndexError:
             return None
 
-    def response_action(self, request: HttpRequest, queryset) -> HttpResponse | None:
+    def changelist_view(
+        self,
+        request: HttpRequest,
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
         action_name = self._get_requested_action_name(request)
-        if action_name not in self.actions_without_selection or request.POST.getlist(
-            ACTION_CHECKBOX_NAME
+        if (
+            request.method == "POST"
+            and action_name in self.actions_without_selection
+            and not request.POST.getlist(ACTION_CHECKBOX_NAME)
         ):
-            return super().response_action(request, queryset)
+            post = request.POST.copy()
+            post.update({ACTION_CHECKBOX_NAME: "0"})
+            cast(Any, request).POST = post
 
-        data = request.POST.copy()
-        data.pop(ACTION_CHECKBOX_NAME, None)
-        data.pop("index", None)
-        data.update({"action": action_name})
-
-        action_form = self.action_form(data, auto_id=None)
-        action_form.fields["action"].choices = self.get_action_choices(request)
-        if not action_form.is_valid():
-            return super().response_action(request, queryset)
-
-        action = self.get_actions(request).get(action_form.cleaned_data["action"])
-        if action is None:
-            return super().response_action(request, queryset)
-
-        response = action[0](self, request, queryset)
-        if isinstance(response, HttpResponseBase):
-            return cast(HttpResponse, response)
-        return HttpResponseRedirect(request.get_full_path())
+        return super().changelist_view(request, extra_context)
 
 
 @admin.register(AbstractEvent)
