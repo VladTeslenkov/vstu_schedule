@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -21,7 +22,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Пути для сервиса обновления расписания
 TEMP_DIR = BASE_DIR / "temp"
 DATA_STORAGE_DIR = BASE_DIR / "data"
-load_dotenv(BASE_DIR / ".env.local")  # ignored in docker
+if os.getenv("RUNNING_IN_DOCKER") != "1":
+    load_dotenv(BASE_DIR / ".env.local")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/

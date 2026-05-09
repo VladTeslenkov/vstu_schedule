@@ -1,6 +1,7 @@
 import logging
 
 from celery.result import AsyncResult
+from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate, login
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -93,6 +94,17 @@ def _task_status_response(task_id: str) -> JsonResponse:
     return JsonResponse({"status": status, "error_message": error_message})
 
 
+def _celery_disabled_response() -> JsonResponse:
+    """Prevents long maintenance tasks from running inside a web request."""
+    return JsonResponse(
+        {
+            "status": "error",
+            "error_message": "Celery отключён: фоновые задачи нельзя запускать из web-процесса.",
+        },
+        status=503,
+    )
+
+
 # ======================== ЗАДАЧИ ========================
 
 
@@ -103,6 +115,9 @@ def run_update_timetable(request: HttpRequest) -> JsonResponse | HttpResponse:
     GET ?task_id=... — возвращает статус запущенной задачи.
     """
     if request.method == "POST":
+        if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+            return _celery_disabled_response()
+
         from apps.panel.tasks import update_timetable as update_task
 
         result = update_task.delay()  # type: ignore[union-attr]
@@ -122,6 +137,9 @@ def manage_storage(request: HttpRequest) -> JsonResponse | HttpResponse:
     GET ?task_id=... — возвращает статус задачи.
     """
     if request.method == "POST" and request.POST.get("action") == "dell":
+        if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+            return _celery_disabled_response()
+
         component = request.POST.get("component", "")
         from apps.panel.tasks import clear_storage_task
 

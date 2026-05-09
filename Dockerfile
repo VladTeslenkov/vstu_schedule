@@ -29,9 +29,10 @@ RUN uv sync --frozen --no-dev --no-install-project
 FROM python:3.13-slim
 
 # Настройки Python
+# Добавляем виртуальное окружение в PATH и объявляем его основным
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    # Добавляем виртуальное окружение в PATH и объявляем его основным
+    RUNNING_IN_DOCKER=1 \
     VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
