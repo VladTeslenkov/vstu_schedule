@@ -23,7 +23,6 @@ from apps.common.services.timetable.load.event_importer import EventImporter
 from apps.common.services.timetable.load.reference_importer import ReferenceImporter
 from apps.common.services.timetable.read.filters import (
     PlaceFilter,
-    TimeSlotFilter,
 )
 from apps.common.services.timetable.utilities.model_helpers import (
     create_common_abstract_days,
@@ -85,35 +84,42 @@ class TestEventImporter(TestCase):
             }
         ]
     """
-    
+
     def setUp(self):
         create_common_abstract_days()
         create_common_time_slots()
         Organization.objects.create(name="ВолгГТУ")
         ReferenceImporter.import_faculty_reference(self.FACULTY_REFERENCE_DATA)
         ReferenceImporter.import_schedule(self.SCHEDULE_REFERENCE_DATA, True)
- 
+
     def test_find_schedule(self):
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия 4 курса ФЭВТ бакалавриат на 2 семестр 2024-2025 учебного года"),
-            Schedule.objects.get(schedule_template__metadata__faculty="ФЭВТ", schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR)
+            EventImporter.find_schedule(
+                "Учебные занятия 4 курса ФЭВТ бакалавриат на 2 семестр 2024-2025 учебного года"
+            ),
+            Schedule.objects.get(
+                schedule_template__metadata__faculty="ФЭВТ",
+                schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
+            ),
         )
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия 4 курса ФЭВТ бакалавриат на 2 семестр 2024 -  2025 учебного года"),
-            Schedule.objects.get(schedule_template__metadata__faculty="ФЭВТ", schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR)
+            EventImporter.find_schedule(
+                "Учебные занятия 4 курса ФЭВТ бакалавриат на 2 семестр 2024 -  2025 учебного года"
+            ),
+            Schedule.objects.get(
+                schedule_template__metadata__faculty="ФЭВТ",
+                schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
+            ),
         )
+        self.assertRaises(ValueError, EventImporter.find_schedule, "")
         self.assertRaises(
             ValueError,
             EventImporter.find_schedule,
-            ""
-        )
-        self.assertRaises(
-            ValueError,
-            EventImporter.find_schedule,
-            "Учебные занятия 4 курса бакалавриат на 2 семестр 2024-2025 учебного года"
+            "Учебные занятия 4 курса бакалавриат на 2 семестр 2024-2025 учебного года",
         )
 
-        ReferenceImporter.import_schedule("""
+        ReferenceImporter.import_schedule(
+            """
             [
                 {
                     "course": "4",
@@ -126,7 +132,9 @@ class TestEventImporter(TestCase):
                     "department_shortname": "ФЭВТ"
                 }
             ]
-        """, True)
+        """,
+            True,
+        )
 
         second_schedule = Schedule.objects.get(status=Schedule.Status.ARCHIVE)
         second_schedule.status = Schedule.Status.ACTIVE
@@ -135,64 +143,78 @@ class TestEventImporter(TestCase):
         self.assertRaises(
             Schedule.MultipleObjectsReturned,
             EventImporter.find_schedule,
-            "Учебные занятия 4 курса ФЭВТ бакалавриат на 2 семестр 2024-2025 учебного года"
+            "Учебные занятия 4 курса ФЭВТ бакалавриат на 2 семестр 2024-2025 учебного года",
         )
 
     def test_find_schedule_scopes(self):
         self.assertEqual(
             EventImporter.find_schedule("4 курс ФЭВТ Баколавры II-ого семестра 2024-2025"),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
                 metadata__course=4,
-                metadata__semester=2
-            )
+                metadata__semester=2,
+            ),
         )
         self.assertEqual(
             EventImporter.find_schedule("4 курс ФЭВТ баколавров II-ого семестра 2024-2025"),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
                 metadata__course=4,
-                metadata__semester=2
-            )
+                metadata__semester=2,
+            ),
         )
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия ФЭВТ магистров 2 курса I-ого семестра 2024-2025"),
+            EventImporter.find_schedule(
+                "Учебные занятия ФЭВТ магистров 2 курса I-ого семестра 2024-2025"
+            ),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.MASTER,
                 metadata__course=2,
-                metadata__semester=1
-            )
+                metadata__semester=1,
+            ),
         )
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия ФЭВТ магистратуры 2 курса I-ого семестра 2024-2025"),
+            EventImporter.find_schedule(
+                "Учебные занятия ФЭВТ магистратуры 2 курса I-ого семестра 2024-2025"
+            ),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.MASTER,
                 metadata__course=2,
-                metadata__semester=1
-            )
+                metadata__semester=1,
+            ),
         )
         self.assertEqual(
             EventImporter.find_schedule("ФЭВТ 1 курс аспирантов на II-й семестр 2024-2025"),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.POSTGRADUATE,
                 metadata__course=1,
-                metadata__semester=2
-            )
+                metadata__semester=2,
+            ),
         )
 
     def test_find_schedule_multiple_department(self):
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия 4 курса АБЬЪ-999, ФЭВТ бакалавриат на 2 семестр 2024-2025 учебного года"),
-            Schedule.objects.get(schedule_template__metadata__faculty="ФЭВТ", schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR)
+            EventImporter.find_schedule(
+                "Учебные занятия 4 курса АБЬЪ-999, ФЭВТ бакалавриат на 2 семестр 2024-2025 учебного года"
+            ),
+            Schedule.objects.get(
+                schedule_template__metadata__faculty="ФЭВТ",
+                schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
+            ),
         )
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия 4 курса ФЭВТ ХТФ бакалавриат на 2 семестр 2024-2025 учебного года"),
-            Schedule.objects.get(schedule_template__metadata__faculty="ФЭВТ", schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR)
+            EventImporter.find_schedule(
+                "Учебные занятия 4 курса ФЭВТ ХТФ бакалавриат на 2 семестр 2024-2025 учебного года"
+            ),
+            Schedule.objects.get(
+                schedule_template__metadata__faculty="ФЭВТ",
+                schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
+            ),
         )
 
         WRONG_SCHEDULE_TITLE = "Учебные занятия 4 курса АБВГ, ПРИН-466 бакалавриат на 2 семестр 2024-2025 учебного года"
@@ -201,74 +223,84 @@ class TestEventImporter(TestCase):
             ValueError,
             f"Не удалось найти подходящее подразделение или факультет для заголовка '{WRONG_SCHEDULE_TITLE}'.",
             EventImporter.find_schedule,
-            WRONG_SCHEDULE_TITLE
+            WRONG_SCHEDULE_TITLE,
         )
 
     def test_find_schedule_semester(self):
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия 4 курса ФЭВТ бакалавриат на II-ой семестр 2024-2025 учебного года"),
+            EventImporter.find_schedule(
+                "Учебные занятия 4 курса ФЭВТ бакалавриат на II-ой семестр 2024-2025 учебного года"
+            ),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
                 metadata__course=4,
-                metadata__semester=2
-            )
+                metadata__semester=2,
+            ),
         )
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия 4 курса ФЭВТ бакалавриат на 2семестр 2024-2025 учебного года"),
+            EventImporter.find_schedule(
+                "Учебные занятия 4 курса ФЭВТ бакалавриат на 2семестр 2024-2025 учебного года"
+            ),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
                 metadata__course=4,
-                metadata__semester=2
-            )
+                metadata__semester=2,
+            ),
         )
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия 2 курса ФЭВТ магистров 1-ого семестра 2024-2025 учебного года"),
+            EventImporter.find_schedule(
+                "Учебные занятия 2 курса ФЭВТ магистров 1-ого семестра 2024-2025 учебного года"
+            ),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.MASTER,
                 metadata__course=2,
-                metadata__semester=1
-            )
+                metadata__semester=1,
+            ),
         )
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия 1 курса ФЭВТ аспирантов II-огосеместра 2024-2025 учебного года"),
+            EventImporter.find_schedule(
+                "Учебные занятия 1 курса ФЭВТ аспирантов II-огосеместра 2024-2025 учебного года"
+            ),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.POSTGRADUATE,
                 metadata__course=1,
-                metadata__semester=2
-            )
+                metadata__semester=2,
+            ),
         )
 
     def test_find_schedule_course(self):
         self.assertEqual(
             EventImporter.find_schedule("ФЭВТ 4ыйкурс бакалавр. 2 семестра 2024-2025"),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
                 metadata__course=4,
-                metadata__semester=2
-            )
+                metadata__semester=2,
+            ),
         )
         self.assertEqual(
             EventImporter.find_schedule("ФЭВТ 2-ого курса  Магистров 1ый семестр 2024-2025"),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.MASTER,
                 metadata__course=2,
-                metadata__semester=1
-            )
+                metadata__semester=1,
+            ),
         )
         self.assertEqual(
-            EventImporter.find_schedule("Учебные занятия 1ый курс ФЭВТ аспиранты 2-ой семестр 2024-2025 учебного года"),
+            EventImporter.find_schedule(
+                "Учебные занятия 1ый курс ФЭВТ аспиранты 2-ой семестр 2024-2025 учебного года"
+            ),
             Schedule.objects.get(
-                schedule_template__metadata__faculty="ФЭВТ", 
+                schedule_template__metadata__faculty="ФЭВТ",
                 schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.POSTGRADUATE,
                 metadata__course=1,
-                metadata__semester=2
-            )
+                metadata__semester=2,
+            ),
         )
 
     def test_find_schedule_upper_and_lower_chars(self):
@@ -277,254 +309,194 @@ class TestEventImporter(TestCase):
 
     def test_correct_holds_on_date_data(self):
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФЭВТ", 
+            schedule_template__metadata__faculty="ФЭВТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
             metadata__course=4,
-            metadata__semester=2
-        )
-        
-        self.assertEqual(
-            EventImporter.correct_holds_on_date_data(SCHEDULE, [
-                "10.09.2001", 
-                "11.09.2002", 
-                "12.09.2003", 
-                "14.09.2004"
-            ]), 
-            None
-        )
-        self.assertEqual(
-            EventImporter.correct_holds_on_date_data(SCHEDULE, [
-                "12.09.1999", 
-                "04.09..02.10", 
-                "12.07;12.08", 
-                "05.09",
-                "с 03.09",
-
-            ]),
-            sorted([
-                "12.09.1999",
-
-                "04.09.2024",
-                "18.09.2024",
-                "02.10.2024",
-
-                "12.07.2024",
-                "12.08.2024",
-
-                "05.09.2024",
-
-                "03.09.2024", 
-                "17.09.2024", 
-                "01.10.2024", 
-                "15.10.2024", 
-                "29.10.2024", 
-                "12.11.2024", 
-                "26.11.2024", 
-                "10.12.2024", 
-                "24.12.2024", 
-                "07.01.2025", 
-                "21.01.2025"
-            ])
+            metadata__semester=2,
         )
 
         self.assertEqual(
-            EventImporter.correct_holds_on_date_data(SCHEDULE, [
-                "10.09.1999", 
-                "11.09.1999", 
-                "04.09..02.10", 
-                "12.09.1999", 
-                "03.09",
-                "14.09.1999"
-            ]),
-            sorted([
-                "10.09.1999", 
+            EventImporter.correct_holds_on_date_data(
+                SCHEDULE, ["10.09.2001", "11.09.2002", "12.09.2003", "14.09.2004"]
+            ),
+            None,
+        )
+        self.assertEqual(
+            EventImporter.correct_holds_on_date_data(
+                SCHEDULE,
+                [
+                    "12.09.1999",
+                    "04.09..02.10",
+                    "12.07;12.08",
+                    "05.09",
+                    "с 03.09",
+                ],
+            ),
+            sorted(
+                [
+                    "12.09.1999",
+                    "04.09.2024",
+                    "18.09.2024",
+                    "02.10.2024",
+                    "12.07.2024",
+                    "12.08.2024",
+                    "05.09.2024",
+                    "03.09.2024",
+                    "17.09.2024",
+                    "01.10.2024",
+                    "15.10.2024",
+                    "29.10.2024",
+                    "12.11.2024",
+                    "26.11.2024",
+                    "10.12.2024",
+                    "24.12.2024",
+                    "07.01.2025",
+                    "21.01.2025",
+                ]
+            ),
+        )
 
-                "11.09.1999", 
-
-                "04.09.2024",
-                "18.09.2024",
-                "02.10.2024",
-
-                "12.09.1999", 
-
-                "03.09.2024",
-
-                "14.09.1999"
-            ])
+        self.assertEqual(
+            EventImporter.correct_holds_on_date_data(
+                SCHEDULE,
+                ["10.09.1999", "11.09.1999", "04.09..02.10", "12.09.1999", "03.09", "14.09.1999"],
+            ),
+            sorted(
+                [
+                    "10.09.1999",
+                    "11.09.1999",
+                    "04.09.2024",
+                    "18.09.2024",
+                    "02.10.2024",
+                    "12.09.1999",
+                    "03.09.2024",
+                    "14.09.1999",
+                ]
+            ),
         )
 
     def test_correct_holds_on_date_data_double_range(self):
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФЭВТ", 
+            schedule_template__metadata__faculty="ФЭВТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
             metadata__course=4,
-            metadata__semester=2
+            metadata__semester=2,
         )
-        
+
         self.assertEqual(
             EventImporter.correct_holds_on_date_data(SCHEDULE, ["03.09..01.10"]),
-            sorted([
-                "03.09.2024",
-                "17.09.2024",
-                "01.10.2024"
-            ])
+            sorted(["03.09.2024", "17.09.2024", "01.10.2024"]),
         )
         self.assertEqual(
             EventImporter.correct_holds_on_date_data(SCHEDULE, ["03.09..01.10", "03.09..01.10"]),
-            sorted([
-                "03.09.2024",
-                "17.09.2024",
-                "01.10.2024"
-            ])
-        )        
+            sorted(["03.09.2024", "17.09.2024", "01.10.2024"]),
+        )
 
     def test_correct_holds_on_date_data_single_range(self):
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФЭВТ", 
+            schedule_template__metadata__faculty="ФЭВТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
             metadata__course=4,
-            metadata__semester=2
+            metadata__semester=2,
         )
 
         self.assertEqual(
             EventImporter.correct_holds_on_date_data(SCHEDULE, ["с 03.09"]),
-            sorted([
-                "03.09.2024", 
-                "17.09.2024", 
-                "01.10.2024", 
-                "15.10.2024", 
-                "29.10.2024", 
-                "12.11.2024", 
-                "26.11.2024", 
-                "10.12.2024", 
-                "24.12.2024", 
-                "07.01.2025", 
-                "21.01.2025"
-            ])
+            sorted(
+                [
+                    "03.09.2024",
+                    "17.09.2024",
+                    "01.10.2024",
+                    "15.10.2024",
+                    "29.10.2024",
+                    "12.11.2024",
+                    "26.11.2024",
+                    "10.12.2024",
+                    "24.12.2024",
+                    "07.01.2025",
+                    "21.01.2025",
+                ]
+            ),
         )
         self.assertEqual(
             EventImporter.correct_holds_on_date_data(SCHEDULE, ["с 03.09", "с 03.09"]),
-            sorted([
-                "03.09.2024", 
-                "17.09.2024", 
-                "01.10.2024", 
-                "15.10.2024", 
-                "29.10.2024", 
-                "12.11.2024", 
-                "26.11.2024", 
-                "10.12.2024", 
-                "24.12.2024", 
-                "07.01.2025", 
-                "21.01.2025"
-            ])
+            sorted(
+                [
+                    "03.09.2024",
+                    "17.09.2024",
+                    "01.10.2024",
+                    "15.10.2024",
+                    "29.10.2024",
+                    "12.11.2024",
+                    "26.11.2024",
+                    "10.12.2024",
+                    "24.12.2024",
+                    "07.01.2025",
+                    "21.01.2025",
+                ]
+            ),
         )
-        
+
     def test_correct_holds_on_date_data_colon(self):
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФЭВТ", 
+            schedule_template__metadata__faculty="ФЭВТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
             metadata__course=4,
-            metadata__semester=2
+            metadata__semester=2,
         )
-        
+
         self.assertEqual(
             EventImporter.correct_holds_on_date_data(SCHEDULE, ["12.09;10.10;07.11;05.12"]),
-            sorted([
-                "12.09.2024",
-                "10.10.2024",
-                "07.11.2024",
-                "05.12.2024"
-            ])
+            sorted(["12.09.2024", "10.10.2024", "07.11.2024", "05.12.2024"]),
         )
         self.assertEqual(
-            EventImporter.correct_holds_on_date_data(SCHEDULE, [" 13.09;  11.10  ; 08.11 ;06.12   "]),
-            sorted([
-                "13.09.2024",
-                "11.10.2024",
-                "08.11.2024",
-                "06.12.2024"
-            ])
+            EventImporter.correct_holds_on_date_data(
+                SCHEDULE, [" 13.09;  11.10  ; 08.11 ;06.12   "]
+            ),
+            sorted(["13.09.2024", "11.10.2024", "08.11.2024", "06.12.2024"]),
         )
 
     def test_correct_holds_on_date_data_add_year(self):
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФЭВТ", 
+            schedule_template__metadata__faculty="ФЭВТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
             metadata__course=4,
-            metadata__semester=2
+            metadata__semester=2,
         )
 
         self.assertEqual(
-            EventImporter.correct_holds_on_date_data(SCHEDULE, ["03.09"]),
-            [
-                "03.09.2024"
-            ]
+            EventImporter.correct_holds_on_date_data(SCHEDULE, ["03.09"]), ["03.09.2024"]
         )
         self.assertEqual(
-            EventImporter.correct_holds_on_date_data(SCHEDULE, ["12.12."]),
-            [
-                "12.12.2024"
-            ]
+            EventImporter.correct_holds_on_date_data(SCHEDULE, ["12.12."]), ["12.12.2024"]
         )
         self.assertEqual(
             EventImporter.correct_holds_on_date_data(SCHEDULE, ["03.09", "03.09", "04.09"]),
-            sorted([
-                "03.09.2024",
-                "04.09.2024"
-            ])
+            sorted(["03.09.2024", "04.09.2024"]),
         )
 
     def test_make_calendar(self):
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФЭВТ", 
+            schedule_template__metadata__faculty="ФЭВТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
             metadata__course=4,
-            metadata__semester=2
+            metadata__semester=2,
         )
-        MONTHS = [
-            "февраль",
-            "март",
-            "апрель",
-            "май",
-            "июнь",
-            "сентябрь"
-        ]
+        MONTHS = ["февраль", "март", "апрель", "май", "июнь", "сентябрь"]
         weeks_as_dict = {
             "first_week": [
                 {
                     "week_day_index": 0,
                     "calendar": [
-                        {
-                            "month_index": 0,
-                            "month_days": ["1", "15"]
-                        },
-                        {
-                            "month_index": 1,
-                            "month_days": ["20", "28"]
-                        }
-                    ]
+                        {"month_index": 0, "month_days": ["1", "15"]},
+                        {"month_index": 1, "month_days": ["20", "28"]},
+                    ],
                 }
             ],
             "second_week": [
-                {
-                    "week_day_index": 0,
-                    "calendar": [
-                        {
-                            "month_index": 0,
-                            "month_days": ["8", "22"]
-                        }
-                    ]
-                },
-                {
-                    "week_day_index": 1,
-                    "calendar": [
-                        {
-                            "month_index": 0,
-                            "month_days": ["9", "23"]
-                        }
-                    ]
-                }
-            ]
+                {"week_day_index": 0, "calendar": [{"month_index": 0, "month_days": ["8", "22"]}]},
+                {"week_day_index": 1, "calendar": [{"month_index": 0, "month_days": ["9", "23"]}]},
+            ],
         }
         weeks_as_list = [
             {
@@ -532,15 +504,9 @@ class TestEventImporter(TestCase):
                     {
                         "week_day_index": 0,
                         "calendar": [
-                            {
-                                "month_index": 0,
-                                "month_days": ["1", "15"]
-                            },
-                            {
-                                "month_index": 1,
-                                "month_days": ["20", "28"]
-                            }
-                        ]
+                            {"month_index": 0, "month_days": ["1", "15"]},
+                            {"month_index": 1, "month_days": ["20", "28"]},
+                        ],
                     }
                 ]
             },
@@ -548,59 +514,47 @@ class TestEventImporter(TestCase):
                 "second_week": [
                     {
                         "week_day_index": 0,
-                        "calendar": [
-                            {
-                                "month_index": 0,
-                                "month_days": ["8", "22"]
-                            }
-                        ]
+                        "calendar": [{"month_index": 0, "month_days": ["8", "22"]}],
                     },
                     {
                         "week_day_index": 1,
-                        "calendar": [
-                            {
-                                "month_index": 0,
-                                "month_days": ["9", "23"]
-                            }
-                        ]
-                    }
+                        "calendar": [{"month_index": 0, "month_days": ["9", "23"]}],
+                    },
                 ]
-            }
+            },
         ]
-        
-        FIRST_WEEK_EXPECTED_RESULT = { 
-            "first_week" : { 
-                0 : [
+
+        FIRST_WEEK_EXPECTED_RESULT = {
+            "first_week": {
+                0: [
                     datetime.strptime("1.02.2025", "%d.%m.%Y").date(),
                     datetime.strptime("15.02.2025", "%d.%m.%Y").date(),
                     datetime.strptime("20.03.2025", "%d.%m.%Y").date(),
-                    datetime.strptime("28.03.2025", "%d.%m.%Y").date()
+                    datetime.strptime("28.03.2025", "%d.%m.%Y").date(),
                 ]
             }
         }
         SECOND_WEEK_EXPECTED_RESULT = {
-            "second_week" : { 
-                0 : [
+            "second_week": {
+                0: [
                     datetime.strptime("8.02.2025", "%d.%m.%Y").date(),
-                    datetime.strptime("22.02.2025", "%d.%m.%Y").date()
+                    datetime.strptime("22.02.2025", "%d.%m.%Y").date(),
                 ],
-                1 : [
+                1: [
                     datetime.strptime("9.02.2025", "%d.%m.%Y").date(),
-                    datetime.strptime("23.02.2025", "%d.%m.%Y").date()
-                ]
-            } 
+                    datetime.strptime("23.02.2025", "%d.%m.%Y").date(),
+                ],
+            }
         }
-        expected_result : dict = {}
+        expected_result: dict = {}
         expected_result.update(FIRST_WEEK_EXPECTED_RESULT)
         expected_result.update(SECOND_WEEK_EXPECTED_RESULT)
 
         self.assertEqual(
-            EventImporter.make_calendar(weeks_as_dict, MONTHS, SCHEDULE),
-            expected_result
+            EventImporter.make_calendar(weeks_as_dict, MONTHS, SCHEDULE), expected_result
         )
         self.assertEqual(
-            EventImporter.make_calendar(weeks_as_list, MONTHS, SCHEDULE),
-            expected_result
+            EventImporter.make_calendar(weeks_as_list, MONTHS, SCHEDULE), expected_result
         )
 
         weeks_as_dict.pop("first_week")
@@ -608,11 +562,10 @@ class TestEventImporter(TestCase):
 
         self.assertEqual(
             EventImporter.make_calendar(weeks_as_dict, MONTHS, SCHEDULE),
-            SECOND_WEEK_EXPECTED_RESULT
+            SECOND_WEEK_EXPECTED_RESULT,
         )
         self.assertEqual(
-            EventImporter.make_calendar(weeks_as_list, MONTHS, SCHEDULE),
-            FIRST_WEEK_EXPECTED_RESULT
+            EventImporter.make_calendar(weeks_as_list, MONTHS, SCHEDULE), FIRST_WEEK_EXPECTED_RESULT
         )
 
         self.assertEqual(
@@ -622,61 +575,42 @@ class TestEventImporter(TestCase):
                         {
                             "week_day_index": 0,
                             "calendar": [
-                                {
-                                    "month_index": 0,
-                                    "month_days": ["1"]
-                                },
-                                {
-                                    "month_index": 1,
-                                    "month_days": ["1"]
-                                }
-                            ]
+                                {"month_index": 0, "month_days": ["1"]},
+                                {"month_index": 1, "month_days": ["1"]},
+                            ],
                         }
                     ]
-                }, 
-                [
-                    "декабрь",
-                    "февраль"
-                ], 
-                SCHEDULE
+                },
+                ["декабрь", "февраль"],
+                SCHEDULE,
             ),
-            { 
-                "first_week" : { 
-                    0 : [
+            {
+                "first_week": {
+                    0: [
                         datetime.strptime("1.12.2024", "%d.%m.%Y").date(),
-                        datetime.strptime("1.02.2025", "%d.%m.%Y").date()
+                        datetime.strptime("1.02.2025", "%d.%m.%Y").date(),
                     ]
                 }
-            }
+            },
         )
 
+        self.assertRaises(ValueError, EventImporter.make_calendar, set(), MONTHS, SCHEDULE)
         self.assertRaises(
-            ValueError,
-            EventImporter.make_calendar,
-            set(), MONTHS, SCHEDULE
+            ValueError, EventImporter.make_calendar, [["qwe"], ["asd"]], MONTHS, SCHEDULE
         )
-        self.assertRaises(
-            ValueError,
-            EventImporter.make_calendar,
-            [["qwe"], ["asd"]], MONTHS, SCHEDULE
-        )
-        self.assertRaises(
-            ValueError,
-            EventImporter.make_calendar,
-            {}, MONTHS, SCHEDULE
-        )
+        self.assertRaises(ValueError, EventImporter.make_calendar, {}, MONTHS, SCHEDULE)
 
     def test_create_events(self):
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФЭВТ", 
+            schedule_template__metadata__faculty="ФЭВТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
             metadata__course=4,
-            metadata__semester=2
+            metadata__semester=2,
         )
         DEPARTMENT = Department.objects.get(shortname="ФЭВТ")
         CALENDAR = [
             datetime.strptime("1.02.2025", "%d.%m.%Y").date(),
-            datetime.strptime("15.02.2025", "%d.%m.%Y").date()
+            datetime.strptime("15.02.2025", "%d.%m.%Y").date(),
         ]
         KIND = EventKind.objects.create(name="Лекция")
         SUBJECT = Subject.objects.create(name="ВКР")
@@ -685,20 +619,17 @@ class TestEventImporter(TestCase):
                 name="Гилка В.В.",
                 role=EventParticipant.Role.TEACHER,
                 is_group=False,
-                department=DEPARTMENT
+                department=DEPARTMENT,
             ),
             EventParticipant.objects.create(
                 name="ПрИн-466",
                 role=EventParticipant.Role.STUDENT,
                 is_group=True,
-                department=DEPARTMENT
-            )
+                department=DEPARTMENT,
+            ),
         ]
         PLACES = [EventPlace.objects.create(building="В", room="902")]
-        TIME_SLOTS = [
-            TimeSlot.objects.get(alt_name="1-2"),
-            TimeSlot.objects.get(alt_name="3-4")
-        ]
+        TIME_SLOTS = [TimeSlot.objects.get(alt_name="1-2"), TimeSlot.objects.get(alt_name="3-4")]
 
         EventImporter.create_events(
             SCHEDULE,
@@ -709,7 +640,7 @@ class TestEventImporter(TestCase):
             AbstractDay.objects.get(day_number=0),
             TIME_SLOTS,
             [None],
-            CALENDAR
+            CALENDAR,
         )
 
         self.assertEqual(AbstractEvent.objects.all().count(), 2)
@@ -725,7 +656,7 @@ class TestEventImporter(TestCase):
             AbstractDay.objects.get(day_number=0),
             TIME_SLOTS,
             [None],
-            CALENDAR
+            CALENDAR,
         )
 
         self.assertEqual(AbstractEvent.objects.all().count(), 2)
@@ -744,9 +675,9 @@ class TestEventImporter(TestCase):
             TIME_SLOTS,
             [
                 datetime.strptime("10.03.2025", "%d.%m.%Y").date(),
-                datetime.strptime("11.03.2025", "%d.%m.%Y").date()
+                datetime.strptime("11.03.2025", "%d.%m.%Y").date(),
             ],
-            None
+            [],
         )
 
         self.assertEqual(AbstractEvent.objects.all().count(), 6)
@@ -763,9 +694,9 @@ class TestEventImporter(TestCase):
             TIME_SLOTS,
             [
                 datetime.strptime("10.03.2025", "%d.%m.%Y").date(),
-                datetime.strptime("11.03.2025", "%d.%m.%Y").date()
+                datetime.strptime("11.03.2025", "%d.%m.%Y").date(),
             ],
-            None
+            [],
         )
 
         self.assertEqual(AbstractEvent.objects.all().count(), 6)
@@ -776,58 +707,26 @@ class TestEventImporter(TestCase):
             "subject": "ВКР",
             "kind": "лекция",
             "participants": {
-                "teachers": [
-                    "Гилка В.В.",
-                    "Кузнецова А.С."
-                ],
-                "student_groups": [
-                    "ИВТ-460"
-                ]
+                "teachers": ["Гилка В.В.", "Кузнецова А.С."],
+                "student_groups": ["ИВТ-460"],
             },
-            "places": [
-                "В 902а",
-                "В 902б"
-            ],
-            "hours": [
-                "11-12",
-                "8.30",
-                "10.10"
-            ],
+            "places": ["В 902а", "В 902б"],
+            "hours": ["11-12", "8.30", "10.10"],
             "week_day_index": 0,
             "week": "first_week",
-            "holds_on_date": [
-                "09.11.2024"
-            ]
+            "holds_on_date": ["09.11.2024"],
         }
 
         EXPECTED_REFERENCE_DATA = {
-            "subjects": {
-                "ВКР"
-            }, 
-            "kinds": {
-                "Лекция"
-            }, 
-            "teachers": {
-                "Кузнецова А.С.", "Гилка В.В."
-            }, 
-            "groups": {
-                "ИВТ-460"
-            }, 
-            "places": {
-                ("В", "902б"), 
-                ("В", "902а")
-            }, 
-            "time_slots": {
-                ("11-12", "", ""), 
-                ("", "10:10", ""), 
-                ("", "8:30", "")
-            }
+            "subjects": {"ВКР"},
+            "kinds": {"Лекция"},
+            "teachers": {"Кузнецова А.С.", "Гилка В.В."},
+            "groups": {"ИВТ-460"},
+            "places": {("В", "902б"), ("В", "902а")},
+            "time_slots": {("11-12", "", ""), ("", "10:10", ""), ("", "8:30", "")},
         }
 
-        self.assertEqual(
-            EventImporter.collect_reference_data(EVENT_DATA),
-            EXPECTED_REFERENCE_DATA
-        )
+        self.assertEqual(EventImporter.collect_reference_data(EVENT_DATA), EXPECTED_REFERENCE_DATA)
 
     def test_make_reference_lookup(self):
         # with empty reference_lookup
@@ -836,100 +735,59 @@ class TestEventImporter(TestCase):
 
         REFERENCE_DATA = [
             {
-                "subjects": {
-                    "ВКР"
-                }, 
-                "kinds": {
-                    "Лекция"
-                }, 
-                "teachers": {
-                    "Гилка В.В.", 
-                    "Кузнецова А.С."
-                }, 
-                "groups": {
-                    "ИВТ-460"
-                }, 
-                "places": {
-                    ("В", "902а"), 
-                    ("В", "902б")
-                }, 
-                "time_slots": {
-                    ("", "8:30", ""), 
-                    ("11-12", "", ""), 
-                    ("", "10:10", "")
-                }
+                "subjects": {"ВКР"},
+                "kinds": {"Лекция"},
+                "teachers": {"Гилка В.В.", "Кузнецова А.С."},
+                "groups": {"ИВТ-460"},
+                "places": {("В", "902а"), ("В", "902б")},
+                "time_slots": {("", "8:30", ""), ("11-12", "", ""), ("", "10:10", "")},
             },
             {
-                "subjects": {
-                    "МИКРОПРОЦЕССОРЫ"
-                }, 
-                "kinds": {
-                    "Лабораторная работа"
-                }, 
-                "teachers": {
-                    "Дмитриев А.С.", 
-                    "Синкевич Д."
-                }, 
-                "groups": {
-                    "ПрИн-467", 
-                    "ПрИн-466"
-                }, 
-                "places": {
-                    ("В", "903"), 
-                    ("В", "908")
-                }, 
-                "time_slots": {
-                    ("", "11:50", "13:20")
-                }
-            }
+                "subjects": {"МИКРОПРОЦЕССОРЫ"},
+                "kinds": {"Лабораторная работа"},
+                "teachers": {"Дмитриев А.С.", "Синкевич Д."},
+                "groups": {"ПрИн-467", "ПрИн-466"},
+                "places": {("В", "903"), ("В", "908")},
+                "time_slots": {("", "11:50", "13:20")},
+            },
         ]
 
         reference_lookup = {
-            "subjects" : {},
-            "kinds" : {},
-            "participants" : {},
-            "places" : {},
-            "time_slots" : TimeSlot.objects.none()
+            "subjects": {},
+            "kinds": {},
+            "participants": {},
+            "places": {},
+            "time_slots": TimeSlot.objects.none(),
         }
-        
+
         for data in REFERENCE_DATA:
             EventImporter.make_reference_lookup(data, reference_lookup)
 
         for subject in Subject.objects.all():
-            self.assertEqual(
-                Subject.objects.filter(name=subject.name).count(),
-                1
-            )
+            self.assertEqual(Subject.objects.filter(name=subject.name).count(), 1)
         for kind in EventKind.objects.all():
-            self.assertEqual(
-                EventKind.objects.filter(name=kind.name).count(),
-                1
-            )
+            self.assertEqual(EventKind.objects.filter(name=kind.name).count(), 1)
         for participant in EventParticipant.objects.all():
-            self.assertEqual(
-                EventParticipant.objects.filter(name=participant.name).count(),
-                1
-            )
+            self.assertEqual(EventParticipant.objects.filter(name=participant.name).count(), 1)
 
     ## TODO: ...
     def test_(self):
-        
 
-        with open("apps/common/tests/data/test_import_1.json", "r", encoding="utf8") as data_file:
+        with open("apps/common/tests/data/test_import_1.json", encoding="utf8") as data_file:
             json_data = json.loads(data_file.read())
 
         reference_lookup = {
-            "subjects" : {},
-            "kinds" : {},
-            "participants" : {},
-            "places" : {},
-            "time_slots" : TimeSlot.objects.none()
+            "subjects": {},
+            "kinds": {},
+            "participants": {},
+            "places": {},
+            "time_slots": TimeSlot.objects.none(),
         }
 
         for entry in json_data["table"]["grid"]:
             reference_data = EventImporter.collect_reference_data(entry)
-            #EventImportAPI._ensure_reference_data(reference_data)
-            #reference_lookup = EventImportAPI._build_reference_lookup(reference_data)
+            # EventImportAPI._ensure_reference_data(reference_data)
+            # reference_lookup = EventImportAPI._build_reference_lookup(reference_data)
 
             EventImporter.make_reference_lookup(reference_data, reference_lookup)
             EventImporter.make_reference_lookup(reference_data, reference_lookup)
@@ -941,14 +799,13 @@ class TestEventImporter(TestCase):
         # print(EventParticipant.objects.all())
 
     def test_2(self):
-        from django.db.models.functions import Lower
         EventKind.objects.create(name="QWE-166")
 
         # try:
-            # print(EventKind.objects.annotate(lower_name=Lower("name")).filter(lower_name="qwe-166").all())
-            
+        # print(EventKind.objects.annotate(lower_name=Lower("name")).filter(lower_name="qwe-166").all())
+
         # except EventKind.DoesNotExist:
-            # print("ничего не найдено")
+        # print("ничего не найдено")
 
     """
 
@@ -1125,11 +982,21 @@ class TestReferenceImporter(TestCase):
         ReferenceImporter.import_place_reference(PLACE_REFERENCE_DATA)
 
         try:
-            self.assertNotEqual(EventPlace.objects.get(**PlaceFilter.by_building_and_room("002")), None)
-            self.assertNotEqual(EventPlace.objects.get(**PlaceFilter.by_building_and_room("КЦ УНЦ")), None)
-            self.assertNotEqual(EventPlace.objects.get(**PlaceFilter.by_building_and_room("В-1402-3")), None)
-            self.assertNotEqual(EventPlace.objects.get(**PlaceFilter.by_building_and_room("Б-205а")), None)
-            self.assertNotEqual(EventPlace.objects.get(**PlaceFilter.by_building_and_room("ГУК101")), None)
+            self.assertNotEqual(
+                EventPlace.objects.get(**PlaceFilter.by_building_and_room("002")), None
+            )
+            self.assertNotEqual(
+                EventPlace.objects.get(**PlaceFilter.by_building_and_room("КЦ УНЦ")), None
+            )
+            self.assertNotEqual(
+                EventPlace.objects.get(**PlaceFilter.by_building_and_room("В-1402-3")), None
+            )
+            self.assertNotEqual(
+                EventPlace.objects.get(**PlaceFilter.by_building_and_room("Б-205а")), None
+            )
+            self.assertNotEqual(
+                EventPlace.objects.get(**PlaceFilter.by_building_and_room("ГУК101")), None
+            )
         except EventPlace.DoesNotExist:
             self.fail()
 
@@ -1151,7 +1018,7 @@ class TestReferenceImporter(TestCase):
             self.assertNotEqual(EventPlace.objects.get(building="В", room="902а"), None)
         except EventPlace.DoesNotExist:
             self.fail()
-    
+
     def test_import_duplicate_place_reference(self):
         PLACE_REFERENCE_DATA = """
             {
@@ -1238,7 +1105,7 @@ class TestReferenceImporter(TestCase):
         except Department.DoesNotExist:
             self.fail()
 
-    def test_department_import_reference(self):
+    def test_department_import_reference_with_missing_parent(self):
         FACULTY_REFERENCE_DATA = """
             [
                 {
@@ -1282,11 +1149,15 @@ class TestReferenceImporter(TestCase):
         ReferenceImporter.import_department_reference(DEPARTMENT_REFERENCE_DATA)
 
         try:
-            self.assertEqual(Department.objects.filter(parent_department__isnull=True).count(), 3) # 2 faculty + 1 department
+            self.assertEqual(
+                Department.objects.filter(parent_department__isnull=True).count(), 3
+            )  # 2 faculty + 1 department
             self.assertEqual(Department.objects.filter(parent_department__isnull=False).count(), 1)
             self.assertNotEqual(Department.objects.get(shortname="ФЭВТ"), None)
             self.assertNotEqual(Department.objects.get(parent_department__code="111"), None)
-            self.assertEqual(Department.objects.get(code="000000001").name, "Кафедра Автоматические установки")
+            self.assertEqual(
+                Department.objects.get(code="000000001").name, "Кафедра Автоматические установки"
+            )
         except Department.DoesNotExist:
             self.fail()
 
@@ -1371,8 +1242,15 @@ class TestReferenceImporter(TestCase):
 
         try:
             self.assertEqual(Subject.objects.all().count(), 3)
-            self.assertNotEqual(Subject.objects.get(name="Основы проектирования WEB-приложений"), None)
-            self.assertNotEqual(Subject.objects.get(name="Экзамен по ПМ.05 'Организация деятельности подчиненного персонала'"), None)
+            self.assertNotEqual(
+                Subject.objects.get(name="Основы проектирования WEB-приложений"), None
+            )
+            self.assertNotEqual(
+                Subject.objects.get(
+                    name="Экзамен по ПМ.05 'Организация деятельности подчиненного персонала'"
+                ),
+                None,
+            )
         except Subject.DoesNotExist:
             self.fail()
 
@@ -1445,7 +1323,7 @@ class TestReferenceImporter(TestCase):
             }
         ]
         """
-        
+
         Organization.objects.create(name="ВолгГТУ")
 
         ReferenceImporter.import_faculty_reference(FACULTY_REFERENCE_DATA)
@@ -1454,7 +1332,12 @@ class TestReferenceImporter(TestCase):
         try:
             self.assertEqual(EventParticipant.objects.all().count(), 2)
             self.assertNotEqual(EventParticipant.objects.get(name="Рамасуббу С."), None)
-            self.assertEqual(EventParticipant.objects.get(role=EventParticipant.Role.TEACHER, department__code="222").name, "Завьялов Д.В.")
+            self.assertEqual(
+                EventParticipant.objects.get(
+                    role=EventParticipant.Role.TEACHER, department__code="222"
+                ).name,
+                "Завьялов Д.В.",
+            )
         except EventParticipant.DoesNotExist:
             self.fail()
 
@@ -1503,7 +1386,7 @@ class TestReferenceImporter(TestCase):
             }
         ]
         """
-        
+
         Organization.objects.create(name="ВолгГТУ")
 
         ReferenceImporter.import_faculty_reference(FACULTY_REFERENCE_DATA)
@@ -1567,7 +1450,7 @@ class TestReferenceImporter(TestCase):
             }
         ]
         """
-        
+
         Organization.objects.create(name="ВолгГТУ")
 
         ReferenceImporter.import_faculty_reference(FACULTY_REFERENCE_DATA)
@@ -1577,11 +1460,14 @@ class TestReferenceImporter(TestCase):
         try:
             self.assertEqual(EventParticipant.objects.all().count(), 2)
             self.assertNotEqual(EventParticipant.objects.get(name="АДП-222"), None)
-            self.assertEqual(EventParticipant.objects.get(
-                role=EventParticipant.Role.STUDENT,
-                is_group=True,
-                department__name="Кафедра Автоматические установки"
-            ).name, "АДП-322")
+            self.assertEqual(
+                EventParticipant.objects.get(
+                    role=EventParticipant.Role.STUDENT,
+                    is_group=True,
+                    department__name="Кафедра Автоматические установки",
+                ).name,
+                "АДП-322",
+            )
         except EventParticipant.DoesNotExist:
             self.fail()
 
@@ -1638,7 +1524,7 @@ class TestReferenceImporter(TestCase):
             }
         ]
         """
-        
+
         Organization.objects.create(name="ВолгГТУ")
 
         ReferenceImporter.import_faculty_reference(FACULTY_REFERENCE_DATA)
@@ -1720,17 +1606,17 @@ class TestReferenceImporter(TestCase):
                 Schedule.objects.get(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ФЭВТ",
-                    metadata__course=4
+                    metadata__course=4,
                 ),
-                None
+                None,
             )
             self.assertNotEqual(
                 Schedule.objects.get(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ФЭВТ",
-                    metadata__course=3
+                    metadata__course=3,
                 ),
-                None
+                None,
             )
         except Schedule.DoesNotExist:
             self.fail()
@@ -1749,7 +1635,7 @@ class TestReferenceImporter(TestCase):
             self.assertEqual(ScheduleTemplate.objects.all().count(), 3)
         except ScheduleTemplate.DoesNotExist:
             self.fail()
-        
+
         # ФЭВТ, Бакалавриат
         # ФЭВТ, Магистратура
         # ХТФ, Магистратура
@@ -1770,25 +1656,25 @@ class TestReferenceImporter(TestCase):
                 Schedule.objects.filter(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ФЭВТ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
             self.assertEqual(
                 Schedule.objects.filter(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ХТФ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
             self.assertEqual(
                 Schedule.objects.filter(
                     status=Schedule.Status.ARCHIVE,
                     schedule_template__metadata__faculty="ХТФ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
         except Schedule.DoesNotExist:
             self.fail()
@@ -1808,7 +1694,7 @@ class TestReferenceImporter(TestCase):
             self.assertEqual(ScheduleTemplate.objects.all().count(), 3)
         except ScheduleTemplate.DoesNotExist:
             self.fail()
-        
+
         # ФЭВТ, Бакалавриат
         # ФЭВТ, Магистратура
         # ХТФ, Магистратура
@@ -1828,25 +1714,25 @@ class TestReferenceImporter(TestCase):
                 Schedule.objects.filter(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ФЭВТ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
             self.assertEqual(
                 Schedule.objects.filter(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ХТФ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
             self.assertEqual(
                 Schedule.objects.filter(
                     status=Schedule.Status.ARCHIVE,
                     schedule_template__metadata__faculty="ХТФ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                2
+                2,
             )
         except Schedule.DoesNotExist:
             self.fail()
@@ -1866,7 +1752,7 @@ class TestReferenceImporter(TestCase):
             self.assertEqual(ScheduleTemplate.objects.all().count(), 3)
         except ScheduleTemplate.DoesNotExist:
             self.fail()
-        
+
         # ФЭВТ, Бакалавриат
         # ФЭВТ, Магистратура
         # ХТФ, Магистратура
@@ -1944,17 +1830,17 @@ class TestReferenceImporter(TestCase):
                 Schedule.objects.get(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ФЭВТ",
-                    metadata__course=4
+                    metadata__course=4,
                 ),
-                None
+                None,
             )
             self.assertNotEqual(
                 Schedule.objects.get(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ФЭВТ",
-                    metadata__course=3
+                    metadata__course=3,
                 ),
-                None
+                None,
             )
         except Schedule.DoesNotExist:
             self.fail()
@@ -1973,7 +1859,7 @@ class TestReferenceImporter(TestCase):
             self.assertEqual(ScheduleTemplate.objects.all().count(), 3)
         except ScheduleTemplate.DoesNotExist:
             self.fail()
-        
+
         # ФЭВТ, Бакалавриат
         # ФЭВТ, Магистратура
         # ХТФ, Магистратура
@@ -1994,25 +1880,25 @@ class TestReferenceImporter(TestCase):
                 Schedule.objects.filter(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ФЭВТ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
             self.assertEqual(
                 Schedule.objects.filter(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ХТФ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
             self.assertEqual(
                 Schedule.objects.filter(
                     status=Schedule.Status.ARCHIVE,
                     schedule_template__metadata__faculty="ХТФ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
         except Schedule.DoesNotExist:
             self.fail()
@@ -2032,7 +1918,7 @@ class TestReferenceImporter(TestCase):
             self.assertEqual(ScheduleTemplate.objects.all().count(), 3)
         except ScheduleTemplate.DoesNotExist:
             self.fail()
-        
+
         # ФЭВТ, Бакалавриат
         # ФЭВТ, Магистратура
         # ХТФ, Магистратура
@@ -2052,25 +1938,25 @@ class TestReferenceImporter(TestCase):
                 Schedule.objects.filter(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ФЭВТ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
             self.assertEqual(
                 Schedule.objects.filter(
                     status=Schedule.Status.ACTIVE,
                     schedule_template__metadata__faculty="ХТФ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
             self.assertEqual(
                 Schedule.objects.filter(
                     status=Schedule.Status.ARCHIVE,
                     schedule_template__metadata__faculty="ХТФ",
-                    metadata__course=4
+                    metadata__course=4,
                 ).count(),
-                1
+                1,
             )
         except Schedule.DoesNotExist:
             self.fail()
@@ -2090,7 +1976,7 @@ class TestReferenceImporter(TestCase):
             self.assertEqual(ScheduleTemplate.objects.all().count(), 3)
         except ScheduleTemplate.DoesNotExist:
             self.fail()
-        
+
         # ФЭВТ, Бакалавриат
         # ФЭВТ, Магистратура
         # ХТФ, Магистратура

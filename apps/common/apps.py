@@ -6,5 +6,7 @@ class CommonConfig(AppConfig):
     name = "apps.common"
 
     def ready(self):
-        import apps.common.signals
+        from apps.common import signals
+
+        signals.register_common_model_signals()
         # TODO: не дописано?

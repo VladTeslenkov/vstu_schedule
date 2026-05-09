@@ -72,39 +72,39 @@ class TestReadAPI(TestCase):
                 name="Гилка В.В.",
                 role=EventParticipant.Role.TEACHER,
                 is_group=False,
-                department=DEPARTMENT
+                department=DEPARTMENT,
             ),
             EventParticipant.objects.create(
                 name="Кузнецова А.С.",
                 role=EventParticipant.Role.TEACHER,
                 is_group=False,
-                department=DEPARTMENT
+                department=DEPARTMENT,
             ),
             EventParticipant.objects.create(
                 name="ПрИн-466",
                 role=EventParticipant.Role.STUDENT,
                 is_group=True,
-                department=DEPARTMENT
+                department=DEPARTMENT,
             ),
             EventParticipant.objects.create(
                 name="ПрИн-467",
                 role=EventParticipant.Role.STUDENT,
                 is_group=True,
-                department=DEPARTMENT
-            )
+                department=DEPARTMENT,
+            ),
         ]
         PLACES = [
             EventPlace.objects.create(building="В", room="902"),
-            EventPlace.objects.create(building="В", room="903")
+            EventPlace.objects.create(building="В", room="903"),
         ]
         ABSTRACT_DAY = AbstractDay.objects.get(day_number=0)
         TIME_SLOT = TimeSlot.objects.get(alt_name="1-2")
         DATE_ = datetime.strptime("1.02.2025", "%d.%m.%Y").date()
         SCHEDULE = Schedule.objects.get(
-            schedule_template__metadata__faculty="ФЭВТ", 
+            schedule_template__metadata__faculty="ФЭВТ",
             schedule_template__metadata__scope=ScheduleTemplateMetadata.Scope.BACHELOR,
             metadata__course=4,
-            metadata__semester=2
+            metadata__semester=2,
         )
 
         create_abstract_event(
@@ -118,25 +118,25 @@ class TestReadAPI(TestCase):
             is_abstract_event_already_exists(
                 KIND, SUBJECT, PARTICIPANTS, PLACES, ABSTRACT_DAY, TIME_SLOT, DATE_, SCHEDULE
             ),
-            True
+            True,
         )
         self.assertEqual(
             is_abstract_event_already_exists(
                 KIND, SUBJECT, PARTICIPANTS, PLACES, ABSTRACT_DAY, TIME_SLOT, None, SCHEDULE
             ),
-            True
+            True,
         )
 
         OTHER_PARTICIPANT = EventParticipant.objects.create(
             name="ПрИн-467",
             role=EventParticipant.Role.STUDENT,
             is_group=True,
-            department=DEPARTMENT
+            department=DEPARTMENT,
         )
 
         self.assertEqual(
             is_abstract_event_already_exists(
                 KIND, SUBJECT, [OTHER_PARTICIPANT], PLACES, ABSTRACT_DAY, TIME_SLOT, None, SCHEDULE
             ),
-            False
+            False,
         )

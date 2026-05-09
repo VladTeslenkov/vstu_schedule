@@ -27,8 +27,9 @@ load_dotenv(BASE_DIR / ".env.local") # ignored in docker
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = dotenv.get("SECRET_KEY",
-                 default="django-insecure-wdt!94+_==sh4e-0849w05gz#y)93=km05)@6d84(6f4%wrnbp")
+SECRET_KEY = dotenv.get(
+    "SECRET_KEY", default="django-insecure-wdt!94+_==sh4e-0849w05gz#y)93=km05)@6d84(6f4%wrnbp"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = dotenv.get_bool("DEBUG")
@@ -48,7 +49,7 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "apps.common",
     "apps.panel",
-    "apps.client"
+    "apps.client",
 ]
 
 MIDDLEWARE = [
@@ -66,9 +67,7 @@ ROOT_URLCONF = "vstu_schedule.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [
-            BASE_DIR / "templates"
-        ],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

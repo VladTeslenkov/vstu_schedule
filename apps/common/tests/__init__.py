@@ -1,2 +1,1 @@
-"""python manage.py test apps.common
-"""
+"""python manage.py test apps.common"""
