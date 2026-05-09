@@ -16,12 +16,24 @@ dependencies = [
     "vstu-xls",
     "xlsxwriter>=3.2.9",
 ]
-
 [dependency-groups]
 dev = [
+    "django-stubs>=6.0.3",
+    "django-stubs-ext>=6.0.3",
+    "pyright>=1.1.409",
     "pytest>=9.0.2",
     "pytest-django>=4.11.1",
-    "ruff>=0.15.8",
+    "ruff>=0.15.12",
+]
+
+[tool.pyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.13"
+include = ["apps", "vstu_schedule"]
+exclude = [
+    "**/migrations",
+    "**/__pycache__",
+    ".venv", "**/node_modules", "**/.*",
 ]
 
 [tool.uv.sources]

@@ -1,6 +1,8 @@
+from typing import Any, ClassVar, cast
+
 from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-from django.http import HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseBase, HttpResponseRedirect
 from django.urls import path
 from django.utils import timezone
 
@@ -44,7 +46,11 @@ from apps.common.services.timetable.write.factories import (
 )
 
 # TODO: django.core.exceptions.ImproperlyConfigured: The model TokenProxy is abstract, so it cannot be registered with admin.
-##from rest_framework.authtoken.admin import TokenAdmin 
+##from rest_framework.authtoken.admin import TokenAdmin
+
+
+def get_model_field_verbose_name(model: type[Any], field_name: str) -> str:
+    return str(cast(Any, model._meta.get_field(field_name)).verbose_name)
 
 
 class BaseAdmin(admin.ModelAdmin):
@@ -64,11 +70,16 @@ class SubjectAdmin(BaseAdmin):
     search_fields = ("name",)
 
     def get_urls(self):
-        return [path("import_subject_reference/", self.import_subject_reference), *super().get_urls()]
+        return [
+            path("import_subject_reference/", self.import_subject_reference),
+            *super().get_urls(),
+        ]
 
     def import_subject_reference(self, request):
         if request.method == "POST" and request.FILES.get("subject_reference_file"):
-            ReferenceImporter.import_subject_reference(request.FILES['subject_reference_file'].read())
+            ReferenceImporter.import_subject_reference(
+                request.FILES["subject_reference_file"].read()
+            )
             messages.success(request, "Импорт успешно произведён")
 
         return HttpResponseRedirect("../")
@@ -82,20 +93,26 @@ class EventParticipantAdmin(BaseAdmin):
     list_filter = ("role",)
 
     def get_urls(self):
-        return [path("import_teacher_reference/", self.import_teacher_reference),
-                path("import_student_reference/", self.import_student_reference),
-                *super().get_urls()]
+        return [
+            path("import_teacher_reference/", self.import_teacher_reference),
+            path("import_student_reference/", self.import_student_reference),
+            *super().get_urls(),
+        ]
 
     def import_teacher_reference(self, request):
         if request.method == "POST" and request.FILES.get("teacher_reference_file"):
-            ReferenceImporter.import_teacher_reference(request.FILES['teacher_reference_file'].read())
+            ReferenceImporter.import_teacher_reference(
+                request.FILES["teacher_reference_file"].read()
+            )
             messages.success(request, "Импорт успешно произведён")
 
         return HttpResponseRedirect("../")
 
     def import_student_reference(self, request):
         if request.method == "POST" and request.FILES.get("student_reference_file"):
-            ReferenceImporter.import_student_reference(request.FILES['student_reference_file'].read())
+            ReferenceImporter.import_student_reference(
+                request.FILES["student_reference_file"].read()
+            )
             messages.success(request, "Импорт успешно произведён")
 
         return HttpResponseRedirect("../")
@@ -109,12 +126,11 @@ class EventPlaceAdmin(BaseAdmin):
     list_filter = ("building",)
 
     def get_urls(self):
-        return [path("import_place_reference/", self.import_place_reference), 
-                *super().get_urls()]
+        return [path("import_place_reference/", self.import_place_reference), *super().get_urls()]
 
     def import_place_reference(self, request):
         if request.method == "POST" and request.FILES.get("place_reference_file"):
-            ReferenceImporter.import_place_reference(request.FILES['place_reference_file'].read())
+            ReferenceImporter.import_place_reference(request.FILES["place_reference_file"].read())
             messages.success(request, "Импорт успешно произведён")
 
         return HttpResponseRedirect("../")
@@ -146,8 +162,10 @@ class ScheduleTemplateAdmin(BaseAdmin):
     search_fields = ("repetition_period", "department__name", "aligned_by_week_day")
     list_filter = ("metadata__faculty", "metadata__scope")
 
-    @admin.display(description=ScheduleTemplate._meta.get_field("department").verbose_name, 
-                   ordering="department__name")
+    @admin.display(
+        description=get_model_field_verbose_name(ScheduleTemplate, "department"),
+        ordering="department__name",
+    )
     def department_name(self, obj):
         return obj.department.name
 
@@ -161,24 +179,26 @@ class ScheduleAdmin(BaseAdmin):
         "schedule_template__metadata__scope",
         "metadata__course",
         "status",
-        "schedule_template__metadata__faculty", 
-        "metadata__semester", 
-        "metadata__years"
+        "schedule_template__metadata__faculty",
+        "metadata__semester",
+        "metadata__years",
     )
 
-    actions = ["extended_delete"]
+    actions = ("extended_delete",)
 
     def get_urls(self):
-        return [path("import_schedule/", self.import_schedule_data),
-                path("delete_archive_schedules/", self.delete_archive_schedules),
-                *super().get_urls()]
+        return [
+            path("import_schedule/", self.import_schedule_data),
+            path("delete_archive_schedules/", self.delete_archive_schedules),
+            *super().get_urls(),
+        ]
 
     def import_schedule_data(self, request):
         if request.method == "POST" and request.FILES.get("selected_file"):
             if "common_import" in request.POST:
-                ReferenceImporter.import_schedule(request.FILES['selected_file'].read(), True)
+                ReferenceImporter.import_schedule(request.FILES["selected_file"].read(), True)
             elif "delete_import" in request.POST:
-                ReferenceImporter.import_schedule(request.FILES['selected_file'].read(), False)
+                ReferenceImporter.import_schedule(request.FILES["selected_file"].read(), False)
             messages.success(request, "Импорт успешно произведён")
 
         return HttpResponseRedirect("../")
@@ -192,31 +212,38 @@ class ScheduleAdmin(BaseAdmin):
     ## TODO: ...
     @admin.action(description="Удалить выбранные Расписания и их Метаданные расписания")
     def extended_delete(modeladmin, request, queryset):
-        """Deletes selected Schedules and its ScheduleMetadatas
-        """
-        return
-        ScheduleMetadata.objects.filter(pk__in=queryset.values_list("metadata__pk", flat=True)).delete()
+        """Deletes selected Schedules and its ScheduleMetadatas"""
+        metadata_pks = list(queryset.values_list("metadata__pk", flat=True))
         queryset.delete()
+        ScheduleMetadata.objects.filter(pk__in=metadata_pks).delete()
 
         messages.success(request, "Успешно удалены")
 
-    @admin.display(description=Schedule._meta.get_field("schedule_template").verbose_name, 
-                   ordering="schedule_template__metadata__faculty")
+    @admin.display(
+        description=get_model_field_verbose_name(Schedule, "schedule_template"),
+        ordering="schedule_template__metadata__faculty",
+    )
     def faculty(self, obj):
         return obj.schedule_template.metadata.faculty
 
-    @admin.display(description=ScheduleMetadata._meta.get_field("course").verbose_name, 
-                   ordering="metadata__course")
+    @admin.display(
+        description=get_model_field_verbose_name(ScheduleMetadata, "course"),
+        ordering="metadata__course",
+    )
     def course(self, obj):
         return obj.metadata.course
 
-    @admin.display(description=ScheduleMetadata._meta.get_field("semester").verbose_name, 
-                   ordering="metadata__semester")
+    @admin.display(
+        description=get_model_field_verbose_name(ScheduleMetadata, "semester"),
+        ordering="metadata__semester",
+    )
     def semester(self, obj):
         return obj.metadata.semester
 
-    @admin.display(description=ScheduleMetadata._meta.get_field("years").verbose_name, 
-                   ordering="metadata__years")
+    @admin.display(
+        description=get_model_field_verbose_name(ScheduleMetadata, "years"),
+        ordering="metadata__years",
+    )
     def years(self, obj):
         return obj.metadata.years
 
@@ -241,11 +268,20 @@ class EventAdmin(BaseAdmin):
             return queryset
 
     list_display = ("subject_override", "date", "abstract_day", "time_slot_override")
-    search_fields = ("participants_override__name", "subject_override__name", "places_override__building", "places_override__room", "kind_override__name", "date")
+    search_fields = (
+        "participants_override__name",
+        "subject_override__name",
+        "places_override__building",
+        "places_override__room",
+        "kind_override__name",
+        "date",
+    )
     list_filter = (EventOverridenFilter, "kind_override", "is_event_canceled")
 
-    @admin.display(description=AbstractEvent._meta.get_field("abstract_day").verbose_name, 
-                   ordering="name")
+    @admin.display(
+        description=get_model_field_verbose_name(AbstractEvent, "abstract_day"),
+        ordering="name",
+    )
     def abstract_day(self, obj):
         return obj.abstract_event.abstract_day
 
@@ -255,21 +291,22 @@ class AbstractEventChangesAdmin(BaseAdmin):
     list_display = ("datemodified", "__str__", "is_exported")
     list_filter = ("is_created", "is_deleted", "is_exported")
 
-    #TODO: rework as buttons not actions
-    actions = ["delete_exported", "export_selected", "export_not_exported"]
+    # TODO: rework as buttons not actions
+    actions = ("delete_exported", "export_selected", "export_not_exported")
+    actions_without_selection: ClassVar[frozenset[str]] = frozenset(
+        {"delete_exported", "export_not_exported"}
+    )
 
     @admin.action(description="Удалить экспортированные")
     def delete_exported(modeladmin, request, queryset):
-        """Deletes already exported AbstractEventChanges
-        """
+        """Deletes already exported AbstractEventChanges"""
         AbstractEventChanges.objects.filter(is_exported=True).delete()
 
         messages.success(request, "Успешно удалены")
 
     @admin.action(description="Экспортировать выбранное")
     def export_selected(modeladmin, request, queryset):
-        """Export XLS form given AbstractEventChanges
-        """
+        """Export XLS form given AbstractEventChanges"""
         response = export_abstract_event_changes(queryset)
 
         messages.success(request, "Успешно экспортированы")
@@ -278,8 +315,7 @@ class AbstractEventChangesAdmin(BaseAdmin):
 
     @admin.action(description="Экспортировать не экспортированные")
     def export_not_exported(modeladmin, request, queryset):
-        """Export XLS form all not exported AbstractEventChanges
-        """
+        """Export XLS form all not exported AbstractEventChanges"""
 
         changes = AbstractEventChanges.objects.filter(is_exported=False)
 
@@ -294,29 +330,49 @@ class AbstractEventChangesAdmin(BaseAdmin):
 
         return response
 
-    def changelist_view(self, request, extra_context = None):
-        """Allows user to interact with specified actions without selecting models
-        """
+    def _get_requested_action_name(self, request: HttpRequest) -> str | None:
+        try:
+            action_index = int(request.POST.get("index", 0))
+        except ValueError:
+            action_index = 0
 
-        if "action" in request.POST and request.POST["action"] in ["export_not_exported", "delete_exported"]:
+        try:
+            return request.POST.getlist("action")[action_index]
+        except IndexError:
+            return None
+
+    def changelist_view(
+        self,
+        request: HttpRequest,
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        action_name = self._get_requested_action_name(request)
+        if (
+            request.method == "POST"
+            and action_name in self.actions_without_selection
+            and not request.POST.getlist(ACTION_CHECKBOX_NAME)
+        ):
             post = request.POST.copy()
+            post.update({ACTION_CHECKBOX_NAME: "0"})
+            cast(Any, request).POST = post
 
-            # makes request never empty
-            post.update({ admin.helpers.ACTION_CHECKBOX_NAME : "0" })
-
-            request._set_post(post) # TODO: это не очень хорошо
-
-        return super(AbstractEventChangesAdmin, self).changelist_view(request, extra_context)
+        return super().changelist_view(request, extra_context)
 
 
 @admin.register(AbstractEvent)
 class AbstractEventAdmin(BaseAdmin):
     change_list_template = "../templates/timetable/admin/abstractEventChangeListExtend.html"
     list_display = ("datemodified", "subject", "abstract_day", "time_slot")
-    search_fields = ("participants__name", "subject__name", "places__building", "places__room", "kind__name")
+    search_fields = (
+        "participants__name",
+        "subject__name",
+        "places__building",
+        "places__room",
+        "kind__name",
+    )
     list_filter = ("kind__name",)
 
-    actions = ["delete_events", "fill", "check_fields"]
+    actions = ("delete_events", "fill", "check_fields")
 
     def get_urls(self):
         return [path("import_data/", self.import_event_data), *super().get_urls()]
@@ -324,23 +380,23 @@ class AbstractEventAdmin(BaseAdmin):
     def import_event_data(self, request):
         if request.method == "POST" and request.FILES.get("selected_file"):
             ## TODO: when working with big files should use chunks() instead
-            EventImporterLegacy.import_event_data(request.FILES['selected_file'].read())
-            messages.success(request, f"Успешно произведён импорт из файла: \"{request.FILES['selected_file']}\"")
+            EventImporterLegacy.import_event_data(request.FILES["selected_file"].read())
+            messages.success(
+                request, f'Успешно произведён импорт из файла: "{request.FILES["selected_file"]}"'
+            )
 
         return HttpResponseRedirect("../")
 
     @admin.action(description="Удалить связанные события")
     def delete_events(modeladmin, request, queryset):
-        """Deletes all Events related with given AbstractEvents
-        """
+        """Deletes all Events related with given AbstractEvents"""
 
         Event.objects.filter(abstract_event__in=queryset).delete()
         messages.success(request, "Связанные события успешно удалены")
 
     @admin.action(description="Заполнить семестр")
     def fill(modeladmin, request, queryset):
-        """Fills semester with Events from given AbstractEvents
-        """
+        """Fills semester with Events from given AbstractEvents"""
 
         if rewrite_events(queryset):
             messages.success(request, "Успешно заполнено")
@@ -349,8 +405,7 @@ class AbstractEventAdmin(BaseAdmin):
 
     @admin.action(description="Проверить на накладки в расписании")
     def check_fields(modeladmin, request, queryset):
-        """Checks for double usage selected AbstractEvents field values
-        """
+        """Checks for double usage selected AbstractEvents field values"""
 
         is_any_warning_shown = False
 
@@ -387,8 +442,8 @@ class DepartmentAdmin(BaseAdmin):
     class HasParentDepartmentFilter(admin.SimpleListFilter):
         title = "Имеет родительское подразделение"
         parameter_name = "has_parent_department"
-        HAS_VALUES = ["Да", "Да"]
-        HAS_NOT_VALUES = ["Нет", "Нет"]
+        HAS_VALUES: ClassVar[tuple[str, str]] = ("Да", "Да")
+        HAS_NOT_VALUES: ClassVar[tuple[str, str]] = ("Нет", "Нет")
 
         def lookups(self, request, model_admin):
             return (self.HAS_VALUES, self.HAS_NOT_VALUES)
@@ -407,26 +462,34 @@ class DepartmentAdmin(BaseAdmin):
     list_filter = (HasParentDepartmentFilter, "organization__name")
 
     def get_urls(self):
-        return [path("import_faculty_reference/", self.import_faculty_reference),
-                path("import_department_reference/", self.import_department_reference),
-                *super().get_urls()]
+        return [
+            path("import_faculty_reference/", self.import_faculty_reference),
+            path("import_department_reference/", self.import_department_reference),
+            *super().get_urls(),
+        ]
 
     def import_faculty_reference(self, request):
         if request.method == "POST" and request.FILES.get("faculty_reference_file"):
-            ReferenceImporter.import_faculty_reference(request.FILES['faculty_reference_file'].read())
+            ReferenceImporter.import_faculty_reference(
+                request.FILES["faculty_reference_file"].read()
+            )
             messages.success(request, "Импорт успешно произведён")
 
         return HttpResponseRedirect("../")
 
     def import_department_reference(self, request):
         if request.method == "POST" and request.FILES.get("department_reference_file"):
-            ReferenceImporter.import_department_reference(request.FILES['department_reference_file'].read())
+            ReferenceImporter.import_department_reference(
+                request.FILES["department_reference_file"].read()
+            )
             messages.success(request, "Импорт успешно произведён")
 
         return HttpResponseRedirect("../")
 
-    @admin.display(description=Department._meta.get_field("organization").verbose_name, 
-                   ordering="organization__name")
+    @admin.display(
+        description=get_model_field_verbose_name(Department, "organization"),
+        ordering="organization__name",
+    )
     def organization_name(self, obj):
         return obj.organization.name
 
@@ -473,12 +536,11 @@ class DayDateOverrideAdmin(BaseAdmin):
     list_display = ("day_source", "day_destination")
     search_fields = ("day_source", "day_destination")
 
-    actions = ["override"]
+    actions = ("override",)
 
     @admin.action(description="Применить переносы")
     def override(modeladmin, request, queryset):
-        """Applies selected DayDateOverrides
-        """
+        """Applies selected DayDateOverrides"""
         for ddo in queryset:
             reader = Selector(DateFilter.from_singe_date(ddo.day_source))
             reader.add_filter(EventFilter.by_department(ddo.department))

@@ -1,22 +1,7 @@
-from datetime import datetime
-
 from django.test import TestCase
 
 from apps.common.models import (
-    AbstractDay,
-    AbstractEvent,
-    Department,
-    Event,
-    EventKind,
-    EventParticipant,
-    EventPlace,
     Organization,
-    Schedule,
-    ScheduleMetadata,
-    ScheduleTemplate,
-    ScheduleTemplateMetadata,
-    Subject,
-    TimeSlot,
 )
 from apps.common.services.timetable.load.reference_importer import ReferenceImporter
 from apps.common.services.timetable.utilities.model_helpers import (
@@ -73,8 +58,8 @@ class TestLogic(TestCase):
         ReferenceImporter.import_faculty_reference(FACULTY_REFERENCE_DATA)
         ReferenceImporter.import_department_reference(DEPARTMENT_REFERENCE_DATA)
         ReferenceImporter.import_schedule(SCHEDULE_REFERENCE_DATA, True)
-        
-    '''
+
+    """
     def test_get_calendar(self):
         SCHEDULE = Schedule.objects.get(
             schedule_template__metadata__faculty="ФАКУЛЬТ", 
@@ -114,4 +99,4 @@ class TestLogic(TestCase):
         ABS_EVENT.participants.set(PARTICIPANTS)
         ABS_EVENT.places.set(PLACES)
 
-        '''
+        """

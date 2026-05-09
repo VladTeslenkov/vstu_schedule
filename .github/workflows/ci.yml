@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Ruff and Pyright
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+
+      - name: Run Ruff linter
+        run: uv run ruff check .
+
+      - name: Check Ruff formatting
+        run: uv run ruff format --check .
+
+      - name: Run Pyright
+        run: uv run pyright
+
+  tests:
+    name: Pytest
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: vstuschedule
+          POSTGRES_USER: vstusched
+          POSTGRES_PASSWORD: db_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vstusched -d vstuschedule"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DEBUG: "1"
+      SECRET_KEY: django-insecure-ci-key
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      POSTGRES_DB: vstuschedule
+      POSTGRES_USER: vstusched
+      POSTGRES_PASSWORD: db_password
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DISABLE_CELERY: "1"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+
+      - name: Run tests
+        run: uv run pytest
