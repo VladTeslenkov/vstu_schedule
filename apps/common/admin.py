@@ -25,8 +25,8 @@ from apps.common.models import (
 )
 from apps.common.selectors import Selector
 from apps.common.services.timetable.export.exporter import export_abstract_event_changes
-from apps.common.services.timetable.load.event_importer_legacy import (
-    EventImporterLegacy,
+from apps.common.services.timetable.load.event_importer import (
+    EventImporter,
 )
 from apps.common.services.timetable.load.reference_importer import ReferenceImporter
 from apps.common.services.timetable.read.filters import (
@@ -324,7 +324,7 @@ class AbstractEventAdmin(BaseAdmin):
     def import_event_data(self, request):
         if request.method == "POST" and request.FILES.get("selected_file"):
             ## TODO: when working with big files should use chunks() instead
-            EventImporterLegacy.import_event_data(request.FILES['selected_file'].read())
+            EventImporter.import_event_data(request.FILES['selected_file'].read())
             messages.success(request, f"Успешно произведён импорт из файла: \"{request.FILES['selected_file']}\"")
 
         return HttpResponseRedirect("../")

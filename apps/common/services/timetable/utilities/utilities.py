@@ -95,7 +95,7 @@ def get_scope_from_label(scope_label : str) -> ScheduleTemplateMetadata.Scope|No
 def is_events_follow_each_other(first_event : Event, second_event : Event) -> bool:
     """Checks is Events follow one after other by time slot
     """
-    
+
     # Consider Events to be consecutive
     # when their time slot follow one after other
 
@@ -106,7 +106,6 @@ def is_events_follow_each_other(first_event : Event, second_event : Event) -> bo
         int(re.findall(r"\d+", second_event.time_slot_override.alt_name)[0]) - 
         int(re.findall(r"\d+", first_event.time_slot_override.alt_name)[-1])
     ) == 1
-            
 
 def is_similar_events(first_event : Event, second_event : Event) -> bool:
     """Checks is Events are similar based on model fields
