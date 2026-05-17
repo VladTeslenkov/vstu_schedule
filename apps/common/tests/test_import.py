@@ -20,6 +20,7 @@ from apps.common.models import (
     TimeSlot,
 )
 from apps.common.services.timetable.load.event_importer import EventImporter
+from apps.common.services.timetable.load.event_importer_legacy import EventImporterLegacy
 from apps.common.services.timetable.load.reference_importer import ReferenceImporter
 from apps.common.services.timetable.read.filters import (
     PlaceFilter,
@@ -874,24 +875,17 @@ class TestEventImporter(TestCase):
             }
         """
 
-        # manualy created TimeSlot
-        TimeSlot.objects.create(
-            alt_name="11-12",
-            start_time=datetime.strptime("17:00:00", "%H:%M:%S"),
-            end_time=datetime.strptime("18:30:00", "%H:%M:%S"),
-        )
-
         EventImporter.import_events(IMPORT_DATA)
 
         try:
             self.assertNotEqual(
-                Event.objects.filter(**TimeSlotFilter.by_repr_event_relative("11-12")).first(), None
+                Event.objects.filter(**TimeSlotFilter.from_display_name_event_relative("11-12")).first(), None
             )
             self.assertNotEqual(
-                Event.objects.filter(**TimeSlotFilter.by_repr_event_relative("11:50")).first(), None
+                Event.objects.filter(**TimeSlotFilter.from_display_name_event_relative("11:50")).first(), None
             )
             self.assertNotEqual(
-                Event.objects.filter(**TimeSlotFilter.by_repr_event_relative("17:00")).first(), None
+                Event.objects.filter(**TimeSlotFilter.from_display_name_event_relative("17:00")).first(), None
             )
         except Event.DoesNotExist:
             self.fail()
@@ -899,19 +893,19 @@ class TestEventImporter(TestCase):
         try:
             self.assertNotEqual(
                 AbstractEvent.objects.filter(
-                    **TimeSlotFilter.by_repr_abstract_event_relative("11-12")
+                    **TimeSlotFilter.from_display_name_abstract_event_relative("11-12")
                 ).first(),
                 None,
             )
             self.assertNotEqual(
                 AbstractEvent.objects.filter(
-                    **TimeSlotFilter.by_repr_abstract_event_relative("11:50")
+                    **TimeSlotFilter.from_display_name_abstract_event_relative("11:50")
                 ).first(),
                 None,
             )
             self.assertNotEqual(
                 AbstractEvent.objects.filter(
-                    **TimeSlotFilter.by_repr_abstract_event_relative("17:00")
+                    **TimeSlotFilter.from_display_name_abstract_event_relative("17:00")
                 ).first(),
                 None,
             )
@@ -938,7 +932,7 @@ class TestEventImporter(TestCase):
             self.fail()
 
         try:
-            self.assertNotEqual(EventPlace.objects.get(**PlaceFilter.by_repr("В 902а")), None)
+            self.assertNotEqual(EventPlace.objects.get(**PlaceFilter.by_building_and_room("В 902а")), None)
         except EventPlace.DoesNotExist:
             self.fail()
 
@@ -1001,9 +995,9 @@ class TestEventImporter(TestCase):
             "groups": {"ИВТ-460", "ПрИн-466", "ПрИн-467"},
             "places": {("Й", "111"), ("Ц", "222"), ("", "ЯЧС333"), ("", "444"), ("", "exist")},
             "time_slots": {
-                ("1-2", "8:30", ""),
+                ("1-2", "8:30", ""), # Must not create duplicative time_slot created in SetUp()
                 ("", "11:55", ""),
-                ("5-6", "13:40", "15:01"),
+                ("5-6", "13:40", "14:01"),
                 ("", "15:09", "15:10"),
                 ("11-12", "", "") # Using common time_slot created in SetUp()
             },
@@ -1019,6 +1013,8 @@ class TestEventImporter(TestCase):
 
         EventPlace.objects.create(building="", room="exist")
 
+        INIT_TIME_SLOTS_COUNT = TimeSlot.objects.all().count()
+
         EventImporter.make_reference_lookup(INPUT_REFERENCE_DATA, reference_lookup)
 
         try:
@@ -1032,12 +1028,13 @@ class TestEventImporter(TestCase):
             self.fail()
 
         try:
+            self.assertEqual(TimeSlot.objects.all().count(), INIT_TIME_SLOTS_COUNT + 3)
             self.assertEqual(reference_lookup["time_slots"].count(), 5)
             self.assertNotEqual(
-                TimeSlot.objects.get(alt_name="1-2", start_time="8:30", end_time__isnull=True), None
+                TimeSlot.objects.get(alt_name="1-2", start_time="8:30"), None
             )
             self.assertNotEqual(
-                reference_lookup["time_slots"].get(alt_name="1-2", start_time="8:30", end_time__isnull=True), None
+                reference_lookup["time_slots"].get(alt_name="1-2", start_time="8:30"), None
             )
             self.assertNotEqual(
                 TimeSlot.objects.get(alt_name="", start_time="11:55", end_time__isnull=True), None
@@ -1046,10 +1043,10 @@ class TestEventImporter(TestCase):
                 reference_lookup["time_slots"].get(alt_name="", start_time="11:55", end_time__isnull=True), None
             )
             self.assertNotEqual(
-                TimeSlot.objects.get(alt_name="5-6", start_time="13:40", end_time="15:01"), None
+                TimeSlot.objects.get(alt_name="5-6", start_time="13:40", end_time="14:01"), None
             )
             self.assertNotEqual(
-                reference_lookup["time_slots"].get(alt_name="5-6", start_time="13:40", end_time="15:01"), None
+                reference_lookup["time_slots"].get(alt_name="5-6", start_time="13:40", end_time="14:01"), None
             )
             self.assertNotEqual(
                 TimeSlot.objects.get(alt_name="", start_time="15:09", end_time="15:10"), None

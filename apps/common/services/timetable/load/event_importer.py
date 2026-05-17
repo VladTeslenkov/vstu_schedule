@@ -76,7 +76,7 @@ class EventImporter:
             cls.make_reference_lookup(reference_data, reference_lookup)
 
             calendar = cls.make_calendar(weeks, months, schedule)
-            print("\n\n\n", reference_lookup, "\n\n\n")
+
             cls.create_events(
                 schedule, *cls.parse_data(entry, calendar, week_days, reference_lookup)
             )
@@ -396,11 +396,11 @@ class EventImporter:
 
                 # start_time
                 if time_slot[1]:
-                    filter_query &= Q(alt_name=time_slot[1])
+                    filter_query &= Q(start_time=time_slot[1])
 
                 # end_time
                 if time_slot[2]:
-                    filter_query &= Q(alt_name=time_slot[2])
+                    filter_query &= Q(end_time=time_slot[2])
 
                 if filter_query:
                     existing_time_slots |= TimeSlot.objects.filter(filter_query)
@@ -548,8 +548,7 @@ class EventImporter:
         parsed_weeks = {
             week_id : {
                 week_day_index : [
-                    dd.mm.YYYY,
-                    dd.mm.YYYY...
+                    dd.mm.YYYY
                 ]
             }
         }
@@ -724,6 +723,8 @@ class EventImporter:
         else:
             holds_on_dates = [None]
 
+        event_dates = calendar[week_id][week_day_index]
+
         return (
             kind,
             subject,
@@ -732,7 +733,7 @@ class EventImporter:
             abstract_day,
             time_slots,
             holds_on_dates,
-            calendar,
+            event_dates,
         )
 
     @staticmethod

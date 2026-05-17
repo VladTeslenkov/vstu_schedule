@@ -105,7 +105,7 @@ def fill_semester_for_dates(abstract_event : AbstractEvent, dates : list[date]) 
     Always creates Events even if it goes out of bounds the end date of the semester 
     """
 
-    # creates single Event 
+    # creates single Event
     # if abstract_event holds only on expected date
     if abstract_event.holds_on_date is not None:
         create_event_for_date(abstract_event.holds_on_date, abstract_event)
