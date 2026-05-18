@@ -23,6 +23,7 @@ from apps.common.services.timetable.load.event_importer import EventImporter
 from apps.common.services.timetable.load.reference_importer import ReferenceImporter
 from apps.common.services.timetable.read.filters import (
     PlaceFilter,
+    TimeSlotFilter,
 )
 from apps.common.services.timetable.utilities.model_helpers import (
     create_common_abstract_days,
