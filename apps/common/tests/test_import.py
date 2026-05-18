@@ -703,48 +703,6 @@ class TestEventImporter(TestCase):
         self.assertEqual(AbstractEvent.objects.all().count(), 6)
         self.assertEqual(Event.objects.all().count(), 8)
 
-    ## TODO: ...
-    def test_(self):
-        pass
-
-        with open("apps/common/tests/data/test_import_1.json", "r", encoding="utf8") as data_file:
-            json_data = json.loads(data_file.read())
-
-        reference_lookup = {
-            "subjects": {},
-            "kinds": {},
-            "participants": {},
-            "places": {},
-            "time_slots": TimeSlot.objects.none(),
-        }
-
-        for entry in json_data["table"]["grid"]:
-            reference_data = EventImporter.collect_reference_data(entry)
-            # EventImportAPI._ensure_reference_data(reference_data)
-            # reference_lookup = EventImportAPI._build_reference_lookup(reference_data)
-
-            EventImporter.make_reference_lookup(reference_data, reference_lookup)
-            EventImporter.make_reference_lookup(reference_data, reference_lookup)
-            EventImporter.make_reference_lookup(reference_data, reference_lookup)
-            EventImporter.make_reference_lookup(reference_data, reference_lookup)
-
-        # print(reference_data)
-        # print(reference_lookup)
-        # print(EventParticipant.objects.all())
-
-    def test_2(self):
-        pass
-
-        from django.db.models.functions import Lower
-
-        EventKind.objects.create(name="QWE-166")
-
-        # try:
-        # print(EventKind.objects.annotate(lower_name=Lower("name")).filter(lower_name="qwe-166").all())
-
-        # except EventKind.DoesNotExist:
-        # print("ничего не найдено")
-
     def test_import_data(self):
         IMPORT_DATA = """
             {
