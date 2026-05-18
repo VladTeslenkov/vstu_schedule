@@ -324,7 +324,7 @@ class AbstractEventAdmin(BaseAdmin):
     def import_event_data(self, request):
         if request.method == "POST" and request.FILES.get("selected_file"):
             ## TODO: when working with big files should use chunks() instead
-            EventImporter.import_event_data(request.FILES['selected_file'].read())
+            EventImporter.import_events(request.FILES['selected_file'].read())
             messages.success(request, f"Успешно произведён импорт из файла: \"{request.FILES['selected_file']}\"")
 
         return HttpResponseRedirect("../")
