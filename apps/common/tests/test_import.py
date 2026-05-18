@@ -20,7 +20,6 @@ from apps.common.models import (
     TimeSlot,
 )
 from apps.common.services.timetable.load.event_importer import EventImporter
-from apps.common.services.timetable.load.event_importer_legacy import EventImporterLegacy
 from apps.common.services.timetable.load.reference_importer import ReferenceImporter
 from apps.common.services.timetable.read.filters import (
     PlaceFilter,
@@ -879,13 +878,22 @@ class TestEventImporter(TestCase):
 
         try:
             self.assertNotEqual(
-                Event.objects.filter(**TimeSlotFilter.from_display_name_event_relative("11-12")).first(), None
+                Event.objects.filter(
+                    **TimeSlotFilter.from_display_name_event_relative("11-12")
+                ).first(),
+                None,
             )
             self.assertNotEqual(
-                Event.objects.filter(**TimeSlotFilter.from_display_name_event_relative("11:50")).first(), None
+                Event.objects.filter(
+                    **TimeSlotFilter.from_display_name_event_relative("11:50")
+                ).first(),
+                None,
             )
             self.assertNotEqual(
-                Event.objects.filter(**TimeSlotFilter.from_display_name_event_relative("17:00")).first(), None
+                Event.objects.filter(
+                    **TimeSlotFilter.from_display_name_event_relative("17:00")
+                ).first(),
+                None,
             )
         except Event.DoesNotExist:
             self.fail()
@@ -932,12 +940,14 @@ class TestEventImporter(TestCase):
             self.fail()
 
         try:
-            self.assertNotEqual(EventPlace.objects.get(**PlaceFilter.by_building_and_room("В 902а")), None)
+            self.assertNotEqual(
+                EventPlace.objects.get(**PlaceFilter.by_building_and_room("В 902а")), None
+            )
         except EventPlace.DoesNotExist:
             self.fail()
 
     def test_collect_reference_data(self):
-        INPUT_DATA = [
+        REFERENCE_DATA = [
             {
                 "subject": "ВКР",
                 "kind": "лекция",
@@ -965,28 +975,38 @@ class TestEventImporter(TestCase):
                 "holds_on_date": [],
             },
         ]
-        EXPECTED_REFERENCE_DATA = {
-            "subjects": {"ВКР", "МИКРОПРОЦЕССОРЫ"},
-            "kinds": {"Лекция", "Лабораторная работа"},
-            "teacher_names": {"Гилка В.В.", "Кузнецова А.С.", "Синкевич Д.", "Дмитриев А.С."},
-            "group_names": {"ИВТ-460", "ПрИн-466", "ПрИн-467"},
-            "places": {("В", "902а"), ("В", "902б"), ("", "ГУК101"), ("", "312")},
-            "time_slots": {
-                ("1-2", "", ""),
-                ("3-4", "", ""),
-                ("", "18:30", ""),
-                ("", "11:11", "12:01"),
+        EXPECTED_REFERENCE_DATA = [
+            {
+                "subjects": {"ВКР"},
+                "kinds": {"Лекция"},
+                "teachers": {"Гилка В.В.", "Кузнецова А.С."},
+                "groups": {"ИВТ-460"},
+                "places": {("В", "902а"), ("В", "902б")},
+                "time_slots": {
+                    ("1-2", "", ""),
+                    ("3-4", "", ""),
+                },
             },
-        }
+            {
+                "subjects": {"МИКРОПРОЦЕССОРЫ"},
+                "kinds": {"Лабораторная работа"},
+                "teachers": {"Синкевич Д.", "Дмитриев А.С."},
+                "groups": {"ПрИн-466", "ПрИн-467"},
+                "places": {("", "ГУК101"), ("", "312")},
+                "time_slots": {
+                    ("", "18:30", ""),
+                    ("", "11:11", "12:01"),
+                },
+            }
+        ]
 
-        return_value = EventImporter.collect_reference_data(INPUT_DATA)
+        for i in range(0, 2):
+            return_value = EventImporter.collect_reference_data(REFERENCE_DATA[i])
 
-        self.assertSequenceEqual(return_value, EXPECTED_REFERENCE_DATA)
+            self.assertSequenceEqual(return_value, EXPECTED_REFERENCE_DATA[i])
 
     def test_make_reference_lookup(self):
         # with empty reference_lookup
-        # with non empty reference_lookup when some models already exists in reference_lookup
-        # already have something in DB that needs to be in reference_lookup
 
         INPUT_REFERENCE_DATA = {
             "subjects": {"ВКР", "МИКРОПРОЦЕССОРЫ"},
@@ -995,11 +1015,11 @@ class TestEventImporter(TestCase):
             "groups": {"ИВТ-460", "ПрИн-466", "ПрИн-467"},
             "places": {("Й", "111"), ("Ц", "222"), ("", "ЯЧС333"), ("", "444"), ("", "exist")},
             "time_slots": {
-                ("1-2", "8:30", ""), # Must not create duplicative time_slot created in SetUp()
+                ("1-2", "8:30", ""),  # Must not create duplicative time_slot created in SetUp()
                 ("", "11:55", ""),
                 ("5-6", "13:40", "14:01"),
                 ("", "15:09", "15:10"),
-                ("11-12", "", "") # Using common time_slot created in SetUp()
+                ("11-12", "", ""),  # Using common time_slot created in SetUp()
             },
         }
 
@@ -1030,9 +1050,7 @@ class TestEventImporter(TestCase):
         try:
             self.assertEqual(TimeSlot.objects.all().count(), INIT_TIME_SLOTS_COUNT + 3)
             self.assertEqual(reference_lookup["time_slots"].count(), 5)
-            self.assertNotEqual(
-                TimeSlot.objects.get(alt_name="1-2", start_time="8:30"), None
-            )
+            self.assertNotEqual(TimeSlot.objects.get(alt_name="1-2", start_time="8:30"), None)
             self.assertNotEqual(
                 reference_lookup["time_slots"].get(alt_name="1-2", start_time="8:30"), None
             )
@@ -1040,23 +1058,30 @@ class TestEventImporter(TestCase):
                 TimeSlot.objects.get(alt_name="", start_time="11:55", end_time__isnull=True), None
             )
             self.assertNotEqual(
-                reference_lookup["time_slots"].get(alt_name="", start_time="11:55", end_time__isnull=True), None
+                reference_lookup["time_slots"].get(
+                    alt_name="", start_time="11:55", end_time__isnull=True
+                ),
+                None,
             )
             self.assertNotEqual(
                 TimeSlot.objects.get(alt_name="5-6", start_time="13:40", end_time="14:01"), None
             )
             self.assertNotEqual(
-                reference_lookup["time_slots"].get(alt_name="5-6", start_time="13:40", end_time="14:01"), None
+                reference_lookup["time_slots"].get(
+                    alt_name="5-6", start_time="13:40", end_time="14:01"
+                ),
+                None,
             )
             self.assertNotEqual(
                 TimeSlot.objects.get(alt_name="", start_time="15:09", end_time="15:10"), None
             )
             self.assertNotEqual(
-                reference_lookup["time_slots"].get(alt_name="", start_time="15:09", end_time="15:10"), None
+                reference_lookup["time_slots"].get(
+                    alt_name="", start_time="15:09", end_time="15:10"
+                ),
+                None,
             )
-            self.assertNotEqual(
-                reference_lookup["time_slots"].get(alt_name="11-12"), None
-            )
+            self.assertNotEqual(reference_lookup["time_slots"].get(alt_name="11-12"), None)
         except TimeSlot.DoesNotExist:
             self.fail()
 
@@ -1082,14 +1107,150 @@ class TestEventImporter(TestCase):
             )
 
     def test_import_events_for_only_active_schedule(self):
+        IMPORT_DATA = """
+            {
+                "title": "Учебные занятия 4 курса ФЭВТ бакалавриат на 2 семестр 2024-2025 учебного года",
+                "table": {
+                    "grid": [
+                        {
+                            "subject": "ВКР",
+                            "kind": "лекция",
+                            "participants": {
+                                "teachers": [
+                                    "Гилка В.В.",
+                                    "Кузнецова А.С."
+                                ],
+                                "student_groups": [
+                                    "ИВТ-460"
+                                ]
+                            },
+                            "places": [
+                                "В 902а",
+                                "В 902б"
+                            ],
+                            "hours": [
+                                "11-12",
+                                "8.30",
+                                "10.10"
+                            ],
+                            "week_day_index": 0,
+                            "week": "first_week",
+                            "holds_on_date": [
+                                "09.11.2024"
+                            ]
+                        },
+                        {
+                            "subject": "МИКРОПРОЦЕССОРЫ",
+                            "kind": "лабораторная работа",
+                            "participants": {
+                                "teachers": [
+                                    "Синкевич Д.",
+                                    "Дмитриев А.С."
+                                ],
+                                "student_groups": [
+                                    "ПрИн-466",
+                                    "ПрИн-467"
+                                ]
+                            },
+                            "places": [
+                                "В 903",
+                                "В 908"
+                            ],
+                            "hours": [
+                                "11.50 - 13:20"
+                            ],
+                            "week_day_index": 1,
+                            "week": "second_week",
+                            "holds_on_date": []
+                        }
+                    ],
+                    "datetime": {
+                        "weeks": {
+                            "first_week": [
+                                {
+                                    "week_day_index": 0,
+                                    "calendar": [
+                                        {
+                                            "month_index": 0,
+                                            "month_days": [
+                                                "1", 
+                                                "15"
+                                            ]
+                                        },
+                                        {
+                                            "month_index": 1,
+                                            "month_days": [
+                                                "20", 
+                                                "28"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "second_week": [
+                                {
+                                    "week_day_index": 0,
+                                    "calendar": [
+                                        {
+                                            "month_index": 0,
+                                            "month_days": [
+                                                "8", 
+                                                "22"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "week_day_index": 1,
+                                    "calendar": [
+                                        {
+                                            "month_index": 0,
+                                            "month_days": [
+                                                "9", 
+                                                "23"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "week_days": [
+                            "ПОНЕДЕЛЬНИК",
+                            "ВТОРНИК",
+                            "СРЕДА",
+                            "ЧЕТВЕРГ",
+                            "ПЯТНИЦА",
+                            "СУББОТА"
+                        ],
+                        "months": [
+                            "февраль",
+                            "март",
+                            "апрель",
+                            "май",
+                            "июнь",
+                            "сентябрь"
+                        ]
+                    }
+                }
+            }
+        """
+
+        INIT_SCHEDULE_COUNT = Schedule.objects.all().count()
+
         ReferenceImporter.import_schedule(self.SCHEDULE_REFERENCE_DATA, True)
 
         try:
-            self.assertEqual(Schedule.objects.all().count(), 2)
-            self.assertEqual(Schedule.objects.filter(status=Schedule.Status.ACTIVE).count(), 1)
-            self.assertEqual(Schedule.objects.filter(status=Schedule.Status.ARCHIVE).count(), 1)
+            self.assertEqual(Schedule.objects.all().count(), INIT_SCHEDULE_COUNT + 3)
+            self.assertEqual(
+                Schedule.objects.filter(status=Schedule.Status.ACTIVE).count(), INIT_SCHEDULE_COUNT
+            )
+            self.assertEqual(
+                Schedule.objects.filter(status=Schedule.Status.ARCHIVE).count(), INIT_SCHEDULE_COUNT
+            )
         except Schedule.DoesNotExist:
             self.fail()
+
+        EventImporter.import_events(IMPORT_DATA)
 
         try:
             self.assertEqual(

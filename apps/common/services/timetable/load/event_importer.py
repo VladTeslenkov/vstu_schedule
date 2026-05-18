@@ -3,6 +3,7 @@ import re
 from datetime import date, datetime, timedelta
 
 from django.db.models import Q
+
 from apps.common.models import (
     AbstractDay,
     Department,
@@ -356,9 +357,7 @@ class EventImporter:
             rooms = {room for _, room in places}
 
             existing_places = EventPlace.objects.filter(room__in=rooms)
-            existing_places_reprs = list(
-                existing_places.values_list("building", "room").distinct()
-            )
+            existing_places_reprs = list(existing_places.values_list("building", "room").distinct())
 
             for place in list(existing_places):
                 if (place.building, place.room) not in reference_lookup["places"]:
@@ -368,12 +367,7 @@ class EventImporter:
 
             for building, room in places:
                 if (building, room) not in existing_places_reprs:
-                    places_to_create.append(
-                        EventPlace(
-                            building=building,
-                            room=room
-                        )
-                    )
+                    places_to_create.append(EventPlace(building=building, room=room))
 
             if places_to_create:
                 created_places = EventPlace.objects.bulk_create(places_to_create)
@@ -404,9 +398,15 @@ class EventImporter:
 
                 if filter_query:
                     existing_time_slots |= TimeSlot.objects.filter(filter_query)
-            existing_time_slots_alt_names = existing_time_slots.values_list("alt_name", flat=True).distinct()
-            existing_time_slots_start_times = existing_time_slots.values_list("start_time", flat=True).distinct()
-            existing_time_slots_end_times = existing_time_slots.values_list("end_time", flat=True).distinct()
+            existing_time_slots_alt_names = existing_time_slots.values_list(
+                "alt_name", flat=True
+            ).distinct()
+            existing_time_slots_start_times = existing_time_slots.values_list(
+                "start_time", flat=True
+            ).distinct()
+            existing_time_slots_end_times = existing_time_slots.values_list(
+                "end_time", flat=True
+            ).distinct()
 
             reference_lookup["time_slots"] = existing_time_slots
 
@@ -414,21 +414,31 @@ class EventImporter:
 
             for alt_name, start_time, end_time in time_slots:
                 # At this moment, we auto creating TimeSlots ONLY from start_time
-                if start_time and datetime.strptime(start_time, "%H:%M").time() not in existing_time_slots_start_times and \
-                    (not alt_name or alt_name not in existing_time_slots_alt_names) and \
-                    (not end_time or datetime.strptime(end_time, "%H:%M").time() not in existing_time_slots_end_times):
-                        time_slots_to_create.append(
-                            TimeSlot(
-                                alt_name=alt_name, 
-                                start_time=datetime.strptime(start_time, "%H:%M"), 
-                                end_time=datetime.strptime(end_time, "%H:%M") if end_time else None
-                            )
+                if (
+                    start_time
+                    and datetime.strptime(start_time, "%H:%M").time()
+                    not in existing_time_slots_start_times
+                    and (not alt_name or alt_name not in existing_time_slots_alt_names)
+                    and (
+                        not end_time
+                        or datetime.strptime(end_time, "%H:%M").time()
+                        not in existing_time_slots_end_times
+                    )
+                ):
+                    time_slots_to_create.append(
+                        TimeSlot(
+                            alt_name=alt_name,
+                            start_time=datetime.strptime(start_time, "%H:%M"),
+                            end_time=datetime.strptime(end_time, "%H:%M") if end_time else None,
                         )
+                    )
 
             if time_slots_to_create:
                 created_time_slots = TimeSlot.objects.bulk_create(time_slots_to_create)
 
-                reference_lookup["time_slots"] |= TimeSlot.objects.filter(pk__in={time_slot.pk for time_slot in created_time_slots})
+                reference_lookup["time_slots"] |= TimeSlot.objects.filter(
+                    pk__in={time_slot.pk for time_slot in created_time_slots}
+                )
 
     @staticmethod
     def find_schedule(title: str) -> Schedule:
