@@ -16,6 +16,11 @@ from apps.common.models import (
 )
 from apps.common.selectors import Selector
 from apps.common.services.timetable.read.filters import TimeSlotFilter
+from apps.common.services.timetable.utilities import (
+    get_number_from_month_name,
+    get_scope_from_label,
+    replace_roman_with_arabic_numerals,
+)
 from apps.common.services.timetable.utilities.model_helpers import (
     is_abstract_event_already_exists,
 )
@@ -26,11 +31,6 @@ from apps.common.services.timetable.utilities.normalizers import (
     normalize_scope,
     normalize_subject_name,
     normalize_time_slot_display_name,
-)
-from apps.common.services.timetable.utilities.utilities import (
-    get_number_from_month_name,
-    get_scope_from_label,
-    replace_roman_with_arabic_numerals,
 )
 from apps.common.services.timetable.write.factories import (
     create_abstract_event,
@@ -135,7 +135,7 @@ class EventImporter:
                     day, month = splited_date.strip().split(".", 1)
 
                     corrected_holds_on_date.add(
-                        "{}.{}.{}".format(day, month, LEFT_YEAR if int(month) > 6 else RIGHT_YEAR)
+                        f"{day}.{month}.{LEFT_YEAR if int(month) > 6 else RIGHT_YEAR}"
                     )
 
                 is_something_corrected = True
@@ -149,20 +149,16 @@ class EventImporter:
                 to_day, to_month = match.group(2).split(".", 1)
 
                 from_date = datetime.strptime(
-                    "{}.{}.{}".format(
-                        from_day, from_month, LEFT_YEAR if int(from_month) > 6 else RIGHT_YEAR
-                    ),
+                    f"{from_day}.{from_month}.{LEFT_YEAR if int(from_month) > 6 else RIGHT_YEAR}",
                     "%d.%m.%Y",
                 ).date()
                 to_date = datetime.strptime(
-                    "{}.{}.{}".format(
-                        to_day, to_month, LEFT_YEAR if int(from_month) > 6 else RIGHT_YEAR
-                    ),
+                    f"{to_day}.{to_month}.{LEFT_YEAR if int(from_month) > 6 else RIGHT_YEAR}",
                     "%d.%m.%Y",
                 ).date()
 
                 while from_date <= to_date:
-                    corrected_holds_on_date.add(datetime.strftime(from_date, "%d.%m.%Y"))
+                    corrected_holds_on_date.add(from_date.strftime("%d.%m.%Y"))
 
                     from_date += timedelta(days=schedule.schedule_template.repetition_period)
 
@@ -176,14 +172,12 @@ class EventImporter:
                 from_day, from_month = match.group(1).split(".", 1)
 
                 from_date = datetime.strptime(
-                    "{}.{}.{}".format(
-                        from_day, from_month, LEFT_YEAR if int(from_month) > 6 else RIGHT_YEAR
-                    ),
+                    f"{from_day}.{from_month}.{LEFT_YEAR if int(from_month) > 6 else RIGHT_YEAR}",
                     "%d.%m.%Y",
                 ).date()
 
                 while from_date <= schedule.end_date:
-                    corrected_holds_on_date.add(datetime.strftime(from_date, "%d.%m.%Y"))
+                    corrected_holds_on_date.add(from_date.strftime("%d.%m.%Y"))
 
                     from_date += timedelta(days=schedule.schedule_template.repetition_period)
 
@@ -197,7 +191,7 @@ class EventImporter:
                 day, month = match.group(1).strip().split(".", 1)
 
                 corrected_holds_on_date.add(
-                    "{}.{}.{}".format(day, month, LEFT_YEAR if int(month) > 6 else RIGHT_YEAR)
+                    f"{day}.{month}.{LEFT_YEAR if int(month) > 6 else RIGHT_YEAR}"
                 )
 
                 is_something_corrected = True
@@ -208,7 +202,7 @@ class EventImporter:
                 f"Неправильный формат даты '{date_}' в holds_on_date '{holds_on_date}'."
             )
 
-        return list(sorted(corrected_holds_on_date)) if is_something_corrected else None
+        return sorted(corrected_holds_on_date) if is_something_corrected else None
 
     @staticmethod
     def collect_reference_data(event_data) -> dict:
@@ -219,7 +213,7 @@ class EventImporter:
         teachers: set[str] = set()
         groups: set[str] = set()
         places: set[tuple[str, str]] = set()
-        time_slots: set[str] = set()
+        time_slots: set[tuple[str, str, str]] = set()
 
         subjects.add(normalize_subject_name(event_data["subject"]))
 
@@ -549,7 +543,14 @@ class EventImporter:
                 "Уточните заголовок."
             )
 
-        return reader.get_found_models().first()
+        schedule = reader.get_found_models().first()
+        if schedule is None:
+            raise Schedule.DoesNotExist(
+                f"Расписание с параметрами {reader.get_filter_query()} не найдено."
+                f"Заголовок: '{title}'."
+            )
+
+        return schedule
 
     @staticmethod
     def make_calendar(weeks, months: list[str], schedule: Schedule) -> dict:
@@ -585,7 +586,7 @@ class EventImporter:
 
         LEFT_YEAR, RIGHT_YEAR = schedule.metadata.years.split("-", 1)
 
-        for key in normalized_weeks.keys():
+        for key in normalized_weeks:
             calendar[key] = {}
 
             for week_day in normalized_weeks[key]:
@@ -597,11 +598,7 @@ class EventImporter:
                     for month_day in month["month_days"]:
                         calendar[key][week_day["week_day_index"]].append(
                             datetime.strptime(
-                                "{}.{}.{}".format(
-                                    month_day,
-                                    month_number,
-                                    LEFT_YEAR if month_number > 6 else RIGHT_YEAR,
-                                ),
+                                f"{month_day}.{month_number}.{LEFT_YEAR if month_number > 6 else RIGHT_YEAR}",
                                 "%d.%m.%Y",
                             ).date()
                         )
@@ -616,7 +613,7 @@ class EventImporter:
         Subject,
         list[EventParticipant],
         list[EventPlace],
-        list[AbstractDay],
+        AbstractDay,
         list[TimeSlot],
         list[date],
         list[date],

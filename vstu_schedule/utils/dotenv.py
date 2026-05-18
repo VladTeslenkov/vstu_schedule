@@ -7,7 +7,7 @@ def get_bool(name: str, default: bool = False) -> bool:
     return value in ("1", "true", "yes", "on")
 
 
-def get_list(name: str, default: list | None = None, sep: str = ',') -> list:
+def get_list(name: str, default: list | None = None, sep: str = ",") -> list:
     value = os.getenv(name, "")
     if not value:
         return default or []

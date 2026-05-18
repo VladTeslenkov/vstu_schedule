@@ -1,8 +1,11 @@
 from datetime import datetime
+from typing import Any
 
+from django.db.models import Q
 from django.test import TestCase
 
 from apps.common.models import EventPlace, TimeSlot
+from apps.common.selectors import Selector
 from apps.common.services.timetable.read.filters import (
     PlaceFilter,
     TimeSlotFilter,
@@ -11,22 +14,27 @@ from apps.common.services.timetable.read.filters import (
 """python manage.py test apps.common.tests.test_utility_filters
 """
 
+
+def get_time_slot_filter(display_name: str) -> dict[str, Any]:
+    filter_query = TimeSlotFilter.from_display_name(display_name)
+    assert filter_query is not None
+    return filter_query
+
+
 class TestTimeSlotFiltering(TestCase):
     def setUp(self):
         self.first_time_slot = TimeSlot.objects.create(
-            alt_name="1-2", 
-            start_time=datetime.strptime("8:30", "%H:%M"), 
-            end_time=datetime.strptime("10:00", "%H:%M")
+            alt_name="1-2",
+            start_time=datetime.strptime("8:30", "%H:%M"),
+            end_time=datetime.strptime("10:00", "%H:%M"),
         )
         self.second_time_slot = TimeSlot.objects.create(
-            alt_name=None, 
-            start_time=datetime.strptime("10:10", "%H:%M"), 
-            end_time=datetime.strptime("11:40", "%H:%M")
+            alt_name=None,
+            start_time=datetime.strptime("10:10", "%H:%M"),
+            end_time=datetime.strptime("11:40", "%H:%M"),
         )
         self.third_time_slot = TimeSlot.objects.create(
-            alt_name=None, 
-            start_time=datetime.strptime("11:50", "%H:%M"), 
-            end_time=None
+            alt_name=None, start_time=datetime.strptime("11:50", "%H:%M"), end_time=None
         )
 
     def test_repr_filter(self):
@@ -38,55 +46,49 @@ class TestTimeSlotFiltering(TestCase):
         WITH_WRONG_START_TIMES_REPR = ["9:09", "3:03", "21:00", "21.22"]
         COMBINED_ALT_NAME_AND_START_TIME_REPR = ["3-4", "5.6", "9-10", "9:10"]
 
-        EXPECTED_SINGLE_ALT_NAME_RESULT = {"alt_name" : "1-2"}
-        EXPECTED_MULTIPLE_ALT_NAMES_RESULT = {"alt_name__in" : ["1-2", "3-4"]}
-        EXPECTED_WITH_WRONG_ALT_NAME_RESULT = {"alt_name__in" : ["1-2", "11-12"]}
-        EXPECTED_SINGLE_START_TIME_RESULT = {"start_time__contains" : "22:05"}
-        EXPECTED_MULTIPLE_START_TIMES_RESULT = {"start_time__in" : ["11:11", "12:12"]}
-        EXPECTED_WITH_WRONG_START_TIMES_RESULT = {"start_time__in" : ["9:09", "3:03", "21:00"]}
-        EXPECTED_COMBINED_ALT_NAME_AND_START_TIME_RESULT = {"start_time__contains" : "9:10"}
+        EXPECTED_SINGLE_ALT_NAME_RESULT = {"alt_name": "1-2"}
+        EXPECTED_MULTIPLE_ALT_NAMES_RESULT = {"alt_name__in": ["1-2", "3-4"]}
+        EXPECTED_WITH_WRONG_ALT_NAME_RESULT = {"alt_name__in": ["1-2", "11-12"]}
+        EXPECTED_SINGLE_START_TIME_RESULT = {"start_time__contains": "22:05"}
+        EXPECTED_MULTIPLE_START_TIMES_RESULT = {"start_time__in": ["11:11", "12:12"]}
+        EXPECTED_WITH_WRONG_START_TIMES_RESULT = {"start_time__in": ["9:09", "3:03", "21:00"]}
+        EXPECTED_COMBINED_ALT_NAME_AND_START_TIME_RESULT = {"start_time__contains": "9:10"}
 
-        self.assertSequenceEqual(
-            TimeSlotFilter.from_display_name(SINGLE_ALT_NAME_REPR),
-            EXPECTED_SINGLE_ALT_NAME_RESULT
+        self.assertEqual(
+            TimeSlotFilter.from_display_name(SINGLE_ALT_NAME_REPR), EXPECTED_SINGLE_ALT_NAME_RESULT
         )
-        self.assertSequenceEqual(
+        self.assertEqual(
             TimeSlotFilter.from_display_name(MULTIPLE_ALT_NAMES_REPR),
-            EXPECTED_MULTIPLE_ALT_NAMES_RESULT
+            EXPECTED_MULTIPLE_ALT_NAMES_RESULT,
         )
-        self.assertSequenceEqual(
+        self.assertEqual(
             TimeSlotFilter.from_display_name(WITH_WRONG_ALT_NAME_REPR),
-            EXPECTED_WITH_WRONG_ALT_NAME_RESULT
+            EXPECTED_WITH_WRONG_ALT_NAME_RESULT,
         )
-        self.assertSequenceEqual(
+        self.assertEqual(
             TimeSlotFilter.from_display_name(SINGLE_START_TIME_REPR),
-            EXPECTED_SINGLE_START_TIME_RESULT
+            EXPECTED_SINGLE_START_TIME_RESULT,
         )
-        self.assertSequenceEqual(
+        self.assertEqual(
             TimeSlotFilter.from_display_name(MULTIPLE_START_TIMES_REPR),
-            EXPECTED_MULTIPLE_START_TIMES_RESULT
+            EXPECTED_MULTIPLE_START_TIMES_RESULT,
         )
-        self.assertSequenceEqual(
+        self.assertEqual(
             TimeSlotFilter.from_display_name(WITH_WRONG_START_TIMES_REPR),
-            EXPECTED_WITH_WRONG_START_TIMES_RESULT
+            EXPECTED_WITH_WRONG_START_TIMES_RESULT,
         )
-        self.assertSequenceEqual(
+        self.assertEqual(
             TimeSlotFilter.from_display_name(COMBINED_ALT_NAME_AND_START_TIME_REPR),
-            EXPECTED_COMBINED_ALT_NAME_AND_START_TIME_RESULT
+            EXPECTED_COMBINED_ALT_NAME_AND_START_TIME_RESULT,
         )
 
     def test_repr_filter_and_find(self):
+        self.assertEqual(TimeSlot.objects.get(**get_time_slot_filter("1-2")), self.first_time_slot)
         self.assertEqual(
-            TimeSlot.objects.get(**TimeSlotFilter.from_display_name("1-2")),
-            self.first_time_slot
+            TimeSlot.objects.get(**get_time_slot_filter("10:10")), self.second_time_slot
         )
         self.assertEqual(
-            TimeSlot.objects.get(**TimeSlotFilter.from_display_name("10:10")),
-            self.second_time_slot
-        )
-        self.assertEqual(
-            TimeSlot.objects.get(**TimeSlotFilter.from_display_name("11:50")),
-            self.third_time_slot
+            TimeSlot.objects.get(**get_time_slot_filter("11:50")), self.third_time_slot
         )
 
     def test_alt_name_filter(self):
@@ -102,45 +104,33 @@ class TestTimeSlotFiltering(TestCase):
         multiple_alt_names = list(INITIAL_MULTIPLE_ALT_NAMES)
         multiple_alt_names_combined = list(INITIAL_MULTIPLE_ALT_NAMES_COMBINED)
 
-        EXPECTED_SINGLE_CORRECT_RESULT = ({"alt_name" : "11-12"}, [])
+        EXPECTED_SINGLE_CORRECT_RESULT = ({"alt_name": "11-12"}, [])
         EXPECTED_SINGLE_WRONG_RESULT = ({}, ["18:05"])
-        EXPECTED_MULTIPLE_CORRENT_RESULTS = ({"alt_name__in" : ["1-2", "0-0", "9-8"]}, [])
-        EXPECTED_MULTIPLE_COMBINED_RESULTS = ({"alt_name__in" : ["10-15", "10-00"]}, ["11.11", "12:32"])
+        EXPECTED_MULTIPLE_CORRENT_RESULTS = ({"alt_name__in": ["1-2", "0-0", "9-8"]}, [])
+        EXPECTED_MULTIPLE_COMBINED_RESULTS = (
+            {"alt_name__in": ["10-15", "10-00"]},
+            ["11.11", "12:32"],
+        )
 
         self.assertSequenceEqual(
-            TimeSlotFilter.by_alt_name(single_correct_alt_name),
-            EXPECTED_SINGLE_CORRECT_RESULT
+            TimeSlotFilter.by_alt_name(single_correct_alt_name), EXPECTED_SINGLE_CORRECT_RESULT
         )
         self.assertSequenceEqual(
-            TimeSlotFilter.by_alt_name(single_wrong_alt_name),
-            EXPECTED_SINGLE_WRONG_RESULT
+            TimeSlotFilter.by_alt_name(single_wrong_alt_name), EXPECTED_SINGLE_WRONG_RESULT
         )
         self.assertSequenceEqual(
-            TimeSlotFilter.by_alt_name(multiple_alt_names),
-            EXPECTED_MULTIPLE_CORRENT_RESULTS
+            TimeSlotFilter.by_alt_name(multiple_alt_names), EXPECTED_MULTIPLE_CORRENT_RESULTS
         )
         self.assertSequenceEqual(
             TimeSlotFilter.by_alt_name(multiple_alt_names_combined),
-            EXPECTED_MULTIPLE_COMBINED_RESULTS
+            EXPECTED_MULTIPLE_COMBINED_RESULTS,
         )
 
         # Input values should not change
-        self.assertSequenceEqual(
-            single_correct_alt_name,
-            INITIAL_SINGLE_CORRECT_ALT_NAME
-        )
-        self.assertSequenceEqual(
-            single_wrong_alt_name,
-            INITIAL_SINGLE_WRONG_ALT_NAME
-        )
-        self.assertSequenceEqual(
-            multiple_alt_names,
-            INITIAL_MULTIPLE_ALT_NAMES
-        )
-        self.assertSequenceEqual(
-            multiple_alt_names_combined,
-            INITIAL_MULTIPLE_ALT_NAMES_COMBINED
-        )
+        self.assertSequenceEqual(single_correct_alt_name, INITIAL_SINGLE_CORRECT_ALT_NAME)
+        self.assertSequenceEqual(single_wrong_alt_name, INITIAL_SINGLE_WRONG_ALT_NAME)
+        self.assertSequenceEqual(multiple_alt_names, INITIAL_MULTIPLE_ALT_NAMES)
+        self.assertSequenceEqual(multiple_alt_names_combined, INITIAL_MULTIPLE_ALT_NAMES_COMBINED)
 
     def test_start_time_filter(self):
         INITIAL_SINGLE_START_TIME = "18:05"
@@ -151,130 +141,110 @@ class TestTimeSlotFiltering(TestCase):
         multiple_start_times = list(INITIAL_MULTIPLE_START_TIMES)
         multiple_start_times_with_some_wrong = list(INITIAL_MULTIPLE_START_TIMES_WITH_SOME_WRONG)
 
-        EXPECTED_COLON_RESULT = ({"start_time__contains" : "18:05"}, [])
-        EXPECTED_MULTIPLE_START_TIMES_RESULTS = ({"start_time__in" : ["18:05", "8:30", "15:30"]}, [])
-        EXPECTED_WITH_SOME_WRONG_RESULT = ({"start_time__in" : ["11:11", "2:09"]}, ["23-12", "14.25"])
+        EXPECTED_COLON_RESULT = ({"start_time__contains": "18:05"}, [])
+        EXPECTED_MULTIPLE_START_TIMES_RESULTS = ({"start_time__in": ["18:05", "8:30", "15:30"]}, [])
+        EXPECTED_WITH_SOME_WRONG_RESULT = (
+            {"start_time__in": ["11:11", "2:09"]},
+            ["23-12", "14.25"],
+        )
 
         self.assertSequenceEqual(
-            TimeSlotFilter.by_start_time(single_start_time),
-            EXPECTED_COLON_RESULT
+            TimeSlotFilter.by_start_time(single_start_time), EXPECTED_COLON_RESULT
         )
         self.assertSequenceEqual(
             TimeSlotFilter.by_start_time(multiple_start_times),
-            EXPECTED_MULTIPLE_START_TIMES_RESULTS
+            EXPECTED_MULTIPLE_START_TIMES_RESULTS,
         )
         self.assertSequenceEqual(
             TimeSlotFilter.by_start_time(multiple_start_times_with_some_wrong),
-            EXPECTED_WITH_SOME_WRONG_RESULT
+            EXPECTED_WITH_SOME_WRONG_RESULT,
         )
 
         # Input values should not change
+        self.assertSequenceEqual(single_start_time, INITIAL_SINGLE_START_TIME)
+        self.assertSequenceEqual(multiple_start_times, INITIAL_MULTIPLE_START_TIMES)
         self.assertSequenceEqual(
-            single_start_time,
-            INITIAL_SINGLE_START_TIME
-        )
-        self.assertSequenceEqual(
-            multiple_start_times,
-            INITIAL_MULTIPLE_START_TIMES
-        )
-        self.assertSequenceEqual(
-            multiple_start_times_with_some_wrong,
-            INITIAL_MULTIPLE_START_TIMES_WITH_SOME_WRONG
+            multiple_start_times_with_some_wrong, INITIAL_MULTIPLE_START_TIMES_WITH_SOME_WRONG
         )
 
 
 class TestPlaceFiltering(TestCase):
     def setUp(self):
-        self.first_place = EventPlace.objects.create(
-            building="В",
-            room="902а"
-        )
-        self.second_place = EventPlace.objects.create(
-            building="А",
-            room="101"
-        )
-        self.third_place = EventPlace.objects.create(
-            building="",
-            room="101"
-        )
-        self.fourth_place = EventPlace.objects.create(
-            building="",
-            room="А101"
-        )
+        self.first_place = EventPlace.objects.create(building="В", room="902а")
+        self.second_place = EventPlace.objects.create(building="А", room="101")
+        self.third_place = EventPlace.objects.create(building="", room="101")
+        self.fourth_place = EventPlace.objects.create(building="", room="А101")
 
     def test_repr_filter(self):
         self.assertEqual(
-            PlaceFilter.by_building_and_room("ГУК 100"),
-            {"building" : "ГУК", "room" : "100"}
+            PlaceFilter.by_building_and_room("ГУК 100"), {"building": "ГУК", "room": "100"}
         )
         self.assertEqual(
-            PlaceFilter.by_building_and_room("ГУК,100"),
-            {"building" : "ГУК", "room" : "100"}
+            PlaceFilter.by_building_and_room("ГУК,100"), {"building": "ГУК", "room": "100"}
         )
         self.assertEqual(
-            PlaceFilter.by_building_and_room("ГУК, 100"),
-            {"building" : "ГУК", "room" : "100"}
+            PlaceFilter.by_building_and_room("ГУК, 100"), {"building": "ГУК", "room": "100"}
         )
         self.assertEqual(
-            PlaceFilter.by_building_and_room("ГУК-100"),
-            {"building" : "ГУК", "room" : "100"}
+            PlaceFilter.by_building_and_room("ГУК-100"), {"building": "ГУК", "room": "100"}
         )
-        self.assertEqual(
-            PlaceFilter.by_building_and_room("312"),
-            {"building" : "", "room" : "312"}
-        )
+        self.assertEqual(PlaceFilter.by_building_and_room("312"), {"building": "", "room": "312"})
         self.assertEqual(
             PlaceFilter.by_building_and_room(["А 211е", "Б 320з"]),
-            {"building__in" : ["А", "Б"], "room__in" : ["211е", "320з"]}
+            Q(building="А", room="211е") | Q(building="Б", room="320з"),
         )
         self.assertEqual(
             PlaceFilter.by_building_and_room(["101", "102"]),
-            {"building__in" : ["", ""], "room__in" : ["101", "102"]}
+            Q(building="", room="101") | Q(building="", room="102"),
         )
         self.assertEqual(
             PlaceFilter.by_building_and_room(["А211е", "Б320з"]),
-            {"building__in" : ["", ""], "room__in" : ["А211е", "Б320з"]}
+            Q(building="", room="А211е") | Q(building="", room="Б320з"),
         )
 
     def test_repr_filter_and_find(self):
         self.assertEqual(
-            EventPlace.objects.get(**PlaceFilter.by_building_and_room("В-902а")),
-            self.first_place
+            EventPlace.objects.get(**PlaceFilter.by_building_and_room("В-902а")), self.first_place
         )
         self.assertSequenceEqual(
-            list(EventPlace.objects.filter(**PlaceFilter.by_building_and_room(["В-902а", "А101"])).all()),
-            [self.first_place, self.fourth_place]
+            list(
+                EventPlace.objects.filter(
+                    PlaceFilter.by_building_and_room(["В-902а", "А101"])
+                ).all()
+            ),
+            [self.first_place, self.fourth_place],
         )
         self.assertEqual(
-            EventPlace.objects.get(**PlaceFilter.by_building_and_room("101")),
-            self.third_place
+            EventPlace.objects.get(**PlaceFilter.by_building_and_room("101")), self.third_place
         )
         self.assertEqual(
-            EventPlace.objects.get(**PlaceFilter.by_building_and_room("А101")),
-            self.fourth_place
+            EventPlace.objects.get(**PlaceFilter.by_building_and_room("А101")), self.fourth_place
         )
         # carefully with order
         self.assertEqual(
-            list(EventPlace.objects.filter(**PlaceFilter.by_building_and_room(["А101", "А 101", "101"])).all().order_by("building", "room")),
-            [self.third_place, self.fourth_place, self.second_place]
+            list(
+                EventPlace.objects.filter(
+                    PlaceFilter.by_building_and_room(["А101", "А 101", "101"])
+                )
+                .all()
+                .order_by("building", "room")
+            ),
+            [self.third_place, self.fourth_place, self.second_place],
+        )
+
+    def test_selector_with_paired_place_filter(self):
+        selector = Selector()
+        selector.add_filter(PlaceFilter.by_building_and_room(["В-902а", "А101"]))
+        selector.find_models(EventPlace)
+
+        self.assertSequenceEqual(
+            list(selector.get_found_models()), [self.first_place, self.fourth_place]
         )
 
     def test_building_filter(self):
-        self.assertEqual(
-            PlaceFilter.by_building("ГУК"),
-            {"building" : "ГУК"}
-        )
-        self.assertEqual(
-            PlaceFilter.by_building(["А", "Б"]),
-            {"building__in" : ["А", "Б"]}
-        )
+        self.assertEqual(PlaceFilter.by_building("ГУК"), {"building": "ГУК"})
+        self.assertEqual(PlaceFilter.by_building(["А", "Б"]), {"building__in": ["А", "Б"]})
 
     def test_room_filter(self):
-        self.assertEqual(
-            PlaceFilter.by_room("902а"),
-            {"room" : "902а"}
-        )
-        self.assertEqual(
-            PlaceFilter.by_room(["100", "602а"]),
-            {"room__in" : ["100", "602а"]}
-        )
+        self.assertEqual(PlaceFilter.by_room("902а"), {"room": "902а"})
+        self.assertEqual(PlaceFilter.by_room(["100", "602а"]), {"room__in": ["100", "602а"]})
