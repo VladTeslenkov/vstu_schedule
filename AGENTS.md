@@ -23,6 +23,20 @@ This file complements `docs/developers.md` and provides concise working rules fo
 - Avoid fat models: keep only behavior that naturally belongs to the model itself.
 - Views should contain only HTTP and web concerns; move shared or complex logic into `services/`.
 - Migrations should cover schema and data changes; do not require separate SQL scripts.
+- When changing Django models, create or update migrations with Django management commands, not by hand:
+
+```powershell
+uv run python manage.py makemigrations
+```
+
+- After model changes, run a migration check before the final response when possible:
+
+```powershell
+uv run python manage.py makemigrations --check --dry-run
+```
+
+- Do not manually write normal schema migrations. Manual migration files are acceptable only for Django migration graph maintenance such as merge migrations, or for carefully reviewed custom data migrations when Django cannot generate the needed operation.
+- If `makemigrations` cannot run because the local database or environment is unavailable, mention that in the final response and do not silently skip the migration step.
 
 ## Code Style
 
