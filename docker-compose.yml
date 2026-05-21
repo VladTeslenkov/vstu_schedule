@@ -26,8 +26,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
-      - .:/app
+      - .:/app    # Поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
       - static_volume:/app/static
       - media_volume:/app/media
       - ./logs:/app/logs
@@ -47,7 +46,10 @@ services:
     environment:
       - SERVICE_NAME=worker
     volumes:
+      - .:/app        # Поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
       - data_volume:/app/data
+      - ./logs:/app/logs
+      - /app/.venv
     env_file: .env
     depends_on:
       db:
@@ -60,6 +62,10 @@ services:
     environment:
       - SERVICE_NAME=beat
     command: celery -A vstu_schedule beat -l info -S django
+    volumes:
+      - .:/app        # Поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
+      - ./logs:/app/logs
+      - /app/.venv
     env_file: .env
     depends_on:
       db:

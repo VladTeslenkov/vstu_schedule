@@ -82,6 +82,17 @@ def set_system_params(request: HttpRequest) -> JsonResponse:
 def _task_status_response(task_id: str) -> JsonResponse:
     """Возвращает текущий статус Celery-задачи по её ID."""
     result = AsyncResult(task_id)
+    task_result = result.result if isinstance(result.result, dict) else {}
+    if result.successful() and task_result.get("status") == "skipped":
+        return JsonResponse(
+            {
+                "status": "error",
+                "error_message": task_result.get(
+                    "message", "Another maintenance task is already running."
+                ),
+            }
+        )
+
     status_map = {
         "SUCCESS": "success",
         "FAILURE": "error",
