@@ -3,3 +3,8 @@ __pycache__/
 docs/
 .env
 .env.local
+.github/
+.pytest_cache/
+.tmp*/
+.ruff_cache/
+.git/

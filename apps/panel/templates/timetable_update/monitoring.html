@@ -1,36 +1,30 @@
+{% extends "panel/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Мониторинг — Расписание ВолгГТУ</title>
+
+{% block title %}Мониторинг — Расписание ВолгГТУ{% endblock %}
+{% block body_class %}monitoring-page{% endblock %}
+{% block topbar_title %}Расписание · Мониторинг{% endblock %}
+{% block styles %}
   <link rel="icon" href="{% static 'image/icon.png' %}" type="image/x-icon">
-  <link rel="stylesheet" href="{% static 'style/panel.css' %}">
   <link rel="stylesheet" href="{% static 'style/monitoring.css' %}">
-</head>
-<body class="panel-page monitoring-page">
+{% endblock %}
 
-<nav class="topbar">
-  <span class="topbar__logo">ВолгГТУ · Расписание</span>
-  <div class="topbar__links">
-    <a href="{% url 'monitoring_panel' %}" class="active">◉ Мониторинг</a>
-  </div>
-</nav>
-
-<main class="page">
-
-  <!-- ЗАГОЛОВОК -->
+{% block content %}
   <header class="page__header">
     <h1>Панель мониторинга</h1>
     <div class="header-actions">
       <span id="lastRefresh" class="refresh-hint"></span>
-      <button class="btn btn--ghost" onclick="loadData()">↻ Обновить</button>
-      <button id="runTaskBtn" class="btn btn--primary" onclick="runUpdate()">▶ Запустить обновление</button>
+      <button class="btn btn--ghost" onclick="loadData()">
+        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#refresh-cw"></use></svg>
+        Обновить
+      </button>
+      <button id="runTaskBtn" class="btn btn--primary" onclick="runUpdate()">
+        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#play"></use></svg>
+        Запустить обновление
+      </button>
     </div>
   </header>
 
-  <!-- СТАТИСТИКА -->
   <section class="stats-grid">
     <div class="stat-card stat-card--accent">
       <div class="stat-card__label">Активных файлов</div>
@@ -50,9 +44,7 @@
     </div>
   </section>
 
-  <!-- ПЛАНИРОВЩИК + СТАТУС ЗАДАЧИ -->
   <div class="two-col two-col--narrow">
-
     <section class="card">
       <div class="card__header">
         <h2>Планировщик</h2>
@@ -67,7 +59,6 @@
       <div id="taskStatus" class="task-status" style="display:none"></div>
     </section>
 
-    <!-- НАСТРОЙКИ ПЛАНИРОВЩИКА -->
     <section class="card">
       <div class="card__header">
         <h2>Настройки обновления</h2>
@@ -93,12 +84,9 @@
         <div id="settingsStatus" class="task-status" style="display:none"></div>
       </div>
     </section>
-
   </div>
 
-  <!-- РЕСУРСЫ + ИСТОРИЯ ВЕРСИЙ -->
   <div class="two-col">
-
     <section class="card">
       <div class="card__header">
         <h2>Ресурсы</h2>
@@ -128,10 +116,8 @@
         </table>
       </div>
     </section>
-
   </div>
 
-  <!-- ОЧИСТКА -->
   <section class="card">
     <div class="card__header">
       <h2>Очистка системы</h2>
@@ -161,13 +147,13 @@
           </span>
         </label>
       </div>
-      <button class="btn btn--danger" onclick="runClear()">⚠ Очистить</button>
+      <button class="btn btn--danger" onclick="runClear()">Очистить</button>
     </div>
     <div id="clearStatus" class="task-status" style="display:none"></div>
   </section>
+{% endblock %}
 
-</main>
-
+{% block scripts %}
 <script>
   window.MONITOR_CTX = {
     timeUpdate: "{{ time_update_value }}",
@@ -175,5 +161,4 @@
   };
 </script>
 <script src="{% static 'src/monitoring.js' %}"></script>
-</body>
-</html>
+{% endblock %}

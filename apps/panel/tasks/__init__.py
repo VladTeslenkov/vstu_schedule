@@ -2,11 +2,11 @@ import json
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, cast
 
-from celery import shared_task
+from celery import current_app, shared_task
 from django.conf import settings
-from django_celery_beat.models import IntervalSchedule, PeriodicTask
+from django_celery_beat.models import CrontabSchedule, PeriodicTask
 from redis import Redis
 from redis.exceptions import RedisError
 
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 _MAINTENANCE_LOCK_NAME = "vstu_schedule:panel:maintenance"
 _MAINTENANCE_LOCK_TIMEOUT_SECONDS = 6 * 60 * 60
+DISPATCH_CONFIGURED_TASK_NAME = "panel.tasks.dispatch_configured_task"
 
 
 @contextmanager
@@ -35,6 +36,46 @@ def _maintenance_lock(task_name: str) -> Iterator[bool]:
             logger.warning(
                 "Could not release maintenance lock for task: %s", task_name, exc_info=True
             )
+
+
+def _task_apply_options(task_name: str) -> dict[str, int]:
+    from apps.panel.models import CeleryTaskConfig
+
+    config = CeleryTaskConfig.objects.filter(task_name=task_name).first()
+    if not config:
+        return {}
+
+    options = {}
+    if config.soft_time_limit_seconds:
+        options["soft_time_limit"] = config.soft_time_limit_seconds
+    if config.time_limit_seconds:
+        options["time_limit"] = config.time_limit_seconds
+    return options
+
+
+@shared_task(bind=True, name=DISPATCH_CONFIGURED_TASK_NAME)
+def dispatch_configured_task(self: Any, task_name: str) -> dict[str, str]:
+    """Queue a configured task using the latest DB settings."""
+    from apps.panel.models import CeleryTaskConfig
+
+    config = CeleryTaskConfig.objects.filter(task_name=task_name).first()
+    if not config or not config.execution_enabled:
+        logger.info("Configured task dispatch skipped: %s", task_name)
+        return {"status": "skipped", "task": task_name}
+
+    celery_app = cast(Any, current_app)
+    task = celery_app.tasks.get(task_name)
+    if task is None:
+        raise ValueError(f"Celery task is not registered: {task_name}")
+
+    result = task.apply_async(**_task_apply_options(task_name))
+    logger.info(
+        "Configured task dispatched: %s [dispatcher_id=%s, task_id=%s]",
+        task_name,
+        self.request.id,
+        result.id,
+    )
+    return {"status": "queued", "task": task_name, "task_id": result.id}
 
 
 @shared_task(bind=True, name="panel.tasks.update_timetable", max_retries=3)
@@ -101,17 +142,37 @@ def configure_periodic_update(interval_minutes: int) -> None:
 
     :param interval_minutes: интервал запуска в минутах
     """
-    schedule, _ = IntervalSchedule.objects.get_or_create(
-        every=interval_minutes,
-        period=IntervalSchedule.MINUTES,
+    from apps.panel.models import CeleryTaskConfig
+
+    task_name = update_timetable.name
+    config, _ = CeleryTaskConfig.objects.get_or_create(task_name=task_name)
+    config.execution_enabled = True
+    config.schedule_enabled = True
+    config.cron_minute = "0"
+    config.cron_hour = f"*/{interval_minutes // 60}" if interval_minutes >= 60 else "*"
+    config.cron_day_of_week = "*"
+    config.cron_day_of_month = "*"
+    config.cron_month_of_year = "*"
+    config.save()
+
+    schedule, _ = CrontabSchedule.objects.get_or_create(
+        minute=config.cron_minute,
+        hour=config.cron_hour,
+        day_of_week=config.cron_day_of_week,
+        day_of_month=config.cron_day_of_month,
+        month_of_year=config.cron_month_of_year,
+        timezone=settings.TIME_ZONE,
     )
-    PeriodicTask.objects.update_or_create(
+    periodic_task, _ = PeriodicTask.objects.update_or_create(
         name="Автообновление расписания",
         defaults={
-            "task": "panel.tasks.update_timetable",
-            "interval": schedule,
-            "args": json.dumps([]),
+            "task": DISPATCH_CONFIGURED_TASK_NAME,
+            "crontab": schedule,
+            "interval": None,
+            "args": json.dumps([task_name]),
             "enabled": True,
         },
     )
+    config.periodic_task = periodic_task
+    config.save(update_fields=["periodic_task", "updated_at"])
     logger.info(f"Periodic update configured: every {interval_minutes} min")

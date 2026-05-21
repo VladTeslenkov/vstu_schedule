@@ -30,6 +30,7 @@ def monitoring_panel(request: HttpRequest) -> HttpResponse:
         request,
         "timetable_update/monitoring.html",
         {
+            "active_nav": "monitoring",
             "time_update_value": time_update,
             "analyze_url_value": analyze_url,
         },
@@ -157,7 +158,9 @@ def _get_scheduler_info() -> dict:
         return {
             "configured": True,
             "enabled": task.enabled,
-            "interval": str(task.interval) if task.interval else None,
+            "interval": str(task.interval or task.crontab)
+            if task.interval or task.crontab
+            else None,
             "last_run_at": task.last_run_at.isoformat() if task.last_run_at else None,
             "total_run_count": task.total_run_count,
         }

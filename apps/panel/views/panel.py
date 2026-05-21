@@ -1,4 +1,5 @@
 import logging
+from typing import Any, cast
 
 from celery.result import AsyncResult
 from django.conf import settings
@@ -129,9 +130,11 @@ def run_update_timetable(request: HttpRequest) -> JsonResponse | HttpResponse:
         if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
             return _celery_disabled_response()
 
+        from apps.panel.tasks import _task_apply_options
         from apps.panel.tasks import update_timetable as update_task
 
-        result = update_task.delay()  # type: ignore[union-attr]
+        task_name = cast(str, cast(Any, update_task).name)
+        result = cast(Any, update_task).apply_async(**_task_apply_options(task_name))
         logger.info(f"update_timetable launched: task_id={result.id}")
         return JsonResponse({"status": "running", "id": result.id}, status=202)
 

@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 
-from apps.panel.views import monitor_view
+from apps.panel.views import monitor_view, task_view
 
 from .views import panel
 
@@ -19,4 +19,8 @@ urlpatterns = [
     path("timetable_update/manage_storage/", panel.manage_storage, name="manage_storage"),
     path("timetable_update/update_timetable/", panel.run_update_timetable, name="update_timetable"),
     path("timetable_update/", monitor_view.monitoring_panel, name="monitoring_panel"),
+    path("tasks/", task_view.tasks_panel, name="panel_tasks"),
+    path("tasks/<str:task_name>/configure/", task_view.task_configure, name="panel_task_configure"),
+    path("tasks/<str:task_name>/run/", task_view.task_run, name="panel_task_run"),
+    path("tasks/<str:task_name>/log/", task_view.task_log, name="panel_task_log"),
 ]
