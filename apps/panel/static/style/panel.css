@@ -11,9 +11,11 @@
   --panel-bg: #0f1117;
   --panel-surface: #171b26;
   --panel-surface-raised: #1e2333;
+  --panel-sidebar-bg: #11141d;
   --panel-border: #2a2f42;
   --panel-accent: #4f8ef7;
   --panel-accent-soft: rgba(79, 142, 247, 0.12);
+  --panel-accent-hover: #6a9ff9;
   --panel-warn: #f7954f;
   --panel-warn-soft: rgba(247, 149, 79, 0.12);
   --panel-success: #4fca7a;
@@ -22,8 +24,37 @@
   --panel-danger-soft: rgba(247, 95, 79, 0.12);
   --panel-text: #e2e6f0;
   --panel-text-muted: #8892a4;
+  --panel-on-accent: #ffffff;
+  --panel-log-bg: #0b0d13;
   --panel-radius: 10px;
   --panel-font: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --panel-bg: #f5f9ff;
+  --panel-surface: #ffffff;
+  --panel-surface-raised: #edf4fc;
+  --panel-sidebar-bg: #ffffff;
+  --panel-border: #c8d7ea;
+  --panel-accent: #1976d2;
+  --panel-accent-soft: rgba(25, 118, 210, 0.12);
+  --panel-accent-hover: #135ca5;
+  --panel-warn: #b86b1d;
+  --panel-warn-soft: rgba(184, 107, 29, 0.12);
+  --panel-success: #16803d;
+  --panel-success-soft: rgba(22, 128, 61, 0.12);
+  --panel-danger: #c62828;
+  --panel-danger-soft: rgba(198, 40, 40, 0.12);
+  --panel-text: #1d2939;
+  --panel-text-muted: #667085;
+  --panel-on-accent: #ffffff;
+  --panel-log-bg: #f8fbff;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 .panel-page {
@@ -42,7 +73,7 @@
 }
 
 .sidebar {
-  background: #11141d;
+  background: var(--panel-sidebar-bg);
   border-right: 1px solid var(--panel-border);
   padding: 18px 12px;
 }
@@ -60,6 +91,15 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.sidebar__section-title {
+  color: var(--panel-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding: 8px 10px 4px;
+  text-transform: uppercase;
 }
 
 .sidebar__nav a {
@@ -138,12 +178,19 @@
   text-transform: uppercase;
 }
 
-.panel-page .topbar__links { display: flex; gap: 4px; }
+.panel-page .topbar__links {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
 
 .panel-page .topbar__links a {
+  align-items: center;
   padding: 6px 14px;
   border-radius: 6px;
   color: var(--panel-text-muted);
+  display: flex;
+  gap: 8px;
   text-decoration: none;
   font-size: 12px;
   transition: all 0.15s;
@@ -157,6 +204,45 @@
 .panel-page .topbar__links a.active {
   background: var(--panel-accent-soft);
   color: var(--panel-accent);
+}
+
+.panel-page .theme-toggle-button {
+  align-items: center;
+  background: var(--panel-surface-raised);
+  border: 1px solid var(--panel-border);
+  border-radius: 7px;
+  color: var(--panel-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-family: var(--panel-font);
+  font-size: 12px;
+  font-weight: 700;
+  gap: 8px;
+  min-height: 30px;
+  padding: 6px 12px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.panel-page .theme-toggle-button:hover {
+  border-color: var(--panel-accent);
+  color: var(--panel-accent);
+}
+
+@media (max-width: 760px) {
+  .panel-page .topbar {
+    align-items: flex-start;
+    gap: 10px;
+    height: auto;
+    padding-bottom: 10px;
+    padding-top: 10px;
+  }
+
+  .panel-page .topbar__links {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 }
 
 /* ===== PAGE ===== */
@@ -232,10 +318,10 @@
 
 .panel-page .btn--primary {
   background: var(--panel-accent);
-  color: #fff;
+  color: var(--panel-on-accent);
 }
 
-.panel-page .btn--primary:hover { background: #6a9ff9; }
+.panel-page .btn--primary:hover { background: var(--panel-accent-hover); }
 .panel-page .btn:disabled,
 .panel-page .btn--primary:disabled {
   cursor: not-allowed;
@@ -244,7 +330,7 @@
 
 .panel-page .btn--danger {
   background: var(--panel-danger);
-  color: #fff;
+  color: var(--panel-on-accent);
 }
 
 .panel-page .btn--danger:hover { background: #f97060; }
@@ -617,7 +703,7 @@
 }
 
 .panel-page .log-output {
-  background: #0b0d13;
+  background: var(--panel-log-bg);
   border-top: 1px solid var(--panel-border);
   color: var(--panel-text);
   font-family: var(--panel-font);

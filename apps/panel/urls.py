@@ -7,7 +7,8 @@ from .views import panel
 
 urlpatterns = [
     path("", RedirectView.as_view(url="/panel/timetable_update/", permanent=False)),
-    path("login/", panel.admin_login, name="admin_login"),
+    path("login/", RedirectView.as_view(pattern_name="admin:login", permanent=False)),
+    path("actions/", panel.actions_panel, name="panel_actions"),
     # API и страница мониторинга — под /panel/timetable_update/ (см. обсуждение в PR)
     path("timetable_update/stats/", monitor_view.monitoring_stats, name="monitoring_stats"),
     path(

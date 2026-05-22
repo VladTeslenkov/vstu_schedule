@@ -28,7 +28,7 @@ def monitoring_panel(request: HttpRequest) -> HttpResponse:
 
     return render(
         request,
-        "timetable_update/monitoring.html",
+        "panel/timetable_update/monitoring.html",
         {
             "active_nav": "monitoring",
             "time_update_value": time_update,

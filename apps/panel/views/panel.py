@@ -4,9 +4,8 @@ from typing import Any, cast
 from celery.result import AsyncResult
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth import authenticate, login
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 
 from apps.common.models import Setting
 
@@ -15,24 +14,13 @@ logger = logging.getLogger(__name__)
 CLEAR_TYPES = ["Вся система", "Хранилище", "База данных"]
 
 
-# ======================== АВТОРИЗАЦИЯ ========================
+# ======================== ДЕЙСТВИЯ ========================
 
 
-def admin_login(request: HttpRequest) -> HttpResponse:
-    """Страница авторизации в панель управления."""
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-        user = authenticate(request, username=username, password=password)
-        if user is not None and getattr(user, "is_staff", False):
-            login(request, user)
-            return redirect("monitoring_panel")
-        return render(
-            request,
-            "timetable_update/admin_login.html",
-            {"error": "Неверные учётные данные или нет доступа"},
-        )
-    return render(request, "timetable_update/admin_login.html")
+@staff_member_required
+def actions_panel(request: HttpRequest) -> HttpResponse:
+    """WIP-страница будущего раздела действий."""
+    return render(request, "panel/actions.html", {"active_nav": "actions"})
 
 
 # ======================== НАСТРОЙКИ ========================

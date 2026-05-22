@@ -5,6 +5,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Панель управления{% endblock %}</title>
+  <script>
+    (function () {
+      var storedTheme = "auto";
+      try {
+        storedTheme = localStorage.getItem("panel.theme") || "auto";
+      } catch (error) {
+        storedTheme = "auto";
+      }
+      var isLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+      document.documentElement.dataset.theme = storedTheme === "auto"
+        ? (isLight ? "light" : "dark")
+        : storedTheme;
+      document.documentElement.dataset.themeChoice = storedTheme;
+    })();
+  </script>
   <link rel="stylesheet" href="{% static 'style/panel.css' %}">
   {% block styles %}{% endblock %}
 </head>
@@ -13,9 +28,14 @@
   <aside class="sidebar">
     <div class="sidebar__brand">ВолгГТУ расписания</div>
     <nav class="sidebar__nav">
+      <div class="sidebar__section-title">Меню</div>
       <a href="{% url 'monitoring_panel' %}" class="{% if active_nav == 'monitoring' %}active{% endif %}">
         <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#activity"></use></svg>
         <span>Мониторинг</span>
+      </a>
+      <a href="{% url 'panel_actions' %}" class="{% if active_nav == 'actions' %}active{% endif %}">
+        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#zap"></use></svg>
+        <span>Действия</span>
       </a>
       <a href="{% url 'panel_tasks' %}" class="{% if active_nav == 'tasks' %}active{% endif %}">
         <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#list-checks"></use></svg>
@@ -29,6 +49,13 @@
       <span class="topbar__logo">{% block topbar_title %}Панель управления{% endblock %}</span>
       <div class="topbar__links">
         {% block topbar_actions %}{% endblock %}
+        <button class="theme-toggle-button" type="button" data-panel-theme-toggle>
+          <span data-panel-theme-label>Тема: авто</span>
+        </button>
+        <a href="{% url 'admin:index' %}">
+          <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#settings"></use></svg>
+          <span>Администрирование</span>
+        </a>
       </div>
     </header>
     <main class="page">
@@ -36,6 +63,7 @@
     </main>
   </div>
 </div>
+<script src="{% static 'src/panel_theme.js' %}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

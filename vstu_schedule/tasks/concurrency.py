@@ -7,9 +7,7 @@ from redis import Redis
 from redis.exceptions import RedisError
 
 from vstu_schedule.tasks.descriptors import (
-    TASK_CONCURRENCY_EXCLUSIVE,
     TASK_CONCURRENCY_PARALLEL,
-    TASK_CONCURRENCY_SINGLETON,
     get_task_descriptor,
 )
 
