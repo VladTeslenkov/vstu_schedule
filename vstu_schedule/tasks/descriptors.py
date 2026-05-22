@@ -3,7 +3,7 @@ import tomllib
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from celery import current_app
 from django.apps import apps as django_apps
@@ -13,6 +13,16 @@ logger = logging.getLogger(__name__)
 
 TASK_DESCRIPTOR_FILENAME = "tasks.toml"
 _INTERNAL_TASK_PREFIXES = ("celery.",)
+TASK_CONCURRENCY_PARALLEL = "parallel"
+TASK_CONCURRENCY_SINGLETON = "singleton"
+TASK_CONCURRENCY_EXCLUSIVE = "exclusive"
+TASK_CONCURRENCY_CHOICES = frozenset(
+    {
+        TASK_CONCURRENCY_PARALLEL,
+        TASK_CONCURRENCY_SINGLETON,
+        TASK_CONCURRENCY_EXCLUSIVE,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -33,6 +43,7 @@ class TaskDescriptor:
     soft_time_limit_seconds: int | None = None
     time_limit_seconds: int | None = None
     recommended_schedule: TaskScheduleDescriptor | None = None
+    concurrency: str = TASK_CONCURRENCY_EXCLUSIVE
     internal: bool = False
 
 
@@ -69,6 +80,16 @@ def _schedule(value: Any, task_name: str) -> TaskScheduleDescriptor | None:
     )
 
 
+def _concurrency(value: Any, task_name: str) -> str:
+    if value is None:
+        return TASK_CONCURRENCY_EXCLUSIVE
+    concurrency = str(value)
+    if concurrency not in TASK_CONCURRENCY_CHOICES:
+        allowed = ", ".join(sorted(TASK_CONCURRENCY_CHOICES))
+        raise ValueError(f"{task_name}.concurrency must be one of: {allowed}.")
+    return concurrency
+
+
 def _parse_descriptor_file(path: Path, app_label: str) -> dict[str, TaskDescriptor]:
     with path.open("rb") as file:
         config = tomllib.load(file)
@@ -87,6 +108,7 @@ def _parse_descriptor_file(path: Path, app_label: str) -> dict[str, TaskDescript
             ),
             time_limit_seconds=_optional_positive_int(task_config.get("time_limit_seconds")),
             recommended_schedule=_schedule(task_config.get("recommended_schedule"), task_name),
+            concurrency=_concurrency(task_config.get("concurrency"), task_name),
             internal=bool(task_config.get("internal", False)),
         )
         descriptors[task_name] = descriptor
@@ -121,7 +143,7 @@ def _project_task_prefixes() -> tuple[str, ...]:
 
 
 def registered_project_task_names(*, import_default_modules: bool = True) -> list[str]:
-    celery_app = current_app
+    celery_app = cast(Any, current_app)
     if import_default_modules:
         celery_app.loader.import_default_modules()
     prefixes = _project_task_prefixes()

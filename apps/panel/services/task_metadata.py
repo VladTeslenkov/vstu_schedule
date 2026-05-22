@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from django.conf import settings
 
-from apps.common.services.celery_task_descriptors import get_task_descriptor
+from vstu_schedule.tasks.descriptors import get_task_descriptor
 
 
 @dataclass(frozen=True)

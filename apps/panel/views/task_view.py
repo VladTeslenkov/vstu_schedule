@@ -12,10 +12,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
-from apps.common.services.celery_task_descriptors import get_task_descriptor
 from apps.panel.models import CeleryTaskConfig, CeleryTaskRun
 from apps.panel.services.task_metadata import TaskMetadata, get_task_metadata
 from apps.panel.tasks import DISPATCH_CONFIGURED_TASK_NAME
+from vstu_schedule.tasks.descriptors import get_task_descriptor
 
 _CRON_VALUE_RE = re.compile(r"^[\d*,/\-]+$")
 _INTERNAL_TASK_PREFIXES = ("celery.",)

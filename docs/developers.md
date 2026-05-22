@@ -157,8 +157,39 @@ name = { ru = "Обновление расписания", en = "Timetable updat
 description = { ru = "Скачивает файлы расписания.", en = "Downloads timetable files." }
 soft_time_limit_seconds = 1800
 time_limit_seconds = 3600
+concurrency = "exclusive"
 recommended_schedule = { minute = "0", hour = "*/6", day_of_week = "*", day_of_month = "*", month_of_year = "*" }
 ```
+
+Поле `concurrency` задаёт проектную политику параллельного выполнения задачи:
+
+- `parallel` - задача может выполняться параллельно с другими задачами и с
+  другими экземплярами самой себя;
+- `singleton` - задача может выполняться параллельно с другими задачами, но не
+  со вторым экземпляром самой себя;
+- `exclusive` - задача выполняется только тогда, когда другие проектные
+  Celery-задачи не выполняются, и блокирует старт других задач до завершения.
+
+Если `concurrency` не указан, используется безопасное значение по умолчанию:
+`exclusive`.
+
+Проектные задачи следует объявлять через `vstu_schedule.tasks.decorators.project_task`,
+а не напрямую через `celery.shared_task`. Этот декоратор вызывает `shared_task`
+под капотом, делает задачу bound-задачей и автоматически применяет политику
+`concurrency` из дескриптора:
+
+```python
+from vstu_schedule.tasks.decorators import project_task
+
+
+@project_task(name="panel.tasks.update_timetable", max_retries=3)
+def update_timetable(self):
+    ...
+```
+
+Если задача находится в `tasks.toml`, но объявлена напрямую через `shared_task`,
+её дескриптор останется доступен для панели, но политика параллельного выполнения
+не будет применяться автоматически.
 
 Внутренние вспомогательные задачи можно описывать с `internal = true`: так
 дескриптор всё равно фиксирует задачу, но она не становится частью публичного

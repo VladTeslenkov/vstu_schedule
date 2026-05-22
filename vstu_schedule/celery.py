@@ -13,8 +13,6 @@ app.autodiscover_tasks()
 @worker_ready.connect
 @beat_init.connect
 def validate_task_descriptors(**kwargs):
-    from apps.common.services.celery_task_descriptors import (
-        warn_about_missing_task_descriptors,
-    )
+    from vstu_schedule.tasks.descriptors import warn_about_missing_task_descriptors
 
     warn_about_missing_task_descriptors()
