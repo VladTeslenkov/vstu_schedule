@@ -103,6 +103,7 @@ docker compose up -d --build
 
 - Running locally without Docker is possible, but it requires an available PostgreSQL database and, when needed, Celery/Redis.
 - To partially disable Celery in local mode, set `DISABLE_CELERY=1` in `.env.local`.
+- Celery tasks declared in an app `tasks` package must be exported from its `__init__.py` and described in `tasks/tasks.toml`.
 - New dependencies will not appear inside already running containers without rebuilding the images.
 
 ## Working With Changes

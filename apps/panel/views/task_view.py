@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
+from apps.common.services.celery_task_descriptors import get_task_descriptor
 from apps.panel.models import CeleryTaskConfig, CeleryTaskRun
 from apps.panel.services.task_metadata import TaskMetadata, get_task_metadata
 from apps.panel.tasks import DISPATCH_CONFIGURED_TASK_NAME
@@ -41,6 +42,9 @@ def _registered_task_names() -> list[str]:
             continue
         if task_name.startswith(_INTERNAL_TASK_PREFIXES):
             continue
+        descriptor = get_task_descriptor(task_name)
+        if descriptor and descriptor.internal:
+            continue
         names.append(task_name)
     return sorted(names)
 
@@ -66,8 +70,42 @@ def _required_arguments(task_name: str) -> list[str]:
 
 
 def _task_config(task_name: str) -> CeleryTaskConfig:
-    config, _ = CeleryTaskConfig.objects.get_or_create(task_name=task_name)
+    config, created = CeleryTaskConfig.objects.get_or_create(task_name=task_name)
+    if created:
+        _apply_descriptor_defaults(config)
     return config
+
+
+def _apply_descriptor_defaults(config: CeleryTaskConfig) -> None:
+    descriptor = get_task_descriptor(config.task_name)
+    if descriptor is None:
+        return
+
+    update_fields = []
+    if descriptor.soft_time_limit_seconds:
+        config.soft_time_limit_seconds = descriptor.soft_time_limit_seconds
+        update_fields.append("soft_time_limit_seconds")
+    if descriptor.time_limit_seconds:
+        config.time_limit_seconds = descriptor.time_limit_seconds
+        update_fields.append("time_limit_seconds")
+    if descriptor.recommended_schedule:
+        config.cron_minute = descriptor.recommended_schedule.minute
+        config.cron_hour = descriptor.recommended_schedule.hour
+        config.cron_day_of_week = descriptor.recommended_schedule.day_of_week
+        config.cron_day_of_month = descriptor.recommended_schedule.day_of_month
+        config.cron_month_of_year = descriptor.recommended_schedule.month_of_year
+        update_fields.extend(
+            [
+                "cron_minute",
+                "cron_hour",
+                "cron_day_of_week",
+                "cron_day_of_month",
+                "cron_month_of_year",
+            ]
+        )
+
+    if update_fields:
+        config.save(update_fields=[*update_fields, "updated_at"])
 
 
 def _periodic_task_for_task(

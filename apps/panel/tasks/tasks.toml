@@ -1,0 +1,17 @@
+["panel.tasks.dispatch_configured_task"]
+internal = true
+name = { ru = "Диспетчер настроенных задач", en = "Configured task dispatcher" }
+description = { ru = "Внутренняя задача, которая запускает пользовательские задачи с актуальными настройками панели.", en = "Internal task that queues panel-managed tasks with the latest runtime settings." }
+
+["panel.tasks.update_timetable"]
+name = { ru = "Обновление расписания", en = "Timetable update" }
+description = { ru = "Скачивает файлы расписания, сравнивает версии и сохраняет новые файлы в локальное хранилище.", en = "Downloads timetable files, compares versions and stores changed files locally." }
+soft_time_limit_seconds = 1800
+time_limit_seconds = 3600
+recommended_schedule = { minute = "0", hour = "*/6", day_of_week = "*", day_of_month = "*", month_of_year = "*" }
+
+["panel.tasks.clear_storage"]
+name = { ru = "Очистка хранилища", en = "Storage cleanup" }
+description = { ru = "Очищает выбранный компонент системы. Для ручного запуска нужны аргументы, поэтому задача отображается только для настройки и просмотра логов.", en = "Clears a selected system component. It requires arguments for manual runs, so it is shown for configuration and logs only." }
+soft_time_limit_seconds = 600
+time_limit_seconds = 900
