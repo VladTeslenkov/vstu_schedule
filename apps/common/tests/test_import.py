@@ -955,7 +955,7 @@ class TestEventImporter(TestCase):
                     ("", "18:30", ""),
                     ("", "11:11", "12:01"),
                 },
-            }
+            },
         ]
 
         for i in range(0, 2):
