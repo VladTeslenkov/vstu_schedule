@@ -254,7 +254,7 @@ class EventImporter:
         }
 
     @staticmethod
-    def make_reference_lookup(reference_data: dict, reference_lookup: dict) -> dict:
+    def make_reference_lookup(reference_data: dict, reference_lookup: dict) -> None:
         """Creates models for reference_data that not exist in database.
         Then updates reference_lookup
         """
@@ -616,7 +616,7 @@ class EventImporter:
         list[EventPlace],
         AbstractDay,
         list[TimeSlot],
-        list[date],
+        list[date] | list[None],
         list[date],
     ]:
         """Finds existing models for Event data

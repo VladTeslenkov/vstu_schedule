@@ -678,7 +678,7 @@ class TestEventImporter(TestCase):
                 datetime.strptime("10.03.2025", "%d.%m.%Y").date(),
                 datetime.strptime("11.03.2025", "%d.%m.%Y").date(),
             ],
-            None,
+            [],
         )
 
         self.assertEqual(AbstractEvent.objects.all().count(), 6)
@@ -697,7 +697,7 @@ class TestEventImporter(TestCase):
                 datetime.strptime("10.03.2025", "%d.%m.%Y").date(),
                 datetime.strptime("11.03.2025", "%d.%m.%Y").date(),
             ],
-            None,
+            [],
         )
 
         self.assertEqual(AbstractEvent.objects.all().count(), 6)
@@ -961,7 +961,7 @@ class TestEventImporter(TestCase):
         for i in range(0, 2):
             return_value = EventImporter.collect_reference_data(REFERENCE_DATA[i])
 
-            self.assertSequenceEqual(return_value, EXPECTED_REFERENCE_DATA[i])
+            self.assertEqual(return_value, EXPECTED_REFERENCE_DATA[i])
 
     def test_make_reference_lookup(self):
         # with empty reference_lookup
