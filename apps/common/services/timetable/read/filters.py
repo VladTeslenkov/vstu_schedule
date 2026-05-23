@@ -46,8 +46,10 @@ def _prefix_q(q_filter: Q, prefix: str) -> Q:
 
     return prefixed_q
 
+
 def prefix_filter_dict(filter_query: dict[str, str], prefix: str) -> dict[str, str]:
     return {f"{prefix}{key}": value for key, value in filter_query.items()}
+
 
 class DateFilter:
     """Only for work with Event model fields"""
@@ -237,7 +239,9 @@ class TimeSlotFilter:
         return prefix_filter_dict(filter_query, "time_slot_override__") if filter_query else {}
 
     @classmethod
-    def from_display_name_abstract_event_relative(cls, display_name: str | list[str]) -> dict[str, str]:
+    def from_display_name_abstract_event_relative(
+        cls, display_name: str | list[str]
+    ) -> dict[str, str]:
         """Only for work with AbstractEvent model TimeSlot field
 
         Use list of time slot display_names for OR behaviour
