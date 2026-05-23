@@ -1,6 +1,7 @@
 import json
 import re
 from datetime import date, datetime, timedelta
+from typing import cast
 
 from django.db.models import Q
 
@@ -316,27 +317,27 @@ class EventImporter:
 
             participants_to_create = []
 
-            for name in teachers:
-                if name not in existing_participants_names:
-                    participants_to_create.append(
-                        EventParticipant(
-                            name=name,
-                            role=EventParticipant.Role.TEACHER,
-                            is_group=False,
-                            # TODO: add department
-                        )
-                    )
+            participants_to_create = [
+                EventParticipant(
+                    name=name,
+                    role=EventParticipant.Role.TEACHER,
+                    is_group=False,
+                    # TODO: add department
+                )
+                for name in teachers
+                if name not in existing_participants_names
+            ]
 
-            for name in groups:
-                if name not in existing_participants_names:
-                    participants_to_create.append(
-                        EventParticipant(
-                            name=name,
-                            role=EventParticipant.Role.STUDENT,
-                            is_group=True,
-                            # TODO: add department
-                        )
-                    )
+            participants_to_create.extend(
+                EventParticipant(
+                    name=name,
+                    role=EventParticipant.Role.STUDENT,
+                    is_group=True,
+                    # TODO: add department
+                )
+                for name in groups
+                if name not in existing_participants_names
+            )
 
             if participants_to_create:
                 created_participants = EventParticipant.objects.bulk_create(participants_to_create)
@@ -702,10 +703,11 @@ class EventImporter:
             time_slot = (
                 reference_lookup["time_slots"]
                 .filter(
-                    **TimeSlotFilter.from_display_name(
-                        normalized_time_slot[1]
-                        if normalized_time_slot[1]
-                        else normalized_time_slot[0]
+                    **cast(
+                        dict[str, object],
+                        TimeSlotFilter.from_display_name(
+                            normalized_time_slot[1] or normalized_time_slot[0]
+                        ),
                     )
                 )
                 .first()
@@ -723,10 +725,9 @@ class EventImporter:
 
         holds_on_date_values = event_data.get("holds_on_date") or []
         if holds_on_date_values:
-            holds_on_dates = []
-
-            for date_ in holds_on_date_values:
-                holds_on_dates.append(datetime.strptime(date_, "%d.%m.%Y").date())
+            holds_on_dates = [
+                datetime.strptime(date_, "%d.%m.%Y").date() for date_ in holds_on_date_values
+            ]
         else:
             holds_on_dates = [None]
 
