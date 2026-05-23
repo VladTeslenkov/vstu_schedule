@@ -1,6 +1,9 @@
 import json
 import re
 from datetime import date, datetime, timedelta
+from typing import cast
+
+from django.db.models import Q
 
 from apps.common.models import (
     AbstractDay,
@@ -13,6 +16,7 @@ from apps.common.models import (
     TimeSlot,
 )
 from apps.common.selectors import Selector
+from apps.common.services.timetable.read.filters import TimeSlotFilter
 from apps.common.services.timetable.utilities import (
     get_number_from_month_name,
     get_scope_from_label,
@@ -81,13 +85,9 @@ class EventImporter:
 
     @classmethod
     def correct_event_data(cls, schedule: Schedule, event_data) -> None:
-        """Corrects inaccuracies and defects in given event_data
+        """Corrects inaccuracies and defects in given event_data"""
 
-        "places": [
-          "Б--514"
-        ]
-        """
-
+        # Fixing dates
         corrected_holds_on_date = cls.correct_holds_on_date_data(
             schedule, event_data["holds_on_date"]
         )
@@ -254,7 +254,7 @@ class EventImporter:
         }
 
     @staticmethod
-    def make_reference_lookup(reference_data: dict, reference_lookup: dict) -> dict:
+    def make_reference_lookup(reference_data: dict, reference_lookup: dict) -> None:
         """Creates models for reference_data that not exist in database.
         Then updates reference_lookup
         """
@@ -315,6 +315,8 @@ class EventImporter:
                 if participant.name not in reference_lookup["participants"]:
                     reference_lookup["participants"].update({participant.name: participant})
 
+            participants_to_create = []
+
             participants_to_create = [
                 EventParticipant(
                     name=name,
@@ -325,6 +327,7 @@ class EventImporter:
                 for name in teachers
                 if name not in existing_participants_names
             ]
+
             participants_to_create.extend(
                 EventParticipant(
                     name=name,
@@ -343,7 +346,94 @@ class EventImporter:
                     if participant.name not in reference_lookup["participants"]:
                         reference_lookup["participants"].update({participant.name: participant})
 
-        return reference_lookup
+        places = reference_data.get("places", set())
+
+        if places:
+            rooms = {room for _, room in places}
+
+            existing_places = EventPlace.objects.filter(room__in=rooms)
+            existing_places_reprs = list(existing_places.values_list("building", "room").distinct())
+
+            for place in list(existing_places):
+                if (place.building, place.room) not in reference_lookup["places"]:
+                    reference_lookup["places"].update({(place.building, place.room): place})
+
+            places_to_create = []
+
+            for building, room in places:
+                if (building, room) not in existing_places_reprs:
+                    places_to_create.append(EventPlace(building=building, room=room))
+
+            if places_to_create:
+                created_places = EventPlace.objects.bulk_create(places_to_create)
+
+                for place in created_places:
+                    if (place.building, place.room) not in reference_lookup["places"]:
+                        reference_lookup["places"].update({(place.building, place.room): place})
+
+        time_slots = reference_data.get("time_slots", set())
+
+        if time_slots:
+            existing_time_slots = TimeSlot.objects.none()
+
+            for time_slot in time_slots:
+                filter_query = Q()
+
+                # alt_name
+                if time_slot[0]:
+                    filter_query &= Q(alt_name=time_slot[0])
+
+                # start_time
+                if time_slot[1]:
+                    filter_query &= Q(start_time=time_slot[1])
+
+                # end_time
+                if time_slot[2]:
+                    filter_query &= Q(end_time=time_slot[2])
+
+                if filter_query:
+                    existing_time_slots |= TimeSlot.objects.filter(filter_query)
+            existing_time_slots_alt_names = existing_time_slots.values_list(
+                "alt_name", flat=True
+            ).distinct()
+            existing_time_slots_start_times = existing_time_slots.values_list(
+                "start_time", flat=True
+            ).distinct()
+            existing_time_slots_end_times = existing_time_slots.values_list(
+                "end_time", flat=True
+            ).distinct()
+
+            reference_lookup["time_slots"] = existing_time_slots
+
+            time_slots_to_create = []
+
+            for alt_name, start_time, end_time in time_slots:
+                # At this moment, we auto creating TimeSlots ONLY from start_time
+                if (
+                    start_time
+                    and datetime.strptime(start_time, "%H:%M").time()
+                    not in existing_time_slots_start_times
+                    and (not alt_name or alt_name not in existing_time_slots_alt_names)
+                    and (
+                        not end_time
+                        or datetime.strptime(end_time, "%H:%M").time()
+                        not in existing_time_slots_end_times
+                    )
+                ):
+                    time_slots_to_create.append(
+                        TimeSlot(
+                            alt_name=alt_name,
+                            start_time=datetime.strptime(start_time, "%H:%M"),
+                            end_time=datetime.strptime(end_time, "%H:%M") if end_time else None,
+                        )
+                    )
+
+            if time_slots_to_create:
+                created_time_slots = TimeSlot.objects.bulk_create(time_slots_to_create)
+
+                reference_lookup["time_slots"] |= TimeSlot.objects.filter(
+                    pk__in={time_slot.pk for time_slot in created_time_slots}
+                )
 
     @staticmethod
     def find_schedule(title: str) -> Schedule:
@@ -470,8 +560,7 @@ class EventImporter:
         parsed_weeks = {
             week_id : {
                 week_day_index : [
-                    dd.mm.YYYY,
-                    dd.mm.YYYY...
+                    dd.mm.YYYY
                 ]
             }
         }
@@ -527,15 +616,133 @@ class EventImporter:
         list[EventPlace],
         AbstractDay,
         list[TimeSlot],
-        list[date],
+        list[date] | list[None],
         list[date],
     ]:
         """Finds existing models for Event data
 
+        Method uses pre-prepared reference data
+
         Raise DoesNotExist if model not found
         """
 
-        raise NotImplementedError
+        week_id = event_data["week"]
+        week_day_index = event_data["week_day_index"]
+
+        kind_name = normalize_kind_name(event_data["kind"])
+        kind = reference_lookup["kinds"].get(kind_name)
+        if kind is None:
+            raise EventKind.DoesNotExist(
+                f"Тип события '{kind_name}' не найден после подготовки справочников."
+            )
+
+        subject_name = normalize_subject_name(event_data["subject"])
+        subject = reference_lookup["subjects"].get(subject_name)
+        if subject is None:
+            raise Subject.DoesNotExist(
+                f"Предмет '{subject_name}' не найден после подготовки справочников."
+            )
+
+        participants = []
+        missing_participants = []
+
+        for teacher_name in event_data.get("participants", {}).get("teachers", []):
+            normalized = normalize_participant_name(teacher_name)
+            participant = reference_lookup["participants"].get(normalized)
+            if participant:
+                participants.append(participant)
+            else:
+                missing_participants.append(normalized)
+
+        for group_name in event_data.get("participants", {}).get("student_groups", []):
+            normalized = normalize_participant_name(group_name)
+            participant = reference_lookup["participants"].get(normalized)
+            if participant:
+                participants.append(participant)
+            else:
+                missing_participants.append(normalized)
+
+        if missing_participants:
+            raise EventParticipant.DoesNotExist(
+                f"Не удалось найти участников: {', '.join(missing_participants)}"
+            )
+
+        places = []
+        missing_places = []
+        for place_repr in event_data.get("places", []):
+            normalized_place = normalize_place_building_and_room(place_repr)
+
+            if not normalized_place:
+                continue
+
+            place = reference_lookup["places"].get(normalized_place)
+            if place:
+                places.append(place)
+            else:
+                missing_places.append(place_repr)
+
+        if missing_places:
+            raise EventPlace.DoesNotExist(
+                f"Не удалось найти аудитории: {', '.join(missing_places)}"
+            )
+
+        abstract_day = AbstractDay.objects.get(
+            name__startswith=1 if week_id == "first_week" else 2,
+            name__endswith=week_days[week_day_index].capitalize(),
+        )
+
+        time_slots = []
+        missing_time_slots = []
+        for time_slot_repr in event_data.get("hours", []):
+            normalized_time_slot = normalize_time_slot_display_name(time_slot_repr)
+
+            if not normalized_time_slot:
+                continue
+
+            ## TODO: select timeslot with alt_name > without altname
+            time_slot = (
+                reference_lookup["time_slots"]
+                .filter(
+                    **cast(
+                        dict[str, object],
+                        TimeSlotFilter.from_display_name(
+                            normalized_time_slot[1] or normalized_time_slot[0]
+                        ),
+                    )
+                )
+                .first()
+            )
+
+            if time_slot:
+                time_slots.append(time_slot)
+            else:
+                missing_time_slots.append(time_slot_repr)
+
+        if missing_time_slots:
+            raise TimeSlot.DoesNotExist(
+                f"Не найден учебный час для значений: {', '.join(missing_time_slots)}"
+            )
+
+        holds_on_date_values = event_data.get("holds_on_date") or []
+        if holds_on_date_values:
+            holds_on_dates = [
+                datetime.strptime(date_, "%d.%m.%Y").date() for date_ in holds_on_date_values
+            ]
+        else:
+            holds_on_dates = [None]
+
+        event_dates = calendar[week_id][week_day_index]
+
+        return (
+            kind,
+            subject,
+            participants,
+            places,
+            abstract_day,
+            time_slots,
+            holds_on_dates,
+            event_dates,
+        )
 
     @staticmethod
     def create_events(
