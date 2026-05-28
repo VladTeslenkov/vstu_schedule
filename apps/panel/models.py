@@ -81,4 +81,35 @@ class CeleryTaskRun(models.Model):
         return f"{self.task_name} [{self.status}]"
 
 
+class CeleryTaskLog(models.Model):
+    """Log records captured while a Celery task run is active."""
+
+    run = models.ForeignKey(
+        CeleryTaskRun,
+        related_name="logs",
+        on_delete=models.CASCADE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    level = models.PositiveSmallIntegerField()
+    level_name = models.CharField(max_length=16)
+    logger_name = models.CharField(max_length=255)
+    message = models.TextField()
+    traceback_text = models.TextField(blank=True, default="")
+    process = models.PositiveIntegerField(null=True, blank=True)
+    thread = models.PositiveBigIntegerField(null=True, blank=True)
+    pathname = models.CharField(max_length=1024, blank=True, default="")
+    lineno = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table = "panel_celery_task_log"
+        ordering: ClassVar = ["created_at", "id"]
+        indexes: ClassVar = [
+            models.Index(fields=["run", "created_at"]),
+            models.Index(fields=["level"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.level_name} {self.logger_name}: {self.message[:80]}"
+
+
 # Create your models here.

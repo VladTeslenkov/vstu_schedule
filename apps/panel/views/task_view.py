@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
-from apps.panel.models import CeleryTaskConfig, CeleryTaskRun
+from apps.panel.models import CeleryTaskConfig, CeleryTaskLog, CeleryTaskRun
 from apps.panel.services.task_metadata import TaskMetadata, get_task_metadata
 from apps.panel.services.task_parameters import (
     celery_task_kwargs,
@@ -354,6 +354,7 @@ def task_log(request: HttpRequest, task_name: str) -> HttpResponse:
         selected_run = get_object_or_404(CeleryTaskRun, id=selected_id, task_name=task_name)
     elif runs:
         selected_run = runs[0]
+    task_logs = list(CeleryTaskLog.objects.filter(run=selected_run)[:1000]) if selected_run else []
 
     return render(
         request,
@@ -364,5 +365,6 @@ def task_log(request: HttpRequest, task_name: str) -> HttpResponse:
             "active_nav": "tasks",
             "runs": runs,
             "selected_run": selected_run,
+            "task_logs": task_logs,
         },
     )

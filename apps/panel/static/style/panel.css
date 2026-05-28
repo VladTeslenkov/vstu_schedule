@@ -702,6 +702,15 @@
   min-width: min(100%, 420px);
 }
 
+.panel-page .section-title {
+  border-top: 1px solid var(--panel-border);
+  color: var(--panel-text);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  padding: 16px 20px 10px;
+}
+
 .panel-page .log-output {
   background: var(--panel-log-bg);
   border-top: 1px solid var(--panel-border);

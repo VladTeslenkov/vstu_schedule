@@ -44,6 +44,16 @@
       <div class="info-row"><span class="info-row__label">Начата</span><span>{{ selected_run.started_at|date:"d.m.Y H:i:s"|default:"—" }}</span></div>
       <div class="info-row"><span class="info-row__label">Завершена</span><span>{{ selected_run.finished_at|date:"d.m.Y H:i:s"|default:"—" }}</span></div>
     </div>
+    <h3 class="section-title">Журнал</h3>
+    {% if task_logs %}
+      <pre class="log-output">{% for entry in task_logs %}[{{ entry.created_at|date:"H:i:s" }}] {{ entry.level_name }} {{ entry.logger_name }}: {{ entry.message }}{% if entry.traceback_text %}
+{{ entry.traceback_text }}{% endif %}
+{% endfor %}</pre>
+    {% else %}
+      <div class="empty-row">Записей журнала пока нет</div>
+    {% endif %}
+
+    <h3 class="section-title">Результат</h3>
     <pre class="log-output">{{ selected_run.result_text|default:"Результат пуст" }}</pre>
     {% if selected_run.traceback_text %}
       <pre class="log-output log-output--error">{{ selected_run.traceback_text }}</pre>

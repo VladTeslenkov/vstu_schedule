@@ -195,11 +195,20 @@ LOGGING = {
             "backupCount": 5,  # Хранить 5 последних файлов
             "formatter": "verbose",
         },
+        "task_db": {
+            "class": "apps.panel.services.task_logging.CeleryTaskLogHandler",
+            "level": "INFO",
+        },
     },
     "loggers": {
         # Ваш основной логгер для приложений
         "apps": {
-            "handlers": ["console", "file"],
+            "handlers": ["console", "file", "task_db"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "vstu_schedule": {
+            "handlers": ["console", "file", "task_db"],
             "level": "INFO",
             "propagate": True,
         },
@@ -211,7 +220,7 @@ LOGGING = {
         },
         # Логгер для Celery
         "celery": {
-            "handlers": ["console", "file"],
+            "handlers": ["console", "file", "task_db"],
             "level": "INFO",
             "propagate": False,
         },

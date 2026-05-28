@@ -5,6 +5,10 @@ from celery import signals
 from django.utils import timezone
 
 from apps.panel.models import CeleryTaskRun
+from apps.panel.services.task_logging import (
+    bind_task_logging_context,
+    clear_task_logging_context,
+)
 from apps.panel.tasks import DISPATCH_CONFIGURED_TASK_NAME
 
 logger = logging.getLogger(__name__)
@@ -27,8 +31,10 @@ def _stringify(value: Any, limit: int = 10000) -> str:
 def task_started(task_id: str, task: Any, **kwargs: Any) -> None:
     task_name = getattr(task, "name", "")
     if not _should_track(task_name):
+        clear_task_logging_context()
         return
 
+    bind_task_logging_context(task_id, task_name)
     CeleryTaskRun.objects.update_or_create(
         task_id=task_id,
         defaults={
@@ -49,23 +55,27 @@ def task_finished(
 ) -> None:
     task_name = getattr(task, "name", "")
     if not _should_track(task_name):
+        clear_task_logging_context()
         return
 
-    status = state or CeleryTaskRun.Status.SUCCESS
-    result_text = _stringify(retval)
-    if isinstance(retval, dict) and retval.get("status") == "skipped":
-        status = CeleryTaskRun.Status.SKIPPED
-        result_text = retval.get("message") or result_text
+    try:
+        status = state or CeleryTaskRun.Status.SUCCESS
+        result_text = _stringify(retval)
+        if isinstance(retval, dict) and retval.get("status") == "skipped":
+            status = CeleryTaskRun.Status.SKIPPED
+            result_text = retval.get("message") or result_text
 
-    CeleryTaskRun.objects.update_or_create(
-        task_id=task_id,
-        defaults={
-            "task_name": task_name,
-            "status": status,
-            "finished_at": timezone.now(),
-            "result_text": result_text,
-        },
-    )
+        CeleryTaskRun.objects.update_or_create(
+            task_id=task_id,
+            defaults={
+                "task_name": task_name,
+                "status": status,
+                "finished_at": timezone.now(),
+                "result_text": result_text,
+            },
+        )
+    finally:
+        clear_task_logging_context()
 
 
 @signals.task_failure.connect
