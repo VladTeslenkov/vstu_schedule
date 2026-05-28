@@ -34,6 +34,16 @@
         {% endfor %}
       </select>
     </form>
+    {% if selected_run_can_stop %}
+      <form method="post" action="{% url 'panel_task_stop' task_name %}">
+        {% csrf_token %}
+        <input type="hidden" name="run" value="{{ selected_run.id }}">
+        <button class="btn btn--danger btn--sm" type="submit">
+          <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#square"></use></svg>
+          Остановить
+        </button>
+      </form>
+    {% endif %}
   </div>
 
   {% if selected_run %}

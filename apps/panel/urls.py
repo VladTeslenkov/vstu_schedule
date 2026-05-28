@@ -23,5 +23,6 @@ urlpatterns = [
     path("tasks/", task_view.tasks_panel, name="panel_tasks"),
     path("tasks/<str:task_name>/configure/", task_view.task_configure, name="panel_task_configure"),
     path("tasks/<str:task_name>/run/", task_view.task_run, name="panel_task_run"),
+    path("tasks/<str:task_name>/stop/", task_view.task_stop, name="panel_task_stop"),
     path("tasks/<str:task_name>/log/", task_view.task_log, name="panel_task_log"),
 ]

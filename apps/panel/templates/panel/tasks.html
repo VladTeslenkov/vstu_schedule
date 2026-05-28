@@ -72,6 +72,16 @@
                   Запустить
                 </button>
               </form>
+              {% if task.latest_run_can_stop %}
+                <form method="post" action="{% url 'panel_task_stop' task.name %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="run" value="{{ task.latest_run.id }}">
+                  <button class="btn btn--danger btn--sm" type="submit">
+                    <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#square"></use></svg>
+                    Остановить
+                  </button>
+                </form>
+              {% endif %}
               <a class="btn btn--ghost btn--sm" href="{% url 'panel_task_configure' task.name %}">
                 <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#settings"></use></svg>
                 Настроить

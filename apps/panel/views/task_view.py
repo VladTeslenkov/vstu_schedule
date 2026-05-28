@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from celery import current_app
+from celery.result import AsyncResult
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpRequest, HttpResponse
@@ -30,6 +31,11 @@ _CRON_VALUE_RE = re.compile(r"^[\d*,/\-]+$")
 _INTERNAL_TASK_PREFIXES = ("celery.",)
 _INTERNAL_TASKS = {DISPATCH_CONFIGURED_TASK_NAME}
 _MANUAL_FAILED_TASK_ID_PREFIX = "manual-failed"
+_STOPPABLE_STATUSES = {
+    CeleryTaskRun.Status.PENDING,
+    CeleryTaskRun.Status.STARTED,
+    CeleryTaskRun.Status.RETRY,
+}
 
 
 @dataclass(frozen=True)
@@ -40,6 +46,7 @@ class RegisteredTask:
     can_run_without_args: bool
     required_arguments: list[str]
     latest_run: CeleryTaskRun | None
+    latest_run_can_stop: bool
     schedule_enabled: bool
 
 
@@ -239,6 +246,44 @@ def _record_failed_manual_task_run(
     return run
 
 
+def _can_stop_task_run(run: CeleryTaskRun | None) -> bool:
+    if run is None:
+        return False
+    if run.task_id.startswith(f"{_MANUAL_FAILED_TASK_ID_PREFIX}:"):
+        return False
+    return run.status in _STOPPABLE_STATUSES
+
+
+def _record_task_run_log(
+    run: CeleryTaskRun,
+    *,
+    level: int,
+    level_name: str,
+    message: str,
+) -> None:
+    CeleryTaskLog.objects.create(
+        run=run,
+        level=level,
+        level_name=level_name,
+        logger_name=__name__,
+        message=message,
+    )
+
+
+def _stop_task_run(run: CeleryTaskRun) -> None:
+    AsyncResult(run.task_id).revoke(terminate=True, signal="SIGTERM")
+    run.status = CeleryTaskRun.Status.REVOKED
+    run.finished_at = timezone.now()
+    run.result_text = "Task was revoked from the admin panel."
+    run.save(update_fields=["status", "finished_at", "result_text"])
+    _record_task_run_log(
+        run,
+        level=logging.WARNING,
+        level_name="WARNING",
+        message="Task revoke requested from the admin panel.",
+    )
+
+
 def _task_parameter_rows(config: CeleryTaskConfig) -> list[TaskParameterRow]:
     descriptor = get_task_descriptor(config.task_name)
     if descriptor is None:
@@ -276,6 +321,7 @@ def _task_rows() -> list[RegisteredTask]:
     for task_name in _registered_task_names():
         config = _task_config(task_name)
         required = _required_arguments(task_name)
+        latest_run = latest_runs.get(task_name)
         rows.append(
             RegisteredTask(
                 name=task_name,
@@ -283,7 +329,8 @@ def _task_rows() -> list[RegisteredTask]:
                 config=config,
                 can_run_without_args=not required,
                 required_arguments=required,
-                latest_run=latest_runs.get(task_name),
+                latest_run=latest_run,
+                latest_run_can_stop=_can_stop_task_run(latest_run),
                 schedule_enabled=_schedule_enabled(task_name, config),
             )
         )
@@ -382,6 +429,35 @@ def task_run(request: HttpRequest, task_name: str) -> HttpResponse:
 
 
 @staff_member_required
+def task_stop(request: HttpRequest, task_name: str) -> HttpResponse:
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    if task_name not in _registered_task_names():
+        return HttpResponse(status=404)
+
+    selected_id = request.POST.get("run")
+    if selected_id:
+        run = get_object_or_404(CeleryTaskRun, id=selected_id, task_name=task_name)
+    else:
+        run = (
+            CeleryTaskRun.objects.filter(
+                task_name=task_name,
+                status__in=_STOPPABLE_STATUSES,
+            )
+            .order_by("-queued_at")
+            .first()
+        )
+        if run is None:
+            return redirect("panel_tasks")
+
+    if _can_stop_task_run(run):
+        _stop_task_run(run)
+
+    run_id = cast(Any, run).id
+    return redirect(f"{reverse('panel_task_log', kwargs={'task_name': task_name})}?run={run_id}")
+
+
+@staff_member_required
 def task_log(request: HttpRequest, task_name: str) -> HttpResponse:
     if task_name not in _registered_task_names():
         return HttpResponse(status=404)
@@ -404,6 +480,7 @@ def task_log(request: HttpRequest, task_name: str) -> HttpResponse:
             "active_nav": "tasks",
             "runs": runs,
             "selected_run": selected_run,
+            "selected_run_can_stop": _can_stop_task_run(selected_run),
             "task_logs": task_logs,
         },
     )
