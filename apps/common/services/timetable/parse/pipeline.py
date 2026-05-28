@@ -122,10 +122,24 @@ def _local_file_path(file_version: FileVersion) -> Path:
     filename = unquote(Path(urlparse(file_version.url or "").path).name)
     if not filename:
         raise ValueError(f"FileVersion {file_version.id} does not have a source filename.")
-    path = settings.DATA_STORAGE_DIR / (resource.path or resource.name) / filename
-    if not path.is_file():
-        raise FileNotFoundError(f"Stored timetable file not found: {path}")
-    return path
+    base_dir = settings.DATA_STORAGE_DIR / (resource.path or resource.name)
+    candidates = _local_file_candidates(base_dir, filename, file_version.mimetype)
+    for path in candidates:
+        if path.is_file():
+            return path
+    candidates_text = ", ".join(str(path) for path in candidates)
+    raise FileNotFoundError(f"Stored timetable file not found. Checked: {candidates_text}")
+
+
+def _local_file_candidates(base_dir: Path, filename: str, mimetype: str | None) -> list[Path]:
+    candidates = [base_dir / filename]
+    if mimetype:
+        suffix = mimetype if mimetype.startswith(".") else f".{mimetype}"
+        converted_name = Path(filename).with_suffix(suffix).name
+        converted_path = base_dir / converted_name
+        if converted_path not in candidates:
+            candidates.append(converted_path)
+    return candidates
 
 
 def _finish_import(

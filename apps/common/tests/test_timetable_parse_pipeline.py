@@ -7,6 +7,7 @@ from apps.common.services.timetable.parse.excel_parser import (
     TimetableImportContext,
     build_schedule_metadata,
 )
+from apps.common.services.timetable.parse.pipeline import _local_file_candidates
 from apps.panel.services.task_parameters import celery_task_kwargs, coerce_task_parameters
 from vstu_schedule.tasks.descriptors import TaskParameterDescriptor
 
@@ -109,3 +110,16 @@ def test_schedule_metadata_uses_context_values():
     assert metadata["start_date"] == "09.02.2026"
     assert metadata["end_date"] == "30.06.2026"
     assert metadata["starting_day_number"] == 7
+
+
+def test_local_file_candidates_include_converted_mimetype_suffix():
+    candidates = _local_file_candidates(
+        Path("data") / "resource",
+        "schedule.xls",
+        ".xlsx",
+    )
+
+    assert candidates == [
+        Path("data") / "resource" / "schedule.xls",
+        Path("data") / "resource" / "schedule.xlsx",
+    ]
