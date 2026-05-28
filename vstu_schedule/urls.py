@@ -19,10 +19,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 urlpatterns = [
+    path("", RedirectView.as_view(pattern_name="schedule:index", permanent=True)),
     path("admin/", admin.site.urls),
-    path("timetable/", include("apps.client.urls")),
+    path("schedule/", include(("apps.client.urls", "client"), namespace="schedule")),
+    path("timetable/", RedirectView.as_view(pattern_name="schedule:index", permanent=False)),
+    path("visualization/", RedirectView.as_view(pattern_name="schedule:index", permanent=False)),
     path("panel/", include("apps.panel.urls")),
     # Освободить корень проекта для включения остальных подсистем.
     # path('', include('apps.client.urls')),
