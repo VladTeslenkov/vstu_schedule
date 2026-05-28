@@ -1,6 +1,9 @@
 import inspect
 import json
+import logging
 import re
+import traceback
+import uuid
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -10,6 +13,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
 from apps.panel.models import CeleryTaskConfig, CeleryTaskLog, CeleryTaskRun
@@ -25,6 +29,7 @@ from vstu_schedule.tasks.descriptors import get_task_descriptor
 _CRON_VALUE_RE = re.compile(r"^[\d*,/\-]+$")
 _INTERNAL_TASK_PREFIXES = ("celery.",)
 _INTERNAL_TASKS = {DISPATCH_CONFIGURED_TASK_NAME}
+_MANUAL_FAILED_TASK_ID_PREFIX = "manual-failed"
 
 
 @dataclass(frozen=True)
@@ -208,6 +213,32 @@ def _apply_options_with_parameters(config: CeleryTaskConfig) -> dict[str, Any]:
     return options
 
 
+def _record_failed_manual_task_run(
+    config: CeleryTaskConfig,
+    exception: Exception,
+) -> CeleryTaskRun:
+    now = timezone.now()
+    message = f"Task was not queued: {exception}"
+    run = CeleryTaskRun.objects.create(
+        task_id=f"{_MANUAL_FAILED_TASK_ID_PREFIX}:{uuid.uuid4()}",
+        task_name=config.task_name,
+        status=CeleryTaskRun.Status.FAILURE,
+        started_at=now,
+        finished_at=now,
+        result_text=str(exception),
+        traceback_text=traceback.format_exc(),
+    )
+    CeleryTaskLog.objects.create(
+        run=run,
+        level=logging.ERROR,
+        level_name="ERROR",
+        logger_name=__name__,
+        message=message,
+        traceback_text=run.traceback_text,
+    )
+    return run
+
+
 def _task_parameter_rows(config: CeleryTaskConfig) -> list[TaskParameterRow]:
     descriptor = get_task_descriptor(config.task_name)
     if descriptor is None:
@@ -334,7 +365,15 @@ def task_run(request: HttpRequest, task_name: str) -> HttpResponse:
     if task is None or not config.execution_enabled or _required_arguments(task_name):
         return redirect("panel_tasks")
 
-    result = task.apply_async(**_apply_options_with_parameters(config))
+    try:
+        result = task.apply_async(**_apply_options_with_parameters(config))
+    except Exception as exc:
+        run = _record_failed_manual_task_run(config, exc)
+        run_id = cast(Any, run).id
+        return redirect(
+            f"{reverse('panel_task_log', kwargs={'task_name': task_name})}?run={run_id}"
+        )
+
     CeleryTaskRun.objects.update_or_create(
         task_id=result.id,
         defaults={"task_name": task_name, "status": CeleryTaskRun.Status.PENDING},
