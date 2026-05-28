@@ -9,6 +9,7 @@ from urllib.parse import unquote
 import requests
 import xxhash
 from django.conf import settings
+from django.utils import timezone
 
 from apps.common.models import FileVersion, Resource, Tag
 
@@ -99,9 +100,13 @@ class FileData:
         file_version.url = self.__url
 
         try:
-            file_version.last_changed = datetime.strptime(self.__last_changed, "%Y-%m-%d %H:%M:%S")
+            parsed_last_changed = datetime.strptime(self.__last_changed, "%Y-%m-%d %H:%M:%S")
+            file_version.last_changed = timezone.make_aware(
+                parsed_last_changed,
+                timezone.get_current_timezone(),
+            )
         except (ValueError, TypeError):
-            file_version.last_changed = datetime.now()
+            file_version.last_changed = timezone.now()
 
         file_version.hashsum = self.__get_file_hash(file_path)
         return file_version
