@@ -17,13 +17,17 @@ from apps.common.models import (
     EventKind,
     EventParticipant,
     EventPlace,
+    FileVersion,
     Organization,
     Schedule,
     ScheduleMetadata,
     ScheduleTemplate,
     ScheduleTemplateMetadata,
+    Setting,
     Subject,
+    Tag,
     TimeSlot,
+    TimetableFileImport,
 )
 from apps.common.selectors import Selector
 from apps.common.services.timetable.export.exporter import export_abstract_event_changes
@@ -61,6 +65,39 @@ class BaseAdmin(admin.ModelAdmin):
             obj.datecreated = timezone.now()
         obj.datemodified = timezone.now()
         obj.save()
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("name", "category")
+    search_fields = ("name", "category")
+    list_filter = ("category",)
+
+
+@admin.register(FileVersion)
+class FileVersionAdmin(admin.ModelAdmin):
+    list_display = ("resource", "mimetype", "timestamp", "last_changed", "hashsum")
+    search_fields = ("resource__name", "resource__path", "url", "hashsum")
+    list_filter = ("mimetype", "timestamp", "last_changed")
+    readonly_fields = ("timestamp",)
+
+
+@admin.register(TimetableFileImport)
+class TimetableFileImportAdmin(admin.ModelAdmin):
+    list_display = ("file_version", "status", "started_at", "finished_at")
+    search_fields = (
+        "file_version__resource__name",
+        "file_version__resource__path",
+        "error",
+    )
+    list_filter = ("status", "started_at", "finished_at")
+    readonly_fields = ("started_at",)
+
+
+@admin.register(Setting)
+class SettingAdmin(admin.ModelAdmin):
+    list_display = ("key", "value", "description")
+    search_fields = ("key", "value", "description")
 
 
 @admin.register(Subject)
