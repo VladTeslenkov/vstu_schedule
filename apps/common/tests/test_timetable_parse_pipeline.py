@@ -5,6 +5,7 @@ import pytest
 
 from apps.common.services.timetable.parse.excel_parser import (
     TimetableImportContext,
+    _build_event_import_title,
     build_schedule_metadata,
 )
 from apps.common.services.timetable.parse.pipeline import _local_file_candidates
@@ -110,6 +111,20 @@ def test_schedule_metadata_uses_context_values():
     assert metadata["start_date"] == "09.02.2026"
     assert metadata["end_date"] == "30.06.2026"
     assert metadata["starting_day_number"] == 7
+
+
+def test_event_import_title_is_enriched_from_metadata():
+    title = _build_event_import_title(
+        "Учебные занятия 2 курса магистратура",
+        {
+            "course": "2",
+            "schedule_template_metadata_faculty_shortname": "ФЭВТ",
+            "semester": 2,
+            "years": "2025-2026",
+        },
+    )
+
+    assert title == "ФЭВТ Учебные занятия 2 курса магистратура 2 семестр 2025-2026"
 
 
 def test_local_file_candidates_include_converted_mimetype_suffix():

@@ -114,13 +114,14 @@ def _build_event_payload(
     metadata: dict[str, Any],
 ) -> dict[str, Any]:
     weeks, months = _extract_weeks(matched_document["table"]["datetime"])
+    normalized_title = _normalize_title(
+        title,
+        str(metadata.get("scope") or ""),
+        str(metadata["semester"]),
+        str(metadata["years"]),
+    )
     payload = {
-        "title": _normalize_title(
-            title,
-            str(metadata.get("scope") or ""),
-            str(metadata["semester"]),
-            str(metadata["years"]),
-        ),
+        "title": _build_event_import_title(normalized_title, metadata),
         "table": {
             "grid": _extract_lessons(matched_document, years=str(metadata["years"])),
             "datetime": {
@@ -212,6 +213,31 @@ def _normalize_title(
         title = f"{title} {normalized_scope}".strip()
 
     return re.sub(r"\s+", " ", title).strip()
+
+
+def _build_event_import_title(title: str, metadata: dict[str, Any]) -> str:
+    parts = [title.strip()]
+    lower_title = title.lower()
+
+    faculty = str(metadata.get("schedule_template_metadata_faculty_shortname") or "").strip()
+    if faculty and faculty.upper() not in title.upper():
+        parts.insert(0, faculty)
+
+    course = str(metadata.get("course") or "").strip()
+    if course and not re.search(
+        rf"\b{re.escape(course)}\s*[-а-яА-ЯёЁ]*\s*курса?\b", title, re.IGNORECASE
+    ):
+        parts.append(f"{course} курс")
+
+    semester = str(metadata.get("semester") or "").strip()
+    if semester and "семестр" not in lower_title:
+        parts.append(f"{semester} семестр")
+
+    years = str(metadata.get("years") or "").strip()
+    if years and years not in title:
+        parts.append(years)
+
+    return re.sub(r"\s+", " ", " ".join(part for part in parts if part)).strip()
 
 
 def _detect_scope(source_path: Path, title: str) -> str:
