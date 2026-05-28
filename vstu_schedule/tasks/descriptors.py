@@ -23,6 +23,19 @@ TASK_CONCURRENCY_CHOICES = frozenset(
         TASK_CONCURRENCY_EXCLUSIVE,
     }
 )
+TASK_PARAMETER_TYPES = frozenset(
+    {
+        "str",
+        "int",
+        "float",
+        "bool",
+        "date",
+        "datetime",
+        "time",
+        "path",
+        "url",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -35,6 +48,16 @@ class TaskScheduleDescriptor:
 
 
 @dataclass(frozen=True)
+class TaskParameterDescriptor:
+    name: str
+    type: str
+    label: dict[str, str]
+    description: dict[str, str]
+    required: bool = False
+    default: Any = None
+
+
+@dataclass(frozen=True)
 class TaskDescriptor:
     task_name: str
     app_label: str
@@ -43,6 +66,7 @@ class TaskDescriptor:
     soft_time_limit_seconds: int | None = None
     time_limit_seconds: int | None = None
     recommended_schedule: TaskScheduleDescriptor | None = None
+    parameters: tuple[TaskParameterDescriptor, ...] = ()
     concurrency: str = TASK_CONCURRENCY_EXCLUSIVE
     internal: bool = False
 
@@ -90,6 +114,46 @@ def _concurrency(value: Any, task_name: str) -> str:
     return concurrency
 
 
+def _parameters(value: Any, task_name: str) -> tuple[TaskParameterDescriptor, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise ValueError(f"{task_name}.parameters must be an array of TOML tables.")
+
+    parameters = []
+    names = set()
+    for raw_parameter in value:
+        if not isinstance(raw_parameter, dict):
+            raise ValueError(f"{task_name}.parameters entries must be TOML tables.")
+        name = str(raw_parameter.get("name", "")).strip()
+        if not name:
+            raise ValueError(f"{task_name}.parameters entries must have a name.")
+        if name in names:
+            raise ValueError(f"{task_name}.parameters contains duplicate parameter: {name}.")
+        names.add(name)
+
+        parameter_type = str(raw_parameter.get("type", "str"))
+        if parameter_type not in TASK_PARAMETER_TYPES:
+            allowed = ", ".join(sorted(TASK_PARAMETER_TYPES))
+            raise ValueError(f"{task_name}.{name}.type must be one of: {allowed}.")
+
+        parameters.append(
+            TaskParameterDescriptor(
+                name=name,
+                type=parameter_type,
+                label=_translations(raw_parameter.get("label", {"en": name}), "label", name),
+                description=_translations(
+                    raw_parameter.get("description", {}),
+                    "description",
+                    name,
+                ),
+                required=bool(raw_parameter.get("required", False)),
+                default=raw_parameter.get("default"),
+            )
+        )
+    return tuple(parameters)
+
+
 def _parse_descriptor_file(path: Path, app_label: str) -> dict[str, TaskDescriptor]:
     with path.open("rb") as file:
         config = tomllib.load(file)
@@ -108,6 +172,7 @@ def _parse_descriptor_file(path: Path, app_label: str) -> dict[str, TaskDescript
             ),
             time_limit_seconds=_optional_positive_int(task_config.get("time_limit_seconds")),
             recommended_schedule=_schedule(task_config.get("recommended_schedule"), task_name),
+            parameters=_parameters(task_config.get("parameters"), task_name),
             concurrency=_concurrency(task_config.get("concurrency"), task_name),
             internal=bool(task_config.get("internal", False)),
         )

@@ -43,4 +43,4 @@ exclude = [
 ]
 
 [tool.uv.sources]
-vstu-xls = { git = "https://github.com/den1s0v/vstu_xls.git", rev = "0.2.0-preview" }
+vstu-xls = { git = "https://github.com/den1s0v/vstu_xls.git", rev = "0.2.2-preview" }

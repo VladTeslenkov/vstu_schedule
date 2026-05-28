@@ -1,0 +1,144 @@
+from __future__ import annotations
+
+import json
+import logging
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+from urllib.parse import unquote, urlparse
+
+from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
+
+from apps.common.models import FileVersion, TimetableFileImport
+from apps.common.services.timetable.load.event_importer import EventImporter
+from apps.common.services.timetable.load.reference_importer import ReferenceImporter
+
+from .excel_parser import TimetableImportContext, parse_timetable_excel
+
+logger = logging.getLogger(__name__)
+
+_EXCEL_EXTENSIONS = {".xls", ".xlsx"}
+
+
+@dataclass(frozen=True)
+class TimetablePipelineResult:
+    imported: int = 0
+    failed: int = 0
+    skipped: int = 0
+    details: list[dict[str, Any]] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "imported": self.imported,
+            "failed": self.failed,
+            "skipped": self.skipped,
+            "details": self.details,
+        }
+
+
+def run_saved_timetable_import_pipeline(
+    context: TimetableImportContext,
+    *,
+    changed_only: bool = True,
+    save_archive_schedules: bool = True,
+    resource_ids: list[int] | None = None,
+) -> TimetablePipelineResult:
+    versions = _select_file_versions(changed_only=changed_only, resource_ids=resource_ids)
+    imported = failed = skipped = 0
+    details = []
+
+    for file_version in versions:
+        import_record = TimetableFileImport.objects.create(file_version=file_version)
+        try:
+            file_path = _local_file_path(file_version)
+            if file_path.suffix.lower() not in _EXCEL_EXTENSIONS:
+                _finish_import(
+                    import_record,
+                    TimetableFileImport.Status.SKIPPED,
+                    result={"reason": "not_excel", "path": str(file_path)},
+                )
+                skipped += 1
+                continue
+
+            with transaction.atomic():
+                parsed = parse_timetable_excel(file_path, context)
+                ReferenceImporter.import_schedule(
+                    json.dumps([parsed.schedule_metadata], ensure_ascii=False),
+                    save_archive_schedules,
+                )
+                EventImporter.import_events(json.dumps(parsed.event_payload, ensure_ascii=False))
+                _finish_import(
+                    import_record,
+                    TimetableFileImport.Status.IMPORTED,
+                    metadata=parsed.schedule_metadata,
+                    result={"title": parsed.title, "path": str(file_path)},
+                )
+            imported += 1
+        except Exception as exc:
+            logger.exception(
+                "Failed to import timetable file version %s",
+                file_version.id,
+            )
+            _finish_import(
+                import_record,
+                TimetableFileImport.Status.FAILED,
+                error=str(exc),
+            )
+            failed += 1
+
+        details.append(
+            {
+                "file_version_id": file_version.id,
+                "status": import_record.status,
+                "error": import_record.error,
+            }
+        )
+
+    return TimetablePipelineResult(
+        imported=imported,
+        failed=failed,
+        skipped=skipped,
+        details=details,
+    )
+
+
+def _select_file_versions(
+    *,
+    changed_only: bool,
+    resource_ids: list[int] | None,
+) -> list[FileVersion]:
+    queryset = FileVersion.objects.select_related("resource").order_by("-timestamp", "-id")
+    if resource_ids:
+        queryset = queryset.filter(resource_id__in=resource_ids)
+    if changed_only:
+        queryset = queryset.exclude(timetable_imports__status=TimetableFileImport.Status.IMPORTED)
+    return list(queryset)
+
+
+def _local_file_path(file_version: FileVersion) -> Path:
+    resource = file_version.resource
+    filename = unquote(Path(urlparse(file_version.url or "").path).name)
+    if not filename:
+        raise ValueError(f"FileVersion {file_version.id} does not have a source filename.")
+    path = settings.DATA_STORAGE_DIR / (resource.path or resource.name) / filename
+    if not path.is_file():
+        raise FileNotFoundError(f"Stored timetable file not found: {path}")
+    return path
+
+
+def _finish_import(
+    import_record: TimetableFileImport,
+    status: str,
+    *,
+    metadata: dict[str, Any] | None = None,
+    result: dict[str, Any] | None = None,
+    error: str = "",
+) -> None:
+    import_record.status = status
+    import_record.finished_at = timezone.now()
+    import_record.metadata = metadata or {}
+    import_record.result = result or {}
+    import_record.error = error
+    import_record.save(update_fields=["status", "finished_at", "metadata", "result", "error"])

@@ -12,6 +12,69 @@ soft_time_limit_seconds = 1800
 time_limit_seconds = 3600
 recommended_schedule = { minute = "0", hour = "*/6", day_of_week = "*", day_of_month = "*", month_of_year = "*" }
 
+["panel.tasks.import_saved_timetables"]
+concurrency = "exclusive"
+name = { ru = "Импорт и разбор сохранённых расписаний", en = "Import and parse stored timetables" }
+description = { ru = "Разбирает уже сохранённые xls/xlsx-файлы и импортирует новые расписания в базу данных.", en = "Parses already stored xls/xlsx files and imports new schedules into the database." }
+soft_time_limit_seconds = 1800
+time_limit_seconds = 3600
+
+[["panel.tasks.import_saved_timetables".parameters]]
+name = "academic_year"
+type = "str"
+required = true
+label = { ru = "Учебный год", en = "Academic year" }
+description = { ru = "Например: 2025-2026.", en = "For example 2025-2026." }
+
+[["panel.tasks.import_saved_timetables".parameters]]
+name = "semester"
+type = "int"
+required = true
+label = { ru = "Семестр", en = "Semester" }
+description = { ru = "Номер семестра.", en = "Semester number." }
+
+[["panel.tasks.import_saved_timetables".parameters]]
+name = "semester_start_date"
+type = "date"
+required = true
+label = { ru = "Дата начала семестра", en = "Semester start date" }
+description = { ru = "Дата начала семестра.", en = "Semester start date." }
+
+[["panel.tasks.import_saved_timetables".parameters]]
+name = "semester_end_date"
+type = "date"
+required = true
+label = { ru = "Дата окончания семестра", en = "Semester end date" }
+description = { ru = "Дата окончания семестра.", en = "Semester end date." }
+
+[["panel.tasks.import_saved_timetables".parameters]]
+name = "starting_day_number"
+type = "int"
+default = 0
+label = { ru = "Начальный номер дня", en = "Starting day number" }
+description = { ru = "Смещение AbstractDay для начала семестра.", en = "AbstractDay offset for semester start." }
+
+[["panel.tasks.import_saved_timetables".parameters]]
+name = "changed_only"
+type = "bool"
+default = true
+label = { ru = "Только изменённые", en = "Changed only" }
+description = { ru = "Пропускать уже импортированные записи FileVersion.", en = "Skip already imported FileVersion records." }
+
+[["panel.tasks.import_saved_timetables".parameters]]
+name = "save_archive_schedules"
+type = "bool"
+default = true
+label = { ru = "Сохранять архивные расписания", en = "Keep archive schedules" }
+description = { ru = "Не удалять старые архивные расписания.", en = "Do not delete old archive schedules." }
+
+[["panel.tasks.import_saved_timetables".parameters]]
+name = "resource_ids"
+type = "str"
+default = ""
+label = { ru = "ID ресурсов", en = "Resource IDs" }
+description = { ru = "Необязательный список ID ресурсов через запятую.", en = "Optional comma-separated resource ids." }
+
 ["panel.tasks.clear_storage"]
 concurrency = "exclusive"
 name = { ru = "Очистка хранилища", en = "Storage cleanup" }

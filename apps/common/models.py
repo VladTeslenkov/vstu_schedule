@@ -109,6 +109,41 @@ class FileVersion(models.Model):
         return f"{self.resource.name} | {self.timestamp} | {self.hashsum[:8]}"
 
 
+class TimetableFileImport(models.Model):
+    """Tracks importing a stored timetable file version into schedule tables."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        IMPORTED = "imported", "Imported"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
+
+    id = models.BigAutoField(primary_key=True)
+    file_version = models.ForeignKey(
+        FileVersion,
+        on_delete=models.CASCADE,
+        related_name="timetable_imports",
+        verbose_name="Версия файла",
+    )
+    status = models.CharField(max_length=32, choices=Status, default=Status.PENDING)
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    result = models.JSONField(default=dict, blank=True)
+    error = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "timetable_file_import"
+        verbose_name = "Импорт файла расписания"
+        verbose_name_plural = "Импорты файлов расписания"
+        indexes: ClassVar = [
+            models.Index(fields=["file_version", "status"], name="tfi_version_status_idx")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.file_version.pk}: {self.status}"
+
+
 class Setting(models.Model):
     """Настройки проекта в формате ключ-значение. Управляются через панель."""
 

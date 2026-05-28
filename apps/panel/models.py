@@ -16,6 +16,7 @@ class CeleryTaskConfig(models.Model):
     cron_month_of_year = models.CharField(max_length=64, default="*")
     soft_time_limit_seconds = models.PositiveIntegerField(null=True, blank=True)
     time_limit_seconds = models.PositiveIntegerField(null=True, blank=True)
+    parameters = models.JSONField(default=dict, blank=True)
     periodic_task = models.OneToOneField(
         "django_celery_beat.PeriodicTask",
         null=True,

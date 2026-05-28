@@ -75,6 +75,33 @@
       </div>
     </div>
 
+    {% if task_parameter_rows %}
+      <div class="card__header">
+        <h2>Task parameters</h2>
+      </div>
+      <div class="two-col">
+        {% for row in task_parameter_rows %}
+          <div class="field-group">
+            <label class="field-label" for="param_{{ row.descriptor.name }}">
+              {{ row.descriptor.label.ru|default:row.descriptor.name }}
+              {% if row.descriptor.required %}*{% endif %}
+            </label>
+            {% if row.descriptor.type == "bool" %}
+              <label class="toggle-row">
+                <input id="param_{{ row.descriptor.name }}" type="checkbox" name="param_{{ row.descriptor.name }}" {% if row.value %}checked{% endif %}>
+                <span>{{ row.descriptor.description.ru|default:row.descriptor.name }}</span>
+              </label>
+            {% else %}
+              <input id="param_{{ row.descriptor.name }}" class="field-input" type="{{ row.input_type }}" name="param_{{ row.descriptor.name }}" value="{{ row.value|default_if_none:'' }}">
+              {% if row.descriptor.description.ru %}
+                <div class="muted">{{ row.descriptor.description.ru }}</div>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <button class="btn btn--primary" type="submit">
       <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#save"></use></svg>
       Сохранить

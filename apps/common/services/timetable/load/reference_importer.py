@@ -329,6 +329,8 @@ class ReferenceImporter:
                 status=Schedule.Status.ACTIVE,
                 start_date=datetime.strptime(entry["start_date"], "%d.%m.%Y"),
                 end_date=datetime.strptime(entry["end_date"], "%d.%m.%Y"),
-                starting_day_number=AbstractDay.objects.get(day_number=0),
+                starting_day_number=AbstractDay.objects.get(
+                    day_number=entry.get("starting_day_number", 0)
+                ),
                 schedule_template=schedule_template,
             )

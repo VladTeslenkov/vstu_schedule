@@ -14,6 +14,11 @@ from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
 from apps.panel.models import CeleryTaskConfig, CeleryTaskRun
 from apps.panel.services.task_metadata import TaskMetadata, get_task_metadata
+from apps.panel.services.task_parameters import (
+    celery_task_kwargs,
+    coerce_task_parameters,
+    raw_task_parameters_from_post,
+)
 from apps.panel.tasks import DISPATCH_CONFIGURED_TASK_NAME
 from vstu_schedule.tasks.descriptors import get_task_descriptor
 
@@ -31,6 +36,13 @@ class RegisteredTask:
     required_arguments: list[str]
     latest_run: CeleryTaskRun | None
     schedule_enabled: bool
+
+
+@dataclass(frozen=True)
+class TaskParameterRow:
+    descriptor: Any
+    value: Any
+    input_type: str
 
 
 def _registered_task_names() -> list[str]:
@@ -53,9 +65,15 @@ def _required_arguments(task_name: str) -> list[str]:
     celery_app = cast(Any, current_app)
     task = celery_app.tasks[task_name]
     signature = inspect.signature(task.run)
+    descriptor = get_task_descriptor(task_name)
+    configured_parameters = (
+        {parameter.name for parameter in descriptor.parameters} if descriptor else set()
+    )
     required = []
     for name, parameter in signature.parameters.items():
         if name == "self":
+            continue
+        if name in configured_parameters:
             continue
         if parameter.default is not inspect.Parameter.empty:
             continue
@@ -182,6 +200,43 @@ def _apply_options(config: CeleryTaskConfig) -> dict[str, int]:
     return options
 
 
+def _apply_options_with_parameters(config: CeleryTaskConfig) -> dict[str, Any]:
+    options: dict[str, Any] = _apply_options(config)
+    descriptor = get_task_descriptor(config.task_name)
+    if descriptor and descriptor.parameters:
+        options["kwargs"] = celery_task_kwargs(descriptor.parameters, config.parameters)
+    return options
+
+
+def _task_parameter_rows(config: CeleryTaskConfig) -> list[TaskParameterRow]:
+    descriptor = get_task_descriptor(config.task_name)
+    if descriptor is None:
+        return []
+    input_types = {
+        "int": "number",
+        "float": "number",
+        "date": "date",
+        "datetime": "datetime-local",
+        "time": "time",
+        "url": "url",
+        "path": "text",
+        "str": "text",
+    }
+    return [
+        TaskParameterRow(
+            descriptor=parameter,
+            value=config.parameters.get(parameter.name, parameter.default or ""),
+            input_type=input_types.get(parameter.type, "text"),
+        )
+        for parameter in descriptor.parameters
+    ]
+
+
+def _task_parameters(config: CeleryTaskConfig) -> tuple[Any, ...]:
+    descriptor = get_task_descriptor(config.task_name)
+    return descriptor.parameters if descriptor else ()
+
+
 def _task_rows() -> list[RegisteredTask]:
     rows = []
     latest_runs = {}
@@ -238,6 +293,14 @@ def task_configure(request: HttpRequest, task_name: str) -> HttpResponse:
             config.time_limit_seconds = _positive_int_or_none(
                 request.POST.get("time_limit_seconds", "")
             )
+            task_parameters = _task_parameters(config)
+            if task_parameters:
+                raw_parameters = raw_task_parameters_from_post(
+                    task_parameters,
+                    request.POST,
+                )
+                coerce_task_parameters(task_parameters, raw_parameters)
+                config.parameters = raw_parameters
             config.save()
             _sync_periodic_task(config)
             return redirect("panel_tasks")
@@ -252,6 +315,7 @@ def task_configure(request: HttpRequest, task_name: str) -> HttpResponse:
             "active_nav": "tasks",
             "task_name": task_name,
             "task_metadata": get_task_metadata(task_name),
+            "task_parameter_rows": _task_parameter_rows(config),
             "required_arguments": _required_arguments(task_name),
             "schedule_enabled": _schedule_enabled(task_name, config),
             "error": error,
@@ -270,7 +334,7 @@ def task_run(request: HttpRequest, task_name: str) -> HttpResponse:
     if task is None or not config.execution_enabled or _required_arguments(task_name):
         return redirect("panel_tasks")
 
-    result = task.apply_async(**_apply_options(config))
+    result = task.apply_async(**_apply_options_with_parameters(config))
     CeleryTaskRun.objects.update_or_create(
         task_id=result.id,
         defaults={"task_name": task_name, "status": CeleryTaskRun.Status.PENDING},
