@@ -136,7 +136,7 @@ def clear_storage_task(self: Any, component: str) -> dict[str, str]:
             clear_storage_by_component,
         )
 
-        clear_storage_by_component(component)
+        clear_storage_by_component(component, preserve_task_id=self.request.id)
         logger.info(f"Task clear_storage completed: {component!r}")
         return {"status": "success", "component": component}
     except Exception as exc:

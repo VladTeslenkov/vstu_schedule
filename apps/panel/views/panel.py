@@ -11,7 +11,7 @@ from apps.common.models import Setting
 
 logger = logging.getLogger(__name__)
 
-CLEAR_TYPES = ["Вся система", "Хранилище", "База данных"]
+CLEAR_TYPES = ["Вся система", "Хранилище", "База данных", "Логи задач"]
 
 
 # ======================== ДЕЙСТВИЯ ========================

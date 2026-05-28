@@ -8,12 +8,15 @@ from apps.common.models import FileVersion, Resource, Tag
 logger = logging.getLogger(__name__)
 
 
-def clear_storage_by_component(component: str) -> None:
+TASK_LOGS_COMPONENT = "Логи задач"
+
+
+def clear_storage_by_component(component: str, *, preserve_task_id: str | None = None) -> None:
     """
     Очищает компонент системы по его имени.
     Вызывается из Celery-задачи panel.tasks.clear_storage.
 
-    Допустимые значения: "Вся система", "Хранилище", "База данных".
+    Допустимые значения: "Вся система", "Хранилище", "База данных", "Логи задач".
     """
     match component:
         case "Вся система":
@@ -23,6 +26,8 @@ def clear_storage_by_component(component: str) -> None:
             _clear_local_files()
         case "База данных":
             _clear_database()
+        case _ if component == TASK_LOGS_COMPONENT:
+            _clear_task_logs(preserve_task_id=preserve_task_id)
         case _:
             logger.warning(f"Unknown component: {component!r}")
             raise ValueError(f"Неизвестный компонент: {component!r}")
@@ -36,6 +41,17 @@ def _clear_database() -> None:
     Resource.objects.all().delete()
     Tag.objects.all().delete()
     logger.info("Database cleared")
+
+
+def _clear_task_logs(*, preserve_task_id: str | None = None) -> None:
+    """Удаляет сохранённые запуски задач и связанные с ними логи."""
+    from apps.panel.models import CeleryTaskRun
+
+    queryset = CeleryTaskRun.objects.all()
+    if preserve_task_id:
+        queryset = queryset.exclude(task_id=preserve_task_id)
+    deleted_count, _ = queryset.delete()
+    logger.info("Task logs cleared: %s records", deleted_count)
 
 
 def _clear_local_files() -> None:
