@@ -7,6 +7,7 @@ from celery import current_app
 from django.conf import settings
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
+from apps.panel.exceptions import CeleryTaskNotRegisteredError
 from apps.panel.services.task_parameters import celery_task_kwargs
 from vstu_schedule.tasks.decorators import project_task
 from vstu_schedule.tasks.descriptors import get_task_descriptor
@@ -47,7 +48,7 @@ def dispatch_configured_task(self: Any, task_name: str) -> dict[str, str]:
     celery_app = cast(Any, current_app)
     task = celery_app.tasks.get(task_name)
     if task is None:
-        raise ValueError(f"Celery task is not registered: {task_name}")
+        raise CeleryTaskNotRegisteredError(f"Celery task is not registered: {task_name}")
 
     result = task.apply_async(**_task_apply_options(task_name))
     logger.info(

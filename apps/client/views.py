@@ -2,9 +2,8 @@ from django.http import QueryDict
 from django.shortcuts import redirect, render
 from django.template.defaulttags import register
 
+from apps.client.exceptions import InvalidDateFilterError, TooManyEventsFoundError
 from apps.client.services.client_helpers import (
-    InvalidDateFilterError,
-    TooManyEventsFoundError,
     get_cached_filter_options,
     make_table_data,
 )

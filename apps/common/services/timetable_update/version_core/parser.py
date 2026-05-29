@@ -5,12 +5,14 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup, Tag
 
+from apps.common.constants import TIMETABLE_WEB_REQUEST_TIMEOUT_SECONDS
+
 from .file_data import FileData
 
 # Создаем логгер для текущего модуля
 logger = logging.getLogger(__name__)
 
-REQUEST_TIMEOUT_SECONDS = 10
+REQUEST_TIMEOUT_SECONDS = TIMETABLE_WEB_REQUEST_TIMEOUT_SECONDS
 
 
 class WebParser:

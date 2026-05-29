@@ -8,6 +8,12 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 
+from apps.client.exceptions import InvalidDateFilterError, TooManyEventsFoundError
+from apps.common.constants import (
+    CLIENT_FILTER_OPTIONS_CACHE_KEY,
+    CLIENT_FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS,
+    CLIENT_MAX_FILTERED_EVENTS,
+)
 from apps.common.models import AbstractEvent, Event
 from apps.common.selectors import Selector
 from apps.common.services.timetable.read.filters import (
@@ -40,24 +46,14 @@ CalendarData = tuple[list[str], list[list[int | str]]]
 EventGroup = list[Event]
 RowSpans = list[int]
 TableDataRow = tuple[EventGroup, RowSpans, CalendarData]
-MAX_FILTERED_EVENTS = 250
-FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS = 2 * 60 * 60
-FILTER_OPTIONS_CACHE_KEY = "client:schedule:filter-options:v1"
+MAX_FILTERED_EVENTS = CLIENT_MAX_FILTERED_EVENTS
+FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS = CLIENT_FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS
+FILTER_OPTIONS_CACHE_KEY = CLIENT_FILTER_OPTIONS_CACHE_KEY
 
 type FilterOptions = dict[str, list[str]]
 
 logger = logging.getLogger(__name__)
 _process_filter_options_cache: tuple[float, FilterOptions] | None = None
-
-
-class TooManyEventsFoundError(Exception):
-    def __init__(self, limit: int) -> None:
-        self.limit = limit
-        super().__init__(f"Found more than {limit} events.")
-
-
-class InvalidDateFilterError(Exception):
-    """Raised when schedule date filter values cannot be parsed."""
 
 
 def _build_filter_options() -> FilterOptions:

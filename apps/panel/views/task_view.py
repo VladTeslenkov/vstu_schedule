@@ -17,6 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
+from apps.panel.exceptions import PanelTaskConfigurationError
 from apps.panel.models import CeleryTaskConfig, CeleryTaskLog, CeleryTaskRun
 from apps.panel.services.task_metadata import TaskMetadata, get_task_metadata
 from apps.panel.services.task_parameters import (
@@ -189,7 +190,7 @@ def _sync_periodic_task(config: CeleryTaskConfig) -> None:
 def _validate_cron_value(value: str) -> str:
     value = value.strip() or "*"
     if not _CRON_VALUE_RE.match(value):
-        raise ValueError("Cron fields may contain digits, *, /, - and commas.")
+        raise PanelTaskConfigurationError("Cron fields may contain digits, *, /, - and commas.")
     return value
 
 
@@ -199,7 +200,7 @@ def _positive_int_or_none(value: str) -> int | None:
         return None
     number = int(value)
     if number <= 0:
-        raise ValueError("Timeout must be greater than zero.")
+        raise PanelTaskConfigurationError("Timeout must be greater than zero.")
     return number
 
 

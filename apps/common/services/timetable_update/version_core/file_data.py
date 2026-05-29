@@ -11,6 +11,11 @@ import xxhash
 from django.conf import settings
 from django.utils import timezone
 
+from apps.common.constants import (
+    TIMETABLE_FILE_DOWNLOAD_TIMEOUT_SECONDS,
+    TIMETABLE_MAX_DOWNLOAD_BYTES,
+)
+from apps.common.exceptions import FileTooLargeError
 from apps.common.models import FileVersion, Resource, Tag
 
 from .stringlistanalyzer import StringListAnalyzer
@@ -18,15 +23,11 @@ from .stringlistanalyzer import StringListAnalyzer
 logger = logging.getLogger(__name__)
 
 _CONFIG_PATH = settings.BASE_DIR / "apps" / "common" / "config" / "file_data_config.json"
-DOWNLOAD_TIMEOUT_SECONDS = 30
-MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024
+DOWNLOAD_TIMEOUT_SECONDS = TIMETABLE_FILE_DOWNLOAD_TIMEOUT_SECONDS
+MAX_DOWNLOAD_BYTES = TIMETABLE_MAX_DOWNLOAD_BYTES
 
 with _CONFIG_PATH.open(encoding="utf-8") as _f:
     _CONFIG = json.load(_f)
-
-
-class FileTooLargeError(Exception):
-    """Raised when a remote timetable file exceeds the allowed download size."""
 
 
 class FileData:

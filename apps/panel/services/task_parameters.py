@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from apps.panel.exceptions import PanelTaskParameterError
 from vstu_schedule.tasks.descriptors import TaskParameterDescriptor
 
 _TRUE_VALUES = {"1", "true", "yes", "on", "y"}
@@ -14,7 +15,7 @@ _FALSE_VALUES = {"0", "false", "no", "off", "n"}
 def coerce_task_parameter(descriptor: TaskParameterDescriptor, value: Any) -> Any:
     if value is None or value == "":
         if descriptor.required:
-            raise ValueError(f"Task parameter {descriptor.name!r} is required.")
+            raise PanelTaskParameterError(f"Task parameter {descriptor.name!r} is required.")
         return descriptor.default
 
     match descriptor.type:
@@ -32,7 +33,7 @@ def coerce_task_parameter(descriptor: TaskParameterDescriptor, value: Any) -> An
                 return True
             if normalized in _FALSE_VALUES:
                 return False
-            raise ValueError(f"Task parameter {descriptor.name!r} must be a boolean.")
+            raise PanelTaskParameterError(f"Task parameter {descriptor.name!r} must be a boolean.")
         case "date":
             if isinstance(value, date) and not isinstance(value, datetime):
                 return value
@@ -50,10 +51,12 @@ def coerce_task_parameter(descriptor: TaskParameterDescriptor, value: Any) -> An
         case "url":
             parsed = urlparse(str(value))
             if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-                raise ValueError(f"Task parameter {descriptor.name!r} must be an HTTP URL.")
+                raise PanelTaskParameterError(
+                    f"Task parameter {descriptor.name!r} must be an HTTP URL."
+                )
             return str(value)
         case _:
-            raise ValueError(f"Unsupported task parameter type: {descriptor.type}")
+            raise PanelTaskParameterError(f"Unsupported task parameter type: {descriptor.type}")
 
 
 def coerce_task_parameters(
