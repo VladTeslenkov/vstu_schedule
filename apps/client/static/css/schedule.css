@@ -237,14 +237,23 @@ select {
 }
 
 .filters-grid {
-  display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(230px, 1.2fr) minmax(180px, 1.2fr) minmax(190px, 1.2fr) minmax(170px, 1fr) minmax(236px, auto);
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: end;
 }
 
 .field {
+  flex: 1 1 180px;
   min-width: 0;
+}
+
+.field:has(.autocomplete-tag) {
+  flex-grow: 2;
+}
+
+.field-period {
+  flex: 0.8 1 150px;
 }
 
 .field-label {
@@ -283,7 +292,7 @@ select {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  grid-column: span 2;
+  flex: 2 1 380px;
   min-width: 0;
 }
 
@@ -292,8 +301,8 @@ select {
 }
 
 .filters-actions {
+  flex: 1 1 236px;
   min-width: 0;
-  grid-column: -3 / -1;
   display: flex;
   gap: 12px;
   align-items: end;
@@ -411,8 +420,8 @@ select {
 }
 
 .addition-filters-container {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 12px;
   padding-top: 12px;
@@ -786,6 +795,7 @@ select.control[multiple] option:checked {
   flex-wrap: wrap;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   padding: 5px 9px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -802,12 +812,16 @@ select.control[multiple] option:checked {
 
 .autocomplete-tags {
   min-width: 0;
+  max-width: 100%;
   display: contents;
+}
+
+.autocomplete-tags:empty {
+  display: none;
 }
 
 .autocomplete-tag {
   flex: 0 0 auto;
-  max-width: 100%;
   min-height: 26px;
   display: inline-flex;
   align-items: center;
@@ -825,7 +839,6 @@ select.control[multiple] option:checked {
 }
 
 .autocomplete-tag-text {
-  min-width: 0;
   overflow: visible;
 }
 
@@ -835,8 +848,9 @@ select.control[multiple] option:checked {
 }
 
 .autocomplete-input {
-  min-width: 90px;
-  flex: 1 1 120px;
+  min-width: min(90px, 100%);
+  max-width: 100%;
+  flex: 1 1 90px;
   height: 28px;
   border: 0;
   outline: 0;
