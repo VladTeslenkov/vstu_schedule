@@ -64,7 +64,8 @@
         tagRemove.textContent = "×";
         tag.setAttribute("aria-label", `Удалить ${getOptionText(option)}`);
         tag.append(tagText, tagRemove);
-        tag.addEventListener("click", () => {
+        tag.addEventListener("click", (event) => {
+          event.stopPropagation();
           option.selected = false;
           updateSelect();
           input.focus();
@@ -78,6 +79,7 @@
       option.selected = true;
       input.value = "";
       updateSelect();
+      input.focus({ preventScroll: true });
       showOptions();
     }
 
@@ -102,7 +104,11 @@
         item.className = "autocomplete-option";
         item.type = "button";
         item.textContent = getOptionText(option);
-        item.addEventListener("click", () => selectOption(option));
+        item.addEventListener("mousedown", (event) => event.preventDefault());
+        item.addEventListener("click", (event) => {
+          event.stopPropagation();
+          selectOption(option);
+        });
         optionsList.append(item);
       });
     }

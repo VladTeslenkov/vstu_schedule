@@ -821,7 +821,9 @@ select.control[multiple] option:checked {
 }
 
 .autocomplete-tag {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
   min-height: 26px;
   display: inline-flex;
   align-items: center;
@@ -839,7 +841,10 @@ select.control[multiple] option:checked {
 }
 
 .autocomplete-tag-text {
-  overflow: visible;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .autocomplete-tag-remove {
