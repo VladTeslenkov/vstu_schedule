@@ -101,9 +101,6 @@ select {
   height: 46px;
   object-fit: contain;
   flex: 0 0 auto;
-  border-radius: 8px;
-  background: white;
-  padding: 4px;
 }
 
 .brand-text {
