@@ -28,11 +28,30 @@ CalendarData = tuple[list[str], list[list[int | str]]]
 EventGroup = list[Event]
 RowSpans = list[int]
 TableDataRow = tuple[EventGroup, RowSpans, CalendarData]
+MAX_FILTERED_EVENTS = 250
 
 
-def make_table_data(filters: dict) -> list[TableDataRow]:
+class TooManyEventsFoundError(Exception):
+    def __init__(self, limit: int) -> None:
+        self.limit = limit
+        super().__init__(f"Found more than {limit} events.")
+
+
+def make_table_data(filters: dict, max_events: int = MAX_FILTERED_EVENTS) -> list[TableDataRow]:
     """Used to get filtered and formated data ready to visualisation"""
+    events = get_filtered_events(filters)
 
+    if has_more_events_than(events, max_events):
+        raise TooManyEventsFoundError(max_events)
+
+    entries = format_events(events)
+    row_spans = make_row_spans(entries)
+    calendar = make_calendar(entries)
+
+    return list(zip(entries, row_spans, calendar, strict=True))
+
+
+def get_filtered_events(filters: dict) -> QuerySet[Event]:
     reader = Selector()
     # Currently working ONLY with ACTIVE Schedules
     # TODO: selector for ARCHIVE and other Schdules
@@ -73,18 +92,21 @@ def make_table_data(filters: dict) -> list[TableDataRow]:
     reader.find_models(Event)
 
     if filters["teacher"]:
-        entries = format_events(
+        return (
             reader.get_found_models()
             .filter(**ParticipantFilter.by_name(filters["teacher"]))
             .distinct()
         )
-    else:
-        entries = format_events(reader.get_found_models())
 
-    row_spans = make_row_spans(entries)
-    calendar = make_calendar(entries)
+    return reader.get_found_models()
 
-    return list(zip(entries, row_spans, calendar, strict=True))
+
+def has_more_events_than(events: QuerySet[Event], limit: int) -> bool:
+    if limit < 0:
+        raise ValueError("limit must not be negative")
+
+    limited_event_ids = events.order_by().values_list("pk", flat=True).distinct()[: limit + 1]
+    return len(limited_event_ids) > limit
 
 
 def format_events(events: QuerySet) -> list[EventGroup]:

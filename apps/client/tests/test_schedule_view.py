@@ -1,7 +1,9 @@
 import pytest
 from django.urls import reverse
 
+from apps.client.services.client_helpers import TooManyEventsFoundError, has_more_events_than
 from apps.client.views import lesson_kind_class
+from apps.common.models import Event
 
 
 @pytest.mark.django_db
@@ -45,6 +47,29 @@ def test_schedule_post_does_not_redirect_to_get(client):
 
     assert response.status_code == 200
     assert "Location" not in response
+
+
+@pytest.mark.django_db
+def test_schedule_page_shows_too_many_events_state(client, monkeypatch):
+    def make_too_many_events_data(filters):
+        raise TooManyEventsFoundError(250)
+
+    monkeypatch.setattr("apps.client.views.make_table_data", make_too_many_events_data)
+
+    response = client.get(reverse("schedule:index"), {"date": "today"})
+
+    assert response.status_code == 200
+    assert response.context["too_many_events_found"] is True
+    assert response.context["data"] == []
+    assert 'data-lucide="shield-alert"' in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_has_more_events_than_detects_limit():
+    Event.objects.bulk_create(Event() for _ in range(251))
+
+    assert has_more_events_than(Event.objects.all(), 250) is True
+    assert has_more_events_than(Event.objects.all(), 251) is False
 
 
 @pytest.mark.parametrize(

@@ -19,6 +19,8 @@
 
       {% if not has_filters %}
         {% include "timetable/welcome.html" %}
+      {% elif too_many_events_found %}
+        {% include "timetable/too_many.html" %}
       {% elif data|length == 0 %}
         {% include "timetable/empty.html" %}
       {% else %}

@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.template.defaulttags import register
 
-from apps.client.services.client_helpers import make_table_data
+from apps.client.services.client_helpers import TooManyEventsFoundError, make_table_data
 from apps.common.models import Event
 from apps.common.selectors import public_alerts
 from apps.common.services.timetable.utilities import (
@@ -84,7 +84,7 @@ def _get_list_param(request, name: str) -> list[str]:
 
 
 def index(request):
-    context = {}
+    context: dict[str, object] = {"too_many_events_found": False}
     selected = {
         "date": "today",
         "left_date": "",
@@ -108,7 +108,12 @@ def index(request):
         selected["subject"] = _get_list_param(request, "subject")
         selected["kind"] = _get_list_param(request, "kind")
         selected["time_slot"] = _get_list_param(request, "time_slot")
-        context["data"] = make_table_data(selected)
+        try:
+            context["data"] = make_table_data(selected)
+        except TooManyEventsFoundError as error:
+            context["data"] = []
+            context["too_many_events_found"] = True
+            context["max_filtered_events"] = error.limit
 
     context["selected"] = selected
     context["groups"] = get_all_groups().values_list("name", flat=True)
