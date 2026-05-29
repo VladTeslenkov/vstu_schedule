@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Расписание занятий ВолгГТУ</title>
+  <link rel="icon" href="{% static 'icons/vstu.png' %}" type="image/png">
+  <link href="{% static 'css/schedule.css' %}" rel="stylesheet">
+</head>
+<body>
+  {% include "timetable/header.html" %}
+
+  <main class="main">
+    <div class="container">
+      {% include "timetable/alerts.html" %}
+      {% include "timetable/filters.html" %}
+
+      {% if not has_filters %}
+        {% include "timetable/welcome.html" %}
+      {% elif data|length == 0 %}
+        {% include "timetable/empty.html" %}
+      {% else %}
+        {% include "timetable/results.html" %}
+      {% endif %}
+    </div>
+  </main>
+
+  {% include "timetable/footer.html" %}
+  <script src="{% static 'js/schedule.js' %}"></script>
+</body>
+</html>

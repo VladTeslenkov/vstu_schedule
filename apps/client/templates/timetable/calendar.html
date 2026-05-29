@@ -1,0 +1,20 @@
+<aside class="calendar-panel">
+  <table class="calendar-table">
+    <thead>
+      <tr>
+        {% for month in calendar.0 %}
+          <th>{{ month }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for days in calendar.1 %}
+        <tr>
+          {% for day in days %}
+            <td>{% if day %}{{ day }}{% endif %}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</aside>

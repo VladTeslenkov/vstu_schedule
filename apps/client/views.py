@@ -65,37 +65,51 @@ def is_time_slot_already_selected(time_slot: str, selected_time_slots: str | lis
         return time_slot == selected_time_slots
 
 
+@register.filter
+def lesson_kind_class(kind: object) -> str:
+    kind_name = str(kind).casefold()
+    if "лаб" in kind_name:
+        return "chip-kind--lab"
+    if "пра" in kind_name or "пр." in kind_name:
+        return "chip-kind--practice"
+    if "лек" in kind_name:
+        return "chip-kind--lecture"
+    return ""
+
+
+def _get_list_param(request, name: str) -> list[str]:
+    values = request.GET.getlist(name)
+    return values or request.GET.getlist(f"{name}[]")
+
+
 def index(request):
     context = {}
+    selected = {
+        "date": "today",
+        "left_date": "",
+        "right_date": "",
+        "group": [],
+        "teacher": [],
+        "place": [],
+        "subject": [],
+        "kind": [],
+        "time_slot": [],
+    }
 
-    if request.method == "POST":
-        selected = {}
-
-        if "date" in request.POST:
-            selected["date"] = request.POST.get("date") or "today"
-        else:
-            selected["date"] = "today"
-
-        if "left_date" in request.POST:
-            selected["left_date"] = request.POST.get("left_date") or ""
-        else:
-            selected["left_date"] = ""
-
-        if "right_date" in request.POST:
-            selected["right_date"] = request.POST.get("right_date") or ""
-        else:
-            selected["right_date"] = ""
-
-        selected["group"] = request.POST.getlist("group[]") or ""
-        selected["teacher"] = request.POST.getlist("teacher[]") or ""
-        selected["place"] = request.POST.getlist("place[]") or ""
-        selected["subject"] = request.POST.getlist("subject[]") or ""
-        selected["kind"] = request.POST.getlist("kind[]") or ""
-        selected["time_slot"] = request.POST.getlist("time_slot[]") or ""
-
-        context["selected"] = selected
+    has_filters = bool(request.GET)
+    if has_filters:
+        selected["date"] = request.GET.get("date") or "today"
+        selected["left_date"] = request.GET.get("left_date") or ""
+        selected["right_date"] = request.GET.get("right_date") or ""
+        selected["group"] = _get_list_param(request, "group")
+        selected["teacher"] = _get_list_param(request, "teacher")
+        selected["place"] = _get_list_param(request, "place")
+        selected["subject"] = _get_list_param(request, "subject")
+        selected["kind"] = _get_list_param(request, "kind")
+        selected["time_slot"] = _get_list_param(request, "time_slot")
         context["data"] = make_table_data(selected)
 
+    context["selected"] = selected
     context["groups"] = get_all_groups().values_list("name", flat=True)
     context["teachers"] = get_all_teachers().values_list("name", flat=True)
     context["places"] = [str(p) for p in get_all_places()]
@@ -104,10 +118,11 @@ def index(request):
     context["time_slots"] = [str(ts) for ts in get_all_time_slots()]
 
     context["addition_filters_visible"] = (
-        request.POST.get("addition_filters_visible")
-        if "addition_filters_visible" in request.POST
+        request.GET.get("addition_filters_visible")
+        if "addition_filters_visible" in request.GET
         else "0"
     )
-    context["calendar_visibile"] = "1" if "calendar_visibility" in request.POST else "0"
+    context["calendar_visible"] = "1" if "calendar_visibility" in request.GET else "0"
+    context["has_filters"] = has_filters
 
     return render(request, "timetable/index.html", context=context)

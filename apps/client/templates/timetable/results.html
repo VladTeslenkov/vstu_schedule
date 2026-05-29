@@ -1,0 +1,90 @@
+{% load static %}
+<section aria-label="Расписание на выбранный период">
+  <div class="schedule-list">
+    {% for entry, row_spans, calendar in data %}
+      <article class="day-section">
+        <div class="day-bar">
+          <div class="day-title">
+            <span>
+              <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#calendar"></use></svg>
+              {{ entry.0.abstract_event.abstract_day.name }}
+            </span>
+            <span class="day-separator" aria-hidden="true"></span>
+            <span class="date">{{ entry.0.date }}</span>
+          </div>
+          <div class="result-count">Найдено занятий: {{ entry|length }}</div>
+        </div>
+
+        <div class="day-content {% if calendar_visible == "1" %}day-content--with-calendar{% endif %}">
+          <div class="calendar-slot {% if calendar_visible != "1" %}is-hidden{% endif %}">
+            {% include "timetable/calendar.html" %}
+          </div>
+
+          <div class="lesson-list">
+            {% for event in entry %}
+              <article class="lesson-card {% if event.is_event_canceled %}lesson-card--canceled{% endif %}">
+                <div class="lesson-time">
+                  <svg class="time-icon"><use href="{% static 'icons/lucide.svg' %}#clock"></use></svg>
+                  <span>{{ event.time_slot_override.start_time }} - {{ event.time_slot_override.end_time }}</span>
+                </div>
+                <div class="lesson-subject">
+                  <h3 class="subject-title">{{ event.subject_override }}</h3>
+                  <div class="chips">
+                    {% if event.kind_override %}
+                      <span class="chip chip-kind {{ event.kind_override|lesson_kind_class }}">{{ event.kind_override }}</span>
+                    {% endif %}
+                    {% if event.abstract_event.holds_on_date %}
+                      <span class="chip chip-date">только {{ event.abstract_event.holds_on_date }}</span>
+                    {% endif %}
+                    {% if event.is_event_canceled %}
+                      <span class="chip chip-cancel">отменено</span>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="lesson-groups">
+                  <div class="lesson-meta-title">
+                    <svg class="meta-icon"><use href="{% static 'icons/lucide.svg' %}#users"></use></svg>
+                    Группы
+                  </div>
+                  <div class="chips">
+                    {% for group in event.get_groups.all %}
+                      <span class="chip">{{ group.name }}</span>
+                    {% empty %}
+                      <span class="muted">Не указаны</span>
+                    {% endfor %}
+                  </div>
+                </div>
+                <div class="lesson-teacher">
+                  <div class="lesson-meta-title">
+                    <svg class="meta-icon"><use href="{% static 'icons/lucide.svg' %}#user"></use></svg>
+                    Преподаватель
+                  </div>
+                  <div class="teacher">
+                    {% for teacher in event.get_teachers.all %}
+                      <div>{{ teacher.name }}</div>
+                    {% empty %}
+                      <span class="muted">Не указан</span>
+                    {% endfor %}
+                  </div>
+                </div>
+                <div class="lesson-room">
+                  <div class="lesson-meta-title">
+                    <svg class="meta-icon"><use href="{% static 'icons/lucide.svg' %}#map-pin"></use></svg>
+                    Аудитория
+                  </div>
+                  <div class="room">
+                    {% for place in event.places_override.all %}
+                      <div>{{ place }}</div>
+                    {% empty %}
+                      <span class="muted">Не указана</span>
+                    {% endfor %}
+                  </div>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
