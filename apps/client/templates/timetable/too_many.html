@@ -1,6 +1,6 @@
 {% load i18n static %}
-<section class="state-card">
-  <i data-lucide="shield-alert" class="state-icon"></i>
+<section class="state-card" role="alert">
+  <i data-lucide="shield-alert" class="state-icon" aria-hidden="true"></i>
   <h2>{% translate "Найдено слишком много занятий" %}</h2>
   <p>{% blocktranslate with limit=max_filtered_events %}По этому запросу найдено больше {{ limit }} занятий. Сократите запрос: выберите меньший диапазон дат или добавьте фильтры по группе, преподавателю, аудитории или предмету.{% endblocktranslate %}</p>
 </section>

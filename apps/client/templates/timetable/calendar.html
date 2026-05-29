@@ -1,5 +1,7 @@
-<aside class="calendar-panel">
+{% load i18n %}
+<aside class="calendar-panel" aria-label="{% translate "Календарь повторения занятий" %}">
   <table class="calendar-table">
+    <caption class="visually-hidden">{% translate "Дни повторения занятия по месяцам" %}</caption>
     <thead>
       <tr>
         {% for month in calendar.0 %}

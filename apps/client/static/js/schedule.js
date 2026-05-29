@@ -1,4 +1,6 @@
 (function () {
+  let autocompleteId = 0;
+
   function getOptionText(option) {
     return option.textContent.trim();
   }
@@ -28,8 +30,12 @@
   function createAutocompleteSelect(select) {
     if (!select.multiple || select.dataset.autocompleteReady === "1") return;
     const messages = getScheduleMessages();
+    autocompleteId += 1;
+    const listboxId = `autocomplete-options-${autocompleteId}`;
     select.dataset.autocompleteReady = "1";
     select.classList.add("native-select-hidden");
+    select.setAttribute("aria-hidden", "true");
+    select.tabIndex = -1;
 
     const wrapper = document.createElement("div");
     wrapper.className = "autocomplete-select";
@@ -42,21 +48,36 @@
     input.type = "text";
     input.autocomplete = "off";
     input.placeholder = messages.autocompletePlaceholder;
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-expanded", "false");
+    input.setAttribute("aria-controls", listboxId);
+    input.setAttribute("aria-haspopup", "listbox");
 
     const optionsList = document.createElement("div");
     optionsList.className = "autocomplete-options is-hidden";
+    optionsList.id = listboxId;
     optionsList.setAttribute("role", "listbox");
+    optionsList.setAttribute("aria-multiselectable", "true");
+    optionsList.hidden = true;
 
     wrapper.append(tags, input, optionsList);
     select.after(wrapper);
+    let activeOptionIndex = -1;
 
     function hideOptions() {
       optionsList.classList.add("is-hidden");
+      optionsList.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+      activeOptionIndex = -1;
     }
 
     function showOptions() {
       renderOptions();
       optionsList.classList.remove("is-hidden");
+      optionsList.hidden = false;
+      input.setAttribute("aria-expanded", "true");
     }
 
     function updateSelect() {
@@ -105,6 +126,31 @@
       showOptions();
     }
 
+    function getSelectableOptions() {
+      return Array.from(optionsList.querySelectorAll(".autocomplete-option:not(.autocomplete-option--empty)"));
+    }
+
+    function setActiveOption(index) {
+      const options = getSelectableOptions();
+      options.forEach((option) => {
+        option.classList.remove("is-active");
+        option.setAttribute("aria-selected", "false");
+      });
+
+      if (!options.length || index < 0) {
+        activeOptionIndex = -1;
+        input.removeAttribute("aria-activedescendant");
+        return;
+      }
+
+      activeOptionIndex = Math.min(index, options.length - 1);
+      const activeOption = options[activeOptionIndex];
+      activeOption.classList.add("is-active");
+      activeOption.setAttribute("aria-selected", "true");
+      input.setAttribute("aria-activedescendant", activeOption.id);
+      activeOption.scrollIntoView({ block: "nearest" });
+    }
+
     function renderOptions() {
       const query = input.value.trim().toLocaleLowerCase("ru");
       const matches = Array.from(select.options)
@@ -116,15 +162,22 @@
       if (matches.length === 0) {
         const empty = document.createElement("div");
         empty.className = "autocomplete-option autocomplete-option--empty";
+        empty.setAttribute("role", "option");
+        empty.setAttribute("aria-disabled", "true");
         empty.textContent = messages.autocompleteEmpty;
         optionsList.append(empty);
+        setActiveOption(-1);
         return;
       }
 
-      matches.forEach((option) => {
+      matches.forEach((option, index) => {
         const item = document.createElement("button");
         item.className = "autocomplete-option";
         item.type = "button";
+        item.id = `${listboxId}-option-${index}`;
+        item.setAttribute("role", "option");
+        item.setAttribute("aria-selected", "false");
+        item.tabIndex = -1;
         item.textContent = getOptionText(option);
         item.addEventListener("mousedown", (event) => event.preventDefault());
         item.addEventListener("click", (event) => {
@@ -133,6 +186,7 @@
         });
         optionsList.append(item);
       });
+      setActiveOption(-1);
     }
 
     select.addEventListener("change", () => {
@@ -145,10 +199,27 @@
       if (event.key === "Escape") {
         hideOptions();
       }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        if (input.getAttribute("aria-expanded") !== "true") {
+          showOptions();
+        }
+        const options = getSelectableOptions();
+        setActiveOption(activeOptionIndex + 1 >= options.length ? 0 : activeOptionIndex + 1);
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        if (input.getAttribute("aria-expanded") !== "true") {
+          showOptions();
+        }
+        const options = getSelectableOptions();
+        setActiveOption(activeOptionIndex <= 0 ? options.length - 1 : activeOptionIndex - 1);
+      }
       if (event.key === "Enter") {
         event.preventDefault();
-        const firstOption = optionsList.querySelector(".autocomplete-option:not(.autocomplete-option--empty)");
-        firstOption?.click();
+        const options = getSelectableOptions();
+        const optionToSelect = options[activeOptionIndex] || options[0];
+        optionToSelect?.click();
       }
     });
     wrapper.addEventListener("click", () => input.focus());
@@ -169,7 +240,9 @@
     const isSingle = dateSelect.value === "single_date";
     const isRange = dateSelect.value === "range_date";
     dateContainer.classList.toggle("is-hidden", !isSingle && !isRange);
+    dateContainer.hidden = !isSingle && !isRange;
     rightDateWrap.classList.toggle("is-hidden", !isRange);
+    rightDateWrap.hidden = !isRange;
   }
 
   function updateCalendarVisibility() {
@@ -177,6 +250,7 @@
     if (!checkbox) return;
     document.querySelectorAll(".calendar-slot").forEach((slot) => {
       slot.classList.toggle("is-hidden", !checkbox.checked);
+      slot.hidden = !checkbox.checked;
       slot.closest(".day-content")?.classList.toggle("day-content--with-calendar", checkbox.checked);
     });
   }
@@ -188,7 +262,9 @@
     if (!container || !state || !button) return;
 
     const isHidden = container.classList.toggle("is-hidden");
+    container.hidden = isHidden;
     state.value = isHidden ? "0" : "1";
+    button.setAttribute("aria-expanded", String(!isHidden));
     const label = button.querySelector("span");
     if (label) {
       const messages = getScheduleMessages();

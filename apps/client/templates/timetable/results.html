@@ -6,7 +6,7 @@
         <div class="day-bar">
           <div class="day-title">
             <span>
-              <i data-lucide="calendar" class="icon"></i>
+              <i data-lucide="calendar" class="icon" aria-hidden="true"></i>
               {{ entry.0.abstract_event.abstract_day.name }}
             </span>
             <span class="day-separator" aria-hidden="true"></span>
@@ -24,13 +24,16 @@
               data-expand-label="{% translate "Развернуть день" %}"
               data-collapse-label="{% translate "Свернуть день" %}"
             >
-              <i data-lucide="chevron-up" class="icon day-toggle-icon"></i>
+              <i data-lucide="chevron-up" class="icon day-toggle-icon" aria-hidden="true"></i>
             </button>
           </div>
         </div>
 
         <div id="day-content-{{ forloop.counter }}" class="day-content {% if calendar_visible == "1" %}day-content--with-calendar{% endif %}">
-          <div class="calendar-slot {% if calendar_visible != "1" %}is-hidden{% endif %}">
+          <div
+            class="calendar-slot {% if calendar_visible != "1" %}is-hidden{% endif %}"
+            {% if calendar_visible != "1" %}hidden{% endif %}
+          >
             {% include "timetable/calendar.html" %}
           </div>
 
@@ -38,7 +41,7 @@
             {% for event in entry %}
               <article class="lesson-card {% if event.is_event_canceled %}lesson-card--canceled{% endif %}">
                 <div class="lesson-time">
-                  <i data-lucide="clock" class="time-icon"></i>
+                  <i data-lucide="clock" class="time-icon" aria-hidden="true"></i>
                   <span>{{ event.time_slot_override.start_time }} - {{ event.time_slot_override.end_time }}</span>
                 </div>
                 <div class="lesson-subject">
@@ -57,7 +60,7 @@
                 </div>
                 <div class="lesson-groups">
                   <div class="lesson-meta-title">
-                    <i data-lucide="users" class="meta-icon"></i>
+                    <i data-lucide="users" class="meta-icon" aria-hidden="true"></i>
                     {% translate "Группы" %}
                   </div>
                   <div class="chips">
@@ -70,7 +73,7 @@
                 </div>
                 <div class="lesson-teacher">
                   <div class="lesson-meta-title">
-                    <i data-lucide="user" class="meta-icon"></i>
+                    <i data-lucide="user" class="meta-icon" aria-hidden="true"></i>
                     {% translate "Преподаватель" %}
                   </div>
                   <div class="teacher">
@@ -83,7 +86,7 @@
                 </div>
                 <div class="lesson-room">
                   <div class="lesson-meta-title">
-                    <i data-lucide="map-pin" class="meta-icon"></i>
+                    <i data-lucide="map-pin" class="meta-icon" aria-hidden="true"></i>
                     {% translate "Аудитория" %}
                   </div>
                   <div class="room">

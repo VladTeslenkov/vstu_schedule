@@ -32,14 +32,22 @@
         </span>
       </label>
 
-      <div class="field specified-date-container" id="specified-date-container">
+      <div
+        class="field specified-date-container {% if selected.date != "single_date" and selected.date != "range_date" %}is-hidden{% endif %}"
+        id="specified-date-container"
+        {% if selected.date != "single_date" and selected.date != "range_date" %}hidden{% endif %}
+      >
         <label>
           <span class="field-label">{% translate "Дата" %}</span>
           <span class="date-wrap">
             <input class="control" type="date" name="left_date" id="left-date" value="{{ selected.left_date }}">
           </span>
         </label>
-        <label id="right-date-wrap">
+        <label
+          id="right-date-wrap"
+          class="{% if selected.date != "range_date" %}is-hidden{% endif %}"
+          {% if selected.date != "range_date" %}hidden{% endif %}
+        >
           <span class="field-label">{% translate "До" %}</span>
           <span class="date-wrap">
             <input class="control" type="date" name="right_date" id="right-date" value="{{ selected.right_date }}">
@@ -76,19 +84,25 @@
 
       <div class="filters-actions">
         <button class="btn btn-primary" type="submit">
-        <i data-lucide="search" class="icon"></i>
+        <i data-lucide="search" class="icon" aria-hidden="true"></i>
         {% translate "Показать" %}
         </button>
         <button class="btn btn-secondary" type="button" id="reset-filters-button">
-        <i data-lucide="rotate-ccw" class="icon"></i>
+        <i data-lucide="rotate-ccw" class="icon" aria-hidden="true"></i>
         {% translate "Сбросить" %}
         </button>
       </div>
     </div>
 
     <div class="filters-toolbar">
-      <button class="btn btn-secondary btn-more" type="button" id="more-filters-button">
-        <i data-lucide="sliders-horizontal" class="icon"></i>
+      <button
+        class="btn btn-secondary btn-more"
+        type="button"
+        id="more-filters-button"
+        aria-expanded="{% if addition_filters_visible == "1" %}true{% else %}false{% endif %}"
+        aria-controls="addition-filters-container"
+      >
+        <i data-lucide="sliders-horizontal" class="icon" aria-hidden="true"></i>
         <span>{% if addition_filters_visible == "1" %}{% translate "Меньше фильтров" %}{% else %}{% translate "Больше фильтров" %}{% endif %}</span>
       </button>
 
@@ -101,7 +115,11 @@
 
     <input type="hidden" id="filters-visibility-state" name="addition_filters_visible" value="{{ addition_filters_visible }}">
 
-    <div class="addition-filters-container {% if addition_filters_visible != "1" %}is-hidden{% endif %}" id="addition-filters-container">
+    <div
+      class="addition-filters-container {% if addition_filters_visible != "1" %}is-hidden{% endif %}"
+      id="addition-filters-container"
+      {% if addition_filters_visible != "1" %}hidden{% endif %}
+    >
       <label class="field">
         <span class="field-label">{% translate "Предмет" %}</span>
         <select class="control subject-pillbox" name="subject" multiple>

@@ -1,6 +1,6 @@
 {% load i18n static %}
-<section class="state-card">
-  <i data-lucide="calendar" class="state-icon"></i>
+<section class="state-card" role="status" aria-live="polite">
+  <i data-lucide="calendar" class="state-icon" aria-hidden="true"></i>
   <h2>{% translate "Выберите параметры расписания" %}</h2>
   <p>{% translate "Доступен поиск занятий по группе, преподавателю, аудитории, предмету и периоду." %}</p>
 </section>

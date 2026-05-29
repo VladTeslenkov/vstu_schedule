@@ -998,10 +998,12 @@ select.control[multiple] option:checked {
 }
 
 .autocomplete-option:hover,
-.autocomplete-option:focus {
+.autocomplete-option:focus,
+.autocomplete-option.is-active {
   background: var(--accent-soft);
   color: #164b85;
-  outline: 0;
+  outline: 2px solid rgba(8, 118, 207, 0.45);
+  outline-offset: -2px;
 }
 
 .autocomplete-option--empty {

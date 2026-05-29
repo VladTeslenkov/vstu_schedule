@@ -18,6 +18,8 @@ def test_schedule_page_renders(client):
     assert 'method="get"' in content
     assert 'name="group"' in content
     assert 'name="group[]"' not in content
+    assert 'aria-controls="addition-filters-container"' in content
+    assert 'aria-expanded="false"' in content
     assert "jquery" not in content.lower()
     assert "select2" not in content.lower()
 
@@ -33,6 +35,17 @@ def test_schedule_page_renders_english(client):
     assert "Schedule filters" in content
     assert 'data-autocomplete-placeholder="Start typing"' in content
     assert 'data-remove-label-template="Remove __value__"' in content
+
+
+@pytest.mark.django_db
+def test_schedule_page_accessibility_landmarks(client):
+    response = client.get(reverse("schedule:index"), {"date": "today"})
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert 'role="status"' in content
+    assert 'aria-hidden="true"' in content
+    assert "hidden" in content
 
 
 @pytest.mark.django_db
