@@ -1,37 +1,46 @@
-{% load static %}
-<section class="filters-card" aria-label="Фильтры расписания">
+{% load i18n static %}
+<section class="filters-card" aria-label="{% translate "Фильтры расписания" %}">
   <div class="filters-header">
     <div>
-      <h2 class="filters-title">Фильтры расписания</h2>
-      <p class="filters-note">Выберите дату, группу, преподавателя или аудиторию.</p>
+      <h2 class="filters-title">{% translate "Фильтры расписания" %}</h2>
+      <p class="filters-note">{% translate "Выберите дату, группу, преподавателя или аудиторию." %}</p>
     </div>
   </div>
 
-  <form action="" method="get" id="schedule-filter-form">
+  <form
+    action=""
+    method="get"
+    id="schedule-filter-form"
+    data-autocomplete-placeholder="{% translate "Начните вводить" %}"
+    data-autocomplete-empty="{% translate "Ничего не найдено" %}"
+    data-remove-label-template="{% translate "Удалить __value__" %}"
+    data-more-filters-label="{% translate "Больше фильтров" %}"
+    data-less-filters-label="{% translate "Меньше фильтров" %}"
+  >
     <div class="filters-grid">
       <label class="field field-period">
-        <span class="field-label">Период</span>
+        <span class="field-label">{% translate "Период" %}</span>
         <span class="select-wrap">
           <select class="control date-select" name="date" id="date-select">
-            <option value="today" {% if selected.date == "today" %}selected{% endif %}>На сегодня</option>
-            <option value="tomorrow" {% if selected.date == "tomorrow" %}selected{% endif %}>На завтра</option>
-            <option value="this_week" {% if selected.date == "this_week" %}selected{% endif %}>На эту неделю</option>
-            <option value="next_week" {% if selected.date == "next_week" %}selected{% endif %}>На следующую неделю</option>
-            <option value="single_date" {% if selected.date == "single_date" %}selected{% endif %}>На дату</option>
-            <option value="range_date" {% if selected.date == "range_date" %}selected{% endif %}>На диапазон дат</option>
+            <option value="today" {% if selected.date == "today" %}selected{% endif %}>{% translate "На сегодня" %}</option>
+            <option value="tomorrow" {% if selected.date == "tomorrow" %}selected{% endif %}>{% translate "На завтра" %}</option>
+            <option value="this_week" {% if selected.date == "this_week" %}selected{% endif %}>{% translate "На эту неделю" %}</option>
+            <option value="next_week" {% if selected.date == "next_week" %}selected{% endif %}>{% translate "На следующую неделю" %}</option>
+            <option value="single_date" {% if selected.date == "single_date" %}selected{% endif %}>{% translate "На дату" %}</option>
+            <option value="range_date" {% if selected.date == "range_date" %}selected{% endif %}>{% translate "На диапазон дат" %}</option>
           </select>
         </span>
       </label>
 
       <div class="field specified-date-container" id="specified-date-container">
         <label>
-          <span class="field-label">Дата</span>
+          <span class="field-label">{% translate "Дата" %}</span>
           <span class="date-wrap">
             <input class="control" type="date" name="left_date" id="left-date" value="{{ selected.left_date }}">
           </span>
         </label>
         <label id="right-date-wrap">
-          <span class="field-label">До</span>
+          <span class="field-label">{% translate "До" %}</span>
           <span class="date-wrap">
             <input class="control" type="date" name="right_date" id="right-date" value="{{ selected.right_date }}">
           </span>
@@ -39,7 +48,7 @@
       </div>
 
       <label class="field">
-        <span class="field-label">Группа</span>
+        <span class="field-label">{% translate "Группа" %}</span>
         <select class="control group-pillbox" name="group" multiple>
           {% for group in groups %}
             <option value="{{ group }}" {% if group in selected.group %}selected{% endif %}>{{ group }}</option>
@@ -48,7 +57,7 @@
       </label>
 
       <label class="field">
-        <span class="field-label">Преподаватель</span>
+        <span class="field-label">{% translate "Преподаватель" %}</span>
         <select class="control teacher-pillbox" name="teacher" multiple>
           {% for teacher in teachers %}
             <option value="{{ teacher }}" {% if teacher in selected.teacher %}selected{% endif %}>{{ teacher }}</option>
@@ -57,7 +66,7 @@
       </label>
 
       <label class="field">
-        <span class="field-label">Аудитория</span>
+        <span class="field-label">{% translate "Аудитория" %}</span>
         <select class="control place-pillbox" name="place" multiple>
           {% for place in places %}
             <option value="{{ place }}" {% if place in selected.place %}selected{% endif %}>{{ place }}</option>
@@ -68,11 +77,11 @@
       <div class="filters-actions">
         <button class="btn btn-primary" type="submit">
         <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#search"></use></svg>
-        Показать
+        {% translate "Показать" %}
         </button>
         <button class="btn btn-secondary" type="button" id="reset-filters-button">
         <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#rotate-ccw"></use></svg>
-        Сбросить
+        {% translate "Сбросить" %}
         </button>
       </div>
     </div>
@@ -80,13 +89,13 @@
     <div class="filters-toolbar">
       <button class="btn btn-secondary btn-more" type="button" id="more-filters-button">
         <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#sliders-horizontal"></use></svg>
-        <span>{% if addition_filters_visible == "1" %}Меньше фильтров{% else %}Больше фильтров{% endif %}</span>
+        <span>{% if addition_filters_visible == "1" %}{% translate "Меньше фильтров" %}{% else %}{% translate "Больше фильтров" %}{% endif %}</span>
       </button>
 
       <label class="calendar-toggle">
         <input type="checkbox" id="show-calendar-checkbox" name="calendar_visibility" {% if calendar_visible == "1" %}checked{% endif %}>
         <span class="toggle-box"></span>
-        <span>Показывать календарь</span>
+        <span>{% translate "Показывать календарь" %}</span>
       </label>
     </div>
 
@@ -94,7 +103,7 @@
 
     <div class="addition-filters-container {% if addition_filters_visible != "1" %}is-hidden{% endif %}" id="addition-filters-container">
       <label class="field">
-        <span class="field-label">Предмет</span>
+        <span class="field-label">{% translate "Предмет" %}</span>
         <select class="control subject-pillbox" name="subject" multiple>
           {% for subject in subjects %}
             <option value="{{ subject }}" {% if subject in selected.subject %}selected{% endif %}>{{ subject }}</option>
@@ -103,7 +112,7 @@
       </label>
 
       <label class="field">
-        <span class="field-label">Тип занятия</span>
+        <span class="field-label">{% translate "Тип занятия" %}</span>
         <select class="control kind-pillbox" name="kind" multiple>
           {% for kind in kinds %}
             <option value="{{ kind }}" {% if kind in selected.kind %}selected{% endif %}>{{ kind }}</option>
@@ -112,7 +121,7 @@
       </label>
 
       <label class="field">
-        <span class="field-label">Время</span>
+        <span class="field-label">{% translate "Время" %}</span>
         <select class="control time-slot-pillbox" name="time_slot" multiple>
           {% for time_slot in time_slots %}
             <option value="{{ time_slot }}" {% if time_slot|is_time_slot_already_selected:selected.time_slot %}selected{% endif %}>{{ time_slot }}</option>

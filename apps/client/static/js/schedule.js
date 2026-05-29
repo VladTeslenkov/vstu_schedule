@@ -7,8 +7,27 @@
     return Array.from(select.options).filter((option) => option.selected);
   }
 
+  function getScheduleMessages() {
+    const form = document.getElementById("schedule-filter-form");
+    return {
+      autocompletePlaceholder: form?.dataset.autocompletePlaceholder || "",
+      autocompleteEmpty: form?.dataset.autocompleteEmpty || "",
+      removeLabelTemplate: form?.dataset.removeLabelTemplate || "__value__",
+      moreFiltersLabel: form?.dataset.moreFiltersLabel || "",
+      lessFiltersLabel: form?.dataset.lessFiltersLabel || "",
+    };
+  }
+
+  function formatMessage(template, values) {
+    return Object.entries(values).reduce(
+      (message, [key, value]) => message.replace(`__${key}__`, value),
+      template,
+    );
+  }
+
   function createAutocompleteSelect(select) {
     if (!select.multiple || select.dataset.autocompleteReady === "1") return;
+    const messages = getScheduleMessages();
     select.dataset.autocompleteReady = "1";
     select.classList.add("native-select-hidden");
 
@@ -22,7 +41,7 @@
     input.className = "autocomplete-input";
     input.type = "text";
     input.autocomplete = "off";
-    input.placeholder = "Начните вводить";
+    input.placeholder = messages.autocompletePlaceholder;
 
     const optionsList = document.createElement("div");
     optionsList.className = "autocomplete-options is-hidden";
@@ -46,7 +65,7 @@
 
     function updatePlaceholder() {
       const hasSelection = getSelectedOptions(select).length > 0;
-      input.placeholder = hasSelection ? "" : "Начните вводить";
+      input.placeholder = hasSelection ? "" : messages.autocompletePlaceholder;
     }
 
     function renderTags() {
@@ -62,7 +81,10 @@
         const tagRemove = document.createElement("span");
         tagRemove.className = "autocomplete-tag-remove";
         tagRemove.textContent = "×";
-        tag.setAttribute("aria-label", `Удалить ${getOptionText(option)}`);
+        tag.setAttribute(
+          "aria-label",
+          formatMessage(messages.removeLabelTemplate, { value: getOptionText(option) }),
+        );
         tag.append(tagText, tagRemove);
         tag.addEventListener("click", (event) => {
           event.stopPropagation();
@@ -94,7 +116,7 @@
       if (matches.length === 0) {
         const empty = document.createElement("div");
         empty.className = "autocomplete-option autocomplete-option--empty";
-        empty.textContent = "Ничего не найдено";
+        empty.textContent = messages.autocompleteEmpty;
         optionsList.append(empty);
         return;
       }
@@ -168,7 +190,10 @@
     const isHidden = container.classList.toggle("is-hidden");
     state.value = isHidden ? "0" : "1";
     const label = button.querySelector("span");
-    if (label) label.textContent = isHidden ? "Больше фильтров" : "Меньше фильтров";
+    if (label) {
+      const messages = getScheduleMessages();
+      label.textContent = isHidden ? messages.moreFiltersLabel : messages.lessFiltersLabel;
+    }
   }
 
   function resetFilters() {

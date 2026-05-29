@@ -1,12 +1,12 @@
-{% load static %}
-<section class="alerts" aria-label="Объявления">
+{% load i18n static %}
+<section class="alerts" aria-label="{% translate "Объявления" %}">
   <div class="alert">
     <svg class="alert-icon"><use href="{% static 'icons/lucide.svg' %}#info"></use></svg>
     <div class="alert-text">
-      <strong>Расписание может изменяться.</strong>
-      Актуальную информацию уточняйте на официальном сайте университета.
+      <strong>{% translate "Расписание может изменяться." %}</strong>
+      {% translate "Актуальную информацию уточняйте на официальном сайте университета." %}
     </div>
-    <button class="icon-button alert-close" type="button" aria-label="Закрыть объявление">
+    <button class="icon-button alert-close" type="button" aria-label="{% translate "Закрыть объявление" %}">
       <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#x"></use></svg>
     </button>
   </div>

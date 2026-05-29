@@ -38,9 +38,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Устанавливаем только библиотеку для работы с Postgres
+# Устанавливаем runtime-зависимости:
+# - libpq5 для Postgres
+# - gettext для Django compilemessages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    gettext \
     && rm -rf /var/lib/apt/lists/*
 
 # Копируем готовое виртуальное окружение из билдера (теперь там реальные файлы, а не ссылки)

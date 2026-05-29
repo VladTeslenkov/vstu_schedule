@@ -23,6 +23,7 @@ from django.views.generic import RedirectView
 
 urlpatterns = [
     path("", RedirectView.as_view(pattern_name="schedule:index", permanent=True)),
+    path("i18n/", include("django.conf.urls.i18n")),
     path("admin/", admin.site.urls),
     path("schedule/", include(("apps.client.urls", "client"), namespace="schedule")),
     path("timetable/", RedirectView.as_view(pattern_name="schedule:index", permanent=False)),

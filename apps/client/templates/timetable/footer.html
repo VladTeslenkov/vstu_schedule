@@ -1,18 +1,18 @@
-{% load static %}
+{% load i18n static %}
 <footer class="footer">
   <div class="footer-inner">
     <a class="footer-link" href="https://www.vstu.ru/" rel="noopener">
       <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#external-link"></use></svg>
-      Официальный сайт ВолгГТУ
+      {% translate "Официальный сайт ВолгГТУ" %}
     </a>
     <a class="footer-link" href="https://www.vstu.ru/student/raspisaniya/zanyatiy/" rel="noopener">
       <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#calendar"></use></svg>
-      Официальный источник расписаний
+      {% translate "Официальный источник расписаний" %}
     </a>
     <div class="footer-contact">
       <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#mail"></use></svg>
       oaod@vstu.ru
     </div>
-    <div class="copyright">© Волгоградский государственный технический университет, 2026</div>
+    <div class="copyright">{% translate "© Волгоградский государственный технический университет, 2026" %}</div>
   </div>
 </footer>
