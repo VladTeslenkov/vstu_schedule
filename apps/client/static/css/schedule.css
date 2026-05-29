@@ -689,23 +689,25 @@ select {
 }
 
 .chip-kind {
-  background: var(--success-soft);
-  color: var(--success);
+  border: 1px solid transparent;
 }
 
 .chip-kind--lecture {
-  background: #eaf4ff;
-  color: #075ca8;
+  border-color: #d6c4ee;
+  background: #eee5fb;
+  color: #68438f;
 }
 
 .chip-kind--practice {
-  background: #eef8ed;
-  color: #276738;
+  border-color: #decaa1;
+  background: #f4ebd8;
+  color: #6a5126;
 }
 
 .chip-kind--lab {
-  background: #fff0e1;
-  color: #b5c065;
+  border-color: #bdd8c9;
+  background: #e5f1ea;
+  color: #315d45;
 }
 
 .chip-date {
