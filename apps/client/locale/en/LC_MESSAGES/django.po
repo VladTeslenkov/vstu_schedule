@@ -221,3 +221,16 @@ msgid ""
 "Доступен поиск занятий по группе, преподавателю, аудитории, предмету и "
 "периоду."
 msgstr "Search classes by group, teacher, room, subject, and period."
+
+#: .\templates\timetable\too_many.html:4
+msgid "Найдено слишком много занятий"
+msgstr "Too many classes found"
+
+#: .\templates\timetable\too_many.html:5
+#, python-format
+msgid ""
+"По этому запросу найдено больше %(limit)s занятий. Сократите запрос: выберите меньший "
+"диапазон дат или добавьте фильтры по группе, преподавателю, аудитории или предмету."
+msgstr ""
+"This search found more than %(limit)s classes. Narrow your search: choose a shorter "
+"date range or add filters by group, teacher, room, or subject."

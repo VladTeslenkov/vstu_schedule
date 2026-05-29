@@ -56,12 +56,15 @@ def test_schedule_page_shows_too_many_events_state(client, monkeypatch):
 
     monkeypatch.setattr("apps.client.views.make_table_data", make_too_many_events_data)
 
-    response = client.get(reverse("schedule:index"), {"date": "today"})
+    response = client.get(reverse("schedule:index"), {"date": "today"}, HTTP_ACCEPT_LANGUAGE="en")
 
     assert response.status_code == 200
     assert response.context["too_many_events_found"] is True
     assert response.context["data"] == []
-    assert 'data-lucide="shield-alert"' in response.content.decode()
+    content = response.content.decode()
+    assert 'data-lucide="shield-alert"' in content
+    assert "Too many classes found" in content
+    assert "more than 250 classes" in content
 
 
 @pytest.mark.django_db
