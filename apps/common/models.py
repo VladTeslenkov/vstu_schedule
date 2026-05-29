@@ -10,38 +10,42 @@ from django.utils import timezone, translation
 
 class Alert(models.Model):
     class Category(models.TextChoices):
-        DANGER = "danger", "Danger"
-        WARNING = "warning", "Warning"
-        SUCCESS = "success", "Success"
-        NOTICE = "notice", "Notice"
+        DANGER = "danger", "Критическое"
+        WARNING = "warning", "Предупреждение"
+        SUCCESS = "success", "Успех"
+        NOTICE = "notice", "Уведомление"
 
     id = models.BigAutoField(primary_key=True)
-    title = models.CharField(max_length=255, verbose_name="Title")
-    body = models.TextField(verbose_name="Text")
+    title = models.CharField(max_length=255, verbose_name="Заголовок")
+    body = models.TextField(verbose_name="Текст")
     title_en = models.CharField(
-        max_length=255, blank=True, default="", verbose_name="Title (English)"
+        max_length=255, blank=True, default="", verbose_name="Заголовок (английский)"
     )
-    body_en = models.TextField(blank=True, default="", verbose_name="Text (English)")
+    body_en = models.TextField(blank=True, default="", verbose_name="Текст (английский)")
     category = models.CharField(
         max_length=16,
         choices=Category,
         default=Category.NOTICE,
-        verbose_name="Category",
+        verbose_name="Категория",
     )
-    is_enabled = models.BooleanField(default=True, verbose_name="Enabled")
-    is_admin = models.BooleanField(default=False, verbose_name="Show only in admin panel")
-    is_dismissible = models.BooleanField(default=True, verbose_name="User can close")
-    starts_at = models.DateTimeField(null=True, blank=True, default=None, verbose_name="Starts at")
+    is_enabled = models.BooleanField(default=True, verbose_name="Включено")
+    is_admin = models.BooleanField(
+        default=False, verbose_name="Показывать только в панели администратора"
+    )
+    is_dismissible = models.BooleanField(default=True, verbose_name="Пользователь может закрыть")
+    starts_at = models.DateTimeField(
+        null=True, blank=True, default=None, verbose_name="Дата начала показа"
+    )
     expires_at = models.DateTimeField(
-        null=True, blank=True, default=None, verbose_name="Expires at"
+        null=True, blank=True, default=None, verbose_name="Дата окончания показа"
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created at")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated at")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
 
     class Meta:
         db_table = "alert"
-        verbose_name = "Alert"
-        verbose_name_plural = "Alerts"
+        verbose_name = "Оповещение"
+        verbose_name_plural = "Оповещения"
         indexes: ClassVar = [
             models.Index(
                 fields=["is_enabled", "is_admin", "starts_at", "expires_at"],
@@ -188,10 +192,10 @@ class TimetableFileImport(models.Model):
     """Tracks importing a stored timetable file version into schedule tables."""
 
     class Status(models.TextChoices):
-        PENDING = "pending", "Pending"
-        IMPORTED = "imported", "Imported"
-        FAILED = "failed", "Failed"
-        SKIPPED = "skipped", "Skipped"
+        PENDING = "pending", "Ожидает импорта"
+        IMPORTED = "imported", "Импортирован"
+        FAILED = "failed", "Ошибка импорта"
+        SKIPPED = "skipped", "Пропущен"
 
     id = models.BigAutoField(primary_key=True)
     file_version = models.ForeignKey(
@@ -200,12 +204,17 @@ class TimetableFileImport(models.Model):
         related_name="timetable_imports",
         verbose_name="Версия файла",
     )
-    status = models.CharField(max_length=32, choices=Status, default=Status.PENDING)
-    started_at = models.DateTimeField(auto_now_add=True)
-    finished_at = models.DateTimeField(null=True, blank=True)
-    metadata = models.JSONField(default=dict, blank=True)
-    result = models.JSONField(default=dict, blank=True)
-    error = models.TextField(blank=True, default="")
+    status = models.CharField(
+        max_length=32,
+        choices=Status,
+        default=Status.PENDING,
+        verbose_name="Статус",
+    )
+    started_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата начала")
+    finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата завершения")
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="Метаданные")
+    result = models.JSONField(default=dict, blank=True, verbose_name="Результат")
+    error = models.TextField(blank=True, default="", verbose_name="Ошибка")
 
     class Meta:
         db_table = "timetable_file_import"
