@@ -10,6 +10,8 @@ from .file_data import FileData
 # Создаем логгер для текущего модуля
 logger = logging.getLogger(__name__)
 
+REQUEST_TIMEOUT_SECONDS = 10
+
 
 class WebParser:
     """
@@ -147,7 +149,7 @@ class WebParser:
         :return: Основной контент страницы
         """
         # Получение web страницы
-        response = requests.get(url)
+        response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
         if response.status_code != 200:
             raise Exception(f"Error opening web page. URL: {url}")
 

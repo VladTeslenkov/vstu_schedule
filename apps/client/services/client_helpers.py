@@ -1,7 +1,10 @@
+import logging
+import time
 from collections import defaultdict
 from datetime import timedelta
 from typing import cast
 
+from django.core.cache import cache
 from django.db.models import QuerySet
 
 from apps.common.models import AbstractEvent, Event
@@ -20,6 +23,14 @@ from apps.common.services.timetable.utilities import (
     is_events_follow_each_other,
     is_similar_events,
 )
+from apps.common.services.timetable.utilities.model_helpers import (
+    get_all_groups,
+    get_all_kinds,
+    get_all_places,
+    get_all_subjects,
+    get_all_teachers,
+    get_all_time_slots,
+)
 from apps.common.services.timetable.write.factories import (
     calculate_semester_filling_parameters,
 )
@@ -29,12 +40,73 @@ EventGroup = list[Event]
 RowSpans = list[int]
 TableDataRow = tuple[EventGroup, RowSpans, CalendarData]
 MAX_FILTERED_EVENTS = 250
+FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS = 2 * 60 * 60
+FILTER_OPTIONS_CACHE_KEY = "client:schedule:filter-options:v1"
+
+type FilterOptions = dict[str, list[str]]
+
+logger = logging.getLogger(__name__)
+_process_filter_options_cache: tuple[float, FilterOptions] | None = None
 
 
 class TooManyEventsFoundError(Exception):
     def __init__(self, limit: int) -> None:
         self.limit = limit
         super().__init__(f"Found more than {limit} events.")
+
+
+def _build_filter_options() -> FilterOptions:
+    return {
+        "groups": list(get_all_groups().values_list("name", flat=True)),
+        "teachers": list(get_all_teachers().values_list("name", flat=True)),
+        "places": [str(place) for place in get_all_places()],
+        "subjects": list(get_all_subjects().values_list("name", flat=True)),
+        "kinds": list(get_all_kinds().values_list("name", flat=True)),
+        "time_slots": [str(time_slot) for time_slot in get_all_time_slots()],
+    }
+
+
+def _get_process_cached_filter_options() -> FilterOptions | None:
+    if _process_filter_options_cache is None:
+        return None
+
+    expires_at, options = _process_filter_options_cache
+    if expires_at <= time.monotonic():
+        return None
+
+    return options
+
+
+def _set_process_cached_filter_options(options: FilterOptions) -> None:
+    global _process_filter_options_cache
+    _process_filter_options_cache = (
+        time.monotonic() + FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS,
+        options,
+    )
+
+
+def get_cached_filter_options() -> FilterOptions:
+    try:
+        cached_options = cache.get(FILTER_OPTIONS_CACHE_KEY)
+    except Exception as exc:
+        logger.warning("Filter options cache read failed; falling back to process memory: %s", exc)
+        process_cached_options = _get_process_cached_filter_options()
+        if process_cached_options is not None:
+            return process_cached_options
+    else:
+        if cached_options is not None:
+            options = cast(FilterOptions, cached_options)
+            return options
+
+    options = _build_filter_options()
+
+    try:
+        cache.set(FILTER_OPTIONS_CACHE_KEY, options, FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS)
+    except Exception as exc:
+        logger.warning("Filter options cache write failed; using process memory only: %s", exc)
+        _set_process_cached_filter_options(options)
+
+    return options
 
 
 def make_table_data(filters: dict, max_events: int = MAX_FILTERED_EVENTS) -> list[TableDataRow]:

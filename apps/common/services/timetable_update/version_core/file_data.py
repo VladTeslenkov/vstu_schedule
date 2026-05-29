@@ -18,9 +18,15 @@ from .stringlistanalyzer import StringListAnalyzer
 logger = logging.getLogger(__name__)
 
 _CONFIG_PATH = settings.BASE_DIR / "apps" / "common" / "config" / "file_data_config.json"
+DOWNLOAD_TIMEOUT_SECONDS = 30
+MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024
 
 with _CONFIG_PATH.open(encoding="utf-8") as _f:
     _CONFIG = json.load(_f)
+
+
+class FileTooLargeError(Exception):
+    """Raised when a remote timetable file exceeds the allowed download size."""
 
 
 class FileData:
@@ -186,21 +192,57 @@ class FileData:
 
     def download_file(self, directory: Path | str, chunk_size: int = 8192) -> Path:
         """Скачивает файл по URL и сохраняет в указанную директорию."""
-        response = requests.get(self.__url, timeout=30)
-        if response.status_code != 200:
-            raise Exception(
-                f"File download error. Status: {response.status_code}, URL: {self.__url}"
-            )
+        response = requests.get(self.__url, stream=True, timeout=DOWNLOAD_TIMEOUT_SECONDS)
+        file_path = None
+        try:
+            if response.status_code != 200:
+                raise Exception(
+                    f"File download error. Status: {response.status_code}, URL: {self.__url}"
+                )
 
-        directory = Path(directory)
-        directory.mkdir(parents=True, exist_ok=True)
-        file_path = directory / self.get_file_name()
+            content_length = response.headers.get("Content-Length")
+            if content_length:
+                try:
+                    remote_size = int(content_length)
+                except ValueError:
+                    remote_size = None
+                if remote_size and remote_size > MAX_DOWNLOAD_BYTES:
+                    raise FileTooLargeError(
+                        f"File is larger than {MAX_DOWNLOAD_BYTES} bytes. URL: {self.__url}"
+                    )
 
-        with file_path.open("wb") as f:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                f.write(chunk)
+            directory = Path(directory)
+            directory.mkdir(parents=True, exist_ok=True)
+            file_path = directory / self.get_file_name()
 
-        return file_path
+            downloaded_bytes = 0
+            file_too_large_error = None
+            with file_path.open("wb") as f:
+                for chunk in response.iter_content(chunk_size=chunk_size):
+                    if not chunk:
+                        continue
+                    downloaded_bytes += len(chunk)
+                    if downloaded_bytes > MAX_DOWNLOAD_BYTES:
+                        file_too_large_error = FileTooLargeError(
+                            f"File is larger than {MAX_DOWNLOAD_BYTES} bytes. URL: {self.__url}"
+                        )
+                        break
+                    f.write(chunk)
+
+            if file_too_large_error:
+                file_path.unlink(missing_ok=True)
+                raise file_too_large_error
+
+            return file_path
+        except Exception:
+            if file_path is not None:
+                file_path.unlink(missing_ok=True)
+            raise
+        finally:
+            close = getattr(response, "close", None)
+            if close:
+                with suppress(Exception):
+                    close()
 
     # ------------------- КЛАССОВЫЕ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ------------------- #
 

@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 
+from apps.client.services import client_helpers
 from apps.client.services.client_helpers import TooManyEventsFoundError, has_more_events_than
 from apps.client.views import lesson_kind_class
 from apps.common.models import Event
@@ -105,6 +106,69 @@ def test_has_more_events_than_detects_limit():
 
     assert has_more_events_than(Event.objects.all(), 250) is True
     assert has_more_events_than(Event.objects.all(), 251) is False
+
+
+def test_filter_options_falls_back_to_process_cache_when_django_cache_fails(monkeypatch):
+    class BrokenCache:
+        def get(self, key):
+            raise ConnectionError("cache is unavailable")
+
+        def set(self, key, value, timeout):
+            raise ConnectionError("cache is unavailable")
+
+    options = {
+        "groups": ["РџР РРќ-101"],
+        "teachers": ["РџСЂРµРїРѕРґР°РІР°С‚РµР»СЊ"],
+        "places": ["Рђ 101"],
+        "subjects": ["РўРµСЃС‚РѕРІС‹Р№ РїСЂРµРґРјРµС‚"],
+        "kinds": ["Р›РµРєС†РёСЏ"],
+        "time_slots": ["8:30"],
+    }
+    calls = 0
+
+    def build_filter_options():
+        nonlocal calls
+        calls += 1
+        return options
+
+    monkeypatch.setattr(client_helpers, "_process_filter_options_cache", None)
+    monkeypatch.setattr(client_helpers, "cache", BrokenCache())
+    monkeypatch.setattr(client_helpers, "_build_filter_options", build_filter_options)
+
+    assert client_helpers.get_cached_filter_options() == options
+    assert client_helpers.get_cached_filter_options() == options
+    assert calls == 1
+
+
+def test_filter_options_prefers_django_cache_when_process_cache_exists(monkeypatch):
+    class WorkingCache:
+        def get(self, key):
+            return redis_options
+
+        def set(self, key, value, timeout):
+            raise AssertionError("set should not be called on cache hit")
+
+    process_options = {
+        "groups": ["process"],
+        "teachers": [],
+        "places": [],
+        "subjects": [],
+        "kinds": [],
+        "time_slots": [],
+    }
+    redis_options = {
+        "groups": ["redis"],
+        "teachers": [],
+        "places": [],
+        "subjects": [],
+        "kinds": [],
+        "time_slots": [],
+    }
+
+    monkeypatch.setattr(client_helpers, "cache", WorkingCache())
+    client_helpers._set_process_cached_filter_options(process_options)
+
+    assert client_helpers.get_cached_filter_options() == redis_options
 
 
 @pytest.mark.parametrize(

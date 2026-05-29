@@ -39,6 +39,9 @@ DEBUG = dotenv.get_bool("DEBUG")
 ALLOWED_HOSTS = dotenv.get_list("ALLOWED_HOSTS", default=["*"])
 CSRF_TRUSTED_ORIGINS = dotenv.get_list("CSRF_TRUSTED_ORIGINS", default=[])
 
+REDIS_URL = dotenv.get("REDIS_URL", "redis://redis:6379/0")
+REDIS_CACHE_URL = dotenv.get("REDIS_CACHE_URL", "redis://redis:6379/1")
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -150,6 +153,13 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # Celery Beat Config
 DISABLE_CELERY = dotenv.get_bool("DISABLE_CELERY", default=False)
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_CACHE_URL,
+    }
+}
 
 if DISABLE_CELERY:
     # --- Режим БЕЗ Celery (Синхронный) ---

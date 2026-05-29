@@ -2,20 +2,16 @@ from django.http import QueryDict
 from django.shortcuts import redirect, render
 from django.template.defaulttags import register
 
-from apps.client.services.client_helpers import TooManyEventsFoundError, make_table_data
+from apps.client.services.client_helpers import (
+    TooManyEventsFoundError,
+    get_cached_filter_options,
+    make_table_data,
+)
 from apps.common.models import Event
 from apps.common.selectors import public_alerts
 from apps.common.services.timetable.utilities import (
     is_events_follow_each_other,
     is_similar_events,
-)
-from apps.common.services.timetable.utilities.model_helpers import (
-    get_all_groups,
-    get_all_kinds,
-    get_all_places,
-    get_all_subjects,
-    get_all_teachers,
-    get_all_time_slots,
 )
 
 
@@ -138,12 +134,7 @@ def index(request):
             context["max_filtered_events"] = error.limit
 
     context["selected"] = selected
-    context["groups"] = get_all_groups().values_list("name", flat=True)
-    context["teachers"] = get_all_teachers().values_list("name", flat=True)
-    context["places"] = [str(p) for p in get_all_places()]
-    context["subjects"] = get_all_subjects().values_list("name", flat=True)
-    context["kinds"] = get_all_kinds().values_list("name", flat=True)
-    context["time_slots"] = [str(ts) for ts in get_all_time_slots()]
+    context.update(get_cached_filter_options())
 
     context["addition_filters_visible"] = (
         request.GET.get("addition_filters_visible")
