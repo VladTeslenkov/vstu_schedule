@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.http import QueryDict
+from django.shortcuts import redirect, render
 from django.template.defaulttags import register
 
 from apps.client.services.client_helpers import TooManyEventsFoundError, make_table_data
@@ -83,7 +84,28 @@ def _get_list_param(request, name: str) -> list[str]:
     return values or request.GET.getlist(f"{name}[]")
 
 
+def _clean_get_params(params: QueryDict) -> QueryDict:
+    cleaned = params.copy()
+    for name in list(cleaned):
+        values = [value for value in cleaned.getlist(name) if value != ""]
+        if values:
+            cleaned.setlist(name, values)
+        else:
+            del cleaned[name]
+
+    if cleaned.get("addition_filters_visible") == "0":
+        del cleaned["addition_filters_visible"]
+
+    return cleaned
+
+
 def index(request):
+    if request.method == "GET":
+        cleaned_get = _clean_get_params(request.GET)
+        if cleaned_get.urlencode() != request.GET.urlencode():
+            query = cleaned_get.urlencode()
+            return redirect(f"{request.path}?{query}" if query else request.path)
+
     context: dict[str, object] = {"too_many_events_found": False}
     selected = {
         "date": "today",

@@ -50,6 +50,38 @@ def test_schedule_post_does_not_redirect_to_get(client):
 
 
 @pytest.mark.django_db
+def test_schedule_page_redirects_empty_and_default_get_params(client):
+    response = client.get(
+        reverse("schedule:index"),
+        {
+            "date": "today",
+            "left_date": "",
+            "right_date": "",
+            "addition_filters_visible": "0",
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.url == f"{reverse('schedule:index')}?date=today"
+
+
+@pytest.mark.django_db
+def test_schedule_page_keeps_visible_addition_filters_param(client):
+    response = client.get(
+        reverse("schedule:index"),
+        {
+            "date": "today",
+            "left_date": "",
+            "right_date": "",
+            "addition_filters_visible": "1",
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.url == f"{reverse('schedule:index')}?date=today&addition_filters_visible=1"
+
+
+@pytest.mark.django_db
 def test_schedule_page_shows_too_many_events_state(client, monkeypatch):
     def make_too_many_events_data(filters):
         raise TooManyEventsFoundError(250)
