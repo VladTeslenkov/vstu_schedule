@@ -221,6 +221,37 @@
     updateDateFields();
   }
 
+  function setupPublicAlerts() {
+    let dismissedAlertIds = [];
+    try {
+      dismissedAlertIds = JSON.parse(localStorage.getItem("schedule.dismissedAlerts") || "[]");
+    } catch (error) {
+      dismissedAlertIds = [];
+    }
+
+    const dismissedAlerts = new Set(dismissedAlertIds.map(String));
+    document.querySelectorAll(".alert[data-alert-id]").forEach((alert) => {
+      const alertId = alert.dataset.alertId;
+      if (dismissedAlerts.has(alertId)) {
+        alert.remove();
+        return;
+      }
+
+      const closeButton = alert.querySelector(".alert-close");
+      closeButton?.addEventListener("click", () => {
+        if (alert.dataset.alertDismissible === "1") {
+          dismissedAlerts.add(alertId);
+          try {
+            localStorage.setItem("schedule.dismissedAlerts", JSON.stringify([...dismissedAlerts]));
+          } catch (error) {
+            // Browser storage may be unavailable in private mode.
+          }
+        }
+        alert.remove();
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("#schedule-filter-form select[multiple]").forEach(createAutocompleteSelect);
 
@@ -235,9 +266,7 @@
       .getElementById("reset-filters-button")
       ?.addEventListener("click", resetFilters);
 
-    document.querySelectorAll(".alert-close").forEach((button) => {
-      button.addEventListener("click", () => button.closest(".alert")?.remove());
-    });
+    setupPublicAlerts();
 
     updateDateFields();
     updateCalendarVisibility();

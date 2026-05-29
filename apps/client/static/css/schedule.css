@@ -214,11 +214,34 @@ select {
   box-shadow: var(--shadow-soft);
 }
 
+.alert--notice {
+  border-color: #cfe3fb;
+  background: var(--accent-soft);
+  color: #154a85;
+}
+
+.alert--success {
+  border-color: #bde8d0;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.alert--warning {
+  border-color: #f5d48a;
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.alert--danger {
+  border-color: #f3b3bd;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .alert-icon {
   width: 24px;
   height: 24px;
   flex: 0 0 auto;
-  color: var(--accent);
 }
 
 .alert-text {
@@ -236,12 +259,12 @@ select {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #145ba2;
+  color: currentColor;
   cursor: pointer;
 }
 
 .icon-button:hover {
-  background: rgba(8, 118, 207, 0.1);
+  background: rgba(20, 32, 51, 0.08);
 }
 
 .filters-card,

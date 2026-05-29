@@ -3,6 +3,7 @@ from django.template.defaulttags import register
 
 from apps.client.services.client_helpers import make_table_data
 from apps.common.models import Event
+from apps.common.selectors import public_alerts
 from apps.common.services.timetable.utilities import (
     is_events_follow_each_other,
     is_similar_events,
@@ -124,5 +125,6 @@ def index(request):
     )
     context["calendar_visible"] = "1" if "calendar_visibility" in request.GET else "0"
     context["has_filters"] = has_filters
+    context["alerts"] = public_alerts()
 
     return render(request, "timetable/index.html", context=context)

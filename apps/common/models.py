@@ -5,6 +5,81 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone, translation
+
+
+class Alert(models.Model):
+    class Category(models.TextChoices):
+        DANGER = "danger", "Danger"
+        WARNING = "warning", "Warning"
+        SUCCESS = "success", "Success"
+        NOTICE = "notice", "Notice"
+
+    id = models.BigAutoField(primary_key=True)
+    title = models.CharField(max_length=255, verbose_name="Title")
+    body = models.TextField(verbose_name="Text")
+    title_en = models.CharField(
+        max_length=255, blank=True, default="", verbose_name="Title (English)"
+    )
+    body_en = models.TextField(blank=True, default="", verbose_name="Text (English)")
+    category = models.CharField(
+        max_length=16,
+        choices=Category,
+        default=Category.NOTICE,
+        verbose_name="Category",
+    )
+    is_enabled = models.BooleanField(default=True, verbose_name="Enabled")
+    is_admin = models.BooleanField(default=False, verbose_name="Show only in admin panel")
+    is_dismissible = models.BooleanField(default=True, verbose_name="User can close")
+    starts_at = models.DateTimeField(null=True, blank=True, default=None, verbose_name="Starts at")
+    expires_at = models.DateTimeField(
+        null=True, blank=True, default=None, verbose_name="Expires at"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created at")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated at")
+
+    class Meta:
+        db_table = "alert"
+        verbose_name = "Alert"
+        verbose_name_plural = "Alerts"
+        indexes: ClassVar = [
+            models.Index(
+                fields=["is_enabled", "is_admin", "starts_at", "expires_at"],
+                name="alert_active_idx",
+            ),
+        ]
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return self.title
+
+    @property
+    def display_title(self) -> str:
+        if translation.get_language() == "en" and self.title_en:
+            return self.title_en
+        return self.title
+
+    @property
+    def display_body(self) -> str:
+        if translation.get_language() == "en" and self.body_en:
+            return self.body_en
+        return self.body
+
+    @property
+    def icon_name(self) -> str:
+        return {
+            self.Category.DANGER: "alert-triangle",
+            self.Category.WARNING: "alert-triangle",
+            self.Category.SUCCESS: "check",
+            self.Category.NOTICE: "info",
+        }[self.category]
+
+    @property
+    def is_currently_active(self) -> bool:
+        now = timezone.now()
+        starts_ok = self.starts_at is None or self.starts_at <= now
+        expires_ok = self.expires_at is None or self.expires_at > now
+        return self.is_enabled and starts_ok and expires_ok
 
 
 class Tag(models.Model):

@@ -1,13 +1,23 @@
 {% load i18n static %}
-<section class="alerts" aria-label="{% translate "Объявления" %}">
-  <div class="alert">
-    <svg class="alert-icon"><use href="{% static 'icons/lucide.svg' %}#info"></use></svg>
-    <div class="alert-text">
-      <strong>{% translate "Расписание может изменяться." %}</strong>
-      {% translate "Актуальную информацию уточняйте на официальном сайте университета." %}
-    </div>
-    <button class="icon-button alert-close" type="button" aria-label="{% translate "Закрыть объявление" %}">
-      <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#x"></use></svg>
-    </button>
-  </div>
-</section>
+{% if alerts %}
+  <section class="alerts" aria-label="{% translate "Announcements" %}">
+    {% for alert in alerts %}
+      <div
+        class="alert alert--{{ alert.category }}"
+        data-alert-id="{{ alert.pk }}"
+        data-alert-dismissible="{{ alert.is_dismissible|yesno:'1,0' }}"
+      >
+        <svg class="alert-icon"><use href="{% static 'icons/lucide.svg' %}#{{ alert.icon_name }}"></use></svg>
+        <div class="alert-text">
+          <strong>{{ alert.display_title }}</strong>
+          {{ alert.display_body|linebreaksbr }}
+        </div>
+        {% if alert.is_dismissible %}
+          <button class="icon-button alert-close" type="button" aria-label="{% translate "Close announcement" %}">
+            <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#x"></use></svg>
+          </button>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+{% endif %}

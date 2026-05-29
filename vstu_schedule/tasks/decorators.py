@@ -9,7 +9,7 @@ from vstu_schedule.tasks.concurrency import celery_task_concurrency_lock
 _TaskFunc = TypeVar("_TaskFunc", bound=Callable[..., Any])
 
 
-def project_task(*decorator_args: Any, **task_options: Any) -> Callable[[_TaskFunc], Any]: # type: ignore
+def project_task(*decorator_args: Any, **task_options: Any) -> Callable[[_TaskFunc], Any]:  # type: ignore
     """
     Register a project Celery task and apply the task descriptor policy.
 

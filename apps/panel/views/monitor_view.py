@@ -6,8 +6,9 @@ from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.views.decorators.http import require_POST
 
-from apps.common.models import FileVersion, Resource, Setting
+from apps.common.models import Alert, FileVersion, Resource, Setting
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,20 @@ def monitoring_stats(request: HttpRequest) -> JsonResponse:
             "resources": resources,
         }
     )
+
+
+@staff_member_required
+@require_POST
+def dismiss_admin_alert(request: HttpRequest, alert_id: int) -> JsonResponse:
+    alert = Alert.objects.filter(pk=alert_id, is_admin=True).first()
+    if not alert:
+        raise Http404("Alert not found")
+
+    deleted = False
+    if alert.is_dismissible:
+        alert.delete()
+        deleted = True
+    return JsonResponse({"ok": True, "deleted": deleted})
 
 
 @staff_member_required

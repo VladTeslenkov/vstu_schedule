@@ -12,6 +12,11 @@ urlpatterns = [
     # API и страница мониторинга — под /panel/timetable_update/ (см. обсуждение в PR)
     path("timetable_update/stats/", monitor_view.monitoring_stats, name="monitoring_stats"),
     path(
+        "alerts/<int:alert_id>/dismiss/",
+        monitor_view.dismiss_admin_alert,
+        name="dismiss_admin_alert",
+    ),
+    path(
         "timetable_update/download/<int:resource_id>/",
         monitor_view.download_resource,
         name="download_resource",

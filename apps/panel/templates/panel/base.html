@@ -24,6 +24,30 @@
   {% block styles %}{% endblock %}
 </head>
 <body class="panel-page {% block body_class %}{% endblock %}">
+{% if admin_alerts %}
+  <section class="panel-flashes" aria-label="Admin alerts">
+    {% for alert in admin_alerts %}
+      <form
+        class="panel-flash panel-flash--{{ alert.category }}"
+        method="post"
+        action="{% url 'dismiss_admin_alert' alert.pk %}"
+        data-panel-alert-id="{{ alert.pk }}"
+        data-panel-alert-dismissible="{{ alert.is_dismissible|yesno:'1,0' }}"
+        data-panel-alert
+      >
+        {% csrf_token %}
+        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#{{ alert.icon_name }}"></use></svg>
+        <div class="panel-flash__text">
+          <strong>{{ alert.display_title }}</strong>
+          <span>{{ alert.display_body|linebreaksbr }}</span>
+        </div>
+        <button class="panel-flash__close" type="submit" aria-label="Close alert">
+          <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#x"></use></svg>
+        </button>
+      </form>
+    {% endfor %}
+  </section>
+{% endif %}
 <div class="panel-shell">
   <aside class="sidebar">
     <div class="sidebar__brand">ВолгГТУ расписания</div>
@@ -64,6 +88,46 @@
   </div>
 </div>
 <script src="{% static 'src/panel_theme.js' %}"></script>
+<script>
+  document.querySelectorAll("[data-panel-alert]").forEach(function (form) {
+    var alertId = form.dataset.panelAlertId;
+    var storageKey = "panel.dismissedAlert." + alertId;
+    try {
+      if (localStorage.getItem(storageKey) === "1") {
+        form.remove();
+        return;
+      }
+    } catch (error) {
+      // Browser storage may be unavailable in private mode.
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (form.dataset.panelAlertDismissible !== "1") {
+        try {
+          localStorage.setItem(storageKey, "1");
+        } catch (error) {
+          // Browser storage may be unavailable in private mode.
+        }
+        form.remove();
+        return;
+      }
+
+      var csrf = form.querySelector("input[name=csrfmiddlewaretoken]");
+      fetch(form.action, {
+        method: "POST",
+        headers: { "X-CSRFToken": csrf ? csrf.value : "" },
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error("Alert dismiss failed");
+          form.remove();
+        })
+        .catch(function () {
+          form.submit();
+        });
+    });
+  });
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

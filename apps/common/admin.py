@@ -10,6 +10,7 @@ from apps.common.models import (
     AbstractDay,
     AbstractEvent,
     AbstractEventChanges,
+    Alert,
     DayDateOverride,
     Department,
     Event,
@@ -65,6 +66,36 @@ class BaseAdmin(admin.ModelAdmin):
             obj.datecreated = timezone.now()
         obj.datemodified = timezone.now()
         obj.save()
+
+
+@admin.register(Alert)
+class AlertAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "category",
+        "is_enabled",
+        "is_admin",
+        "is_dismissible",
+        "starts_at",
+        "expires_at",
+        "created_at",
+    )
+    list_filter = (
+        "category",
+        "is_enabled",
+        "is_admin",
+        "is_dismissible",
+        "starts_at",
+        "expires_at",
+    )
+    search_fields = ("title", "body", "title_en", "body_en")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (None, {"fields": ("title", "body", "title_en", "body_en")}),
+        ("Display", {"fields": ("category", "is_enabled", "is_admin", "is_dismissible")}),
+        ("Schedule", {"fields": ("starts_at", "expires_at")}),
+        ("System", {"fields": ("created_at", "updated_at")}),
+    )
 
 
 @admin.register(Tag)
