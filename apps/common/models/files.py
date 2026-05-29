@@ -47,6 +47,11 @@ class Resource(models.Model):
         db_table = "resource"
         verbose_name = "Ресурс"
         verbose_name_plural = "Ресурсы"
+        indexes: ClassVar = [
+            models.Index(fields=["deprecated", "-last_update"], name="resource_status_updated_idx"),
+            models.Index(fields=["name"], name="resource_name_idx"),
+            models.Index(fields=["path", "name"], name="resource_path_name_idx"),
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -101,6 +106,12 @@ class FileVersion(models.Model):
         db_table = "file_version"
         verbose_name = "Версия файла"
         verbose_name_plural = "Версии файлов"
+        indexes: ClassVar = [
+            models.Index(fields=["-timestamp", "-id"], name="fileversion_recent_idx"),
+            models.Index(
+                fields=["resource", "-last_changed", "-timestamp"], name="fv_resource_latest_idx"
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.resource.name} | {self.timestamp} | {self.hashsum[:8]}"

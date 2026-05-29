@@ -1,5 +1,5 @@
 # ruff: noqa: DJ001
-from typing import Self
+from typing import ClassVar, Self
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -42,6 +42,9 @@ class Subject(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Предмет"
         verbose_name_plural = "Предметы"
+        indexes: ClassVar = [
+            models.Index(fields=["name"], name="subject_name_idx"),
+        ]
 
     def __repr__(self):
         return str(self.name)
@@ -55,6 +58,11 @@ class TimeSlot(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Время проведения события"
         verbose_name_plural = "Времена проведения события"
+        indexes: ClassVar = [
+            models.Index(fields=["alt_name"], name="timeslot_alt_name_idx"),
+            models.Index(fields=["start_time"], name="timeslot_start_time_idx"),
+            models.Index(fields=["alt_name", "start_time", "end_time"], name="timeslot_lookup_idx"),
+        ]
 
     def __repr__(self):
         res = self.start_time.strftime("%H:%M").removeprefix("0")
@@ -79,6 +87,10 @@ class EventPlace(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Место проведения события"
         verbose_name_plural = "Места проведения события"
+        indexes: ClassVar = [
+            models.Index(fields=["room"], name="eventplace_room_idx"),
+            models.Index(fields=["building", "room"], name="eventplace_building_room_idx"),
+        ]
 
     def __repr__(self):
         return f"{self.building} {self.room}"
@@ -93,6 +105,9 @@ class EventKind(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Тип события"
         verbose_name_plural = "Типы событий"
+        indexes: ClassVar = [
+            models.Index(fields=["name"], name="eventkind_name_idx"),
+        ]
 
     def __repr__(self):
         return str(self.name)
@@ -107,6 +122,10 @@ class AbstractDay(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Абстрактный день"
         verbose_name_plural = "Абстрактные дни"
+        indexes: ClassVar = [
+            models.Index(fields=["day_number"], name="abstractday_number_idx"),
+            models.Index(fields=["name"], name="abstractday_name_idx"),
+        ]
 
     def __repr__(self):
         return f"{self.name!s}"
@@ -118,6 +137,9 @@ class Organization(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Учреждение"
         verbose_name_plural = "Учреждения"
+        indexes: ClassVar = [
+            models.Index(fields=["name"], name="organization_name_idx"),
+        ]
 
     def __repr__(self):
         return str(self.name)
@@ -141,6 +163,11 @@ class Department(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Подразделение"
         verbose_name_plural = "Подразделения"
+        indexes: ClassVar = [
+            models.Index(fields=["code"], name="department_code_idx"),
+            models.Index(fields=["shortname"], name="department_shortname_idx"),
+            models.Index(fields=["name", "shortname", "code"], name="department_identity_idx"),
+        ]
 
     def __repr__(self):
         return str(self.name)
@@ -159,6 +186,9 @@ class ScheduleTemplateMetadata(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Метаданные шаблона расписания"
         verbose_name_plural = "Метаданные шаблона расписания"
+        indexes: ClassVar = [
+            models.Index(fields=["faculty", "scope"], name="sch_tmpl_meta_lookup_idx"),
+        ]
 
     def __repr__(self):
         return f"{self.faculty}, {self.Scope(self.scope).label}"
@@ -172,6 +202,9 @@ class ScheduleMetadata(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Метаданные расписания"
         verbose_name_plural = "Метаданные расписания"
+        indexes: ClassVar = [
+            models.Index(fields=["years", "course", "semester"], name="schedule_meta_lookup_idx"),
+        ]
 
     def __repr__(self):
         return f"{self.years}, {self.course}курс, {self.semester}сем"
@@ -196,6 +229,9 @@ class ScheduleTemplate(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Шаблон расписания"
         verbose_name_plural = "Шаблоны расписаний"
+        indexes: ClassVar = [
+            models.Index(fields=["metadata", "department"], name="sch_tmpl_meta_dept_idx"),
+        ]
 
     def __repr__(self):
         if self.repetition_period in [0, 5, 6, 7, 8, 9] or self.repetition_period // 10 == 1:
@@ -251,6 +287,13 @@ class Schedule(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Расписание"
         verbose_name_plural = "Расписания"
+        indexes: ClassVar = [
+            models.Index(fields=["status"], name="schedule_status_idx"),
+            models.Index(
+                fields=["metadata", "schedule_template", "status"],
+                name="schedule_identity_idx",
+            ),
+        ]
 
     def __repr__(self):
         return (
@@ -303,6 +346,12 @@ class EventParticipant(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Участник события"
         verbose_name_plural = "Участники события"
+        indexes: ClassVar = [
+            models.Index(fields=["name"], name="eventparticipant_name_idx"),
+            models.Index(fields=["role"], name="eventparticipant_role_idx"),
+            models.Index(fields=["is_group"], name="eventparticipant_is_group_idx"),
+            models.Index(fields=["name", "department"], name="eventparticipant_identity_idx"),
+        ]
 
     def __repr__(self):
         return f"{self.name} ({self.role})"
@@ -351,6 +400,10 @@ class AbstractEventChanges(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Изменения в запланированном событии"
         verbose_name_plural = "Изменения в запланированных событиях"
+        indexes: ClassVar = [
+            models.Index(fields=["is_exported"], name="ae_changes_exported_idx"),
+            models.Index(fields=["datemodified"], name="ae_changes_modified_idx"),
+        ]
 
     def __repr__(self):
         return f"{self.group}, {self.date_time}, {self.subject}"
@@ -520,6 +573,12 @@ class AbstractEvent(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Запланированное событие"
         verbose_name_plural = "Запланированные события"
+        indexes: ClassVar = [
+            models.Index(
+                fields=["schedule", "abstract_day", "time_slot", "holds_on_date"],
+                name="ae_schedule_time_idx",
+            ),
+        ]
 
     def __repr__(self):
         return f"Занятие по {self.subject.name}, {self.time_slot.alt_name}ч."
@@ -625,6 +684,9 @@ class EventCancel(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Отмена событий"
         verbose_name_plural = "Отмены событий"
+        indexes: ClassVar = [
+            models.Index(fields=["department", "date"], name="eventcancel_dept_date_idx"),
+        ]
 
     def __repr__(self):
         return f"Отмена событий на {self.date}"
@@ -658,6 +720,9 @@ class DayDateOverride(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Перенос дня на другую дату"
         verbose_name_plural = "Переносы дней на другие даты"
+        indexes: ClassVar = [
+            models.Index(fields=["department", "day_source"], name="dayoverride_dept_source_idx"),
+        ]
 
     def __repr__(self):
         return f"Перенос с {self.day_source} на {self.day_destination}"
@@ -720,6 +785,15 @@ class Event(CommonModel):
     class Meta(CommonModel.Meta):
         verbose_name = "Событие"
         verbose_name_plural = "События"
+        indexes: ClassVar = [
+            models.Index(fields=["date"], name="event_date_idx"),
+            models.Index(fields=["is_event_overriden"], name="event_overriden_idx"),
+            models.Index(fields=["is_event_canceled"], name="event_canceled_idx"),
+            models.Index(
+                fields=["abstract_event", "is_event_overriden"], name="event_abs_overriden_idx"
+            ),
+            models.Index(fields=["date", "time_slot_override"], name="event_date_time_idx"),
+        ]
 
     def __repr__(self):
         return f"Занятие по {self.abstract_event.subject.name}"
