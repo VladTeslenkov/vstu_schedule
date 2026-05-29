@@ -16,7 +16,7 @@
   <div class="header-actions">
     <a class="btn btn--ghost" href="{% url 'panel_tasks' %}">Назад</a>
     <a class="btn btn--ghost" href="">
-      <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#refresh-cw"></use></svg>
+      <i data-lucide="refresh-cw" class="icon"></i>
       Обновить
     </a>
   </div>
@@ -39,7 +39,7 @@
         {% csrf_token %}
         <input type="hidden" name="run" value="{{ selected_run.id }}">
         <button class="btn btn--danger btn--sm" type="submit">
-          <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#square"></use></svg>
+          <i data-lucide="square" class="icon"></i>
           Остановить
         </button>
       </form>

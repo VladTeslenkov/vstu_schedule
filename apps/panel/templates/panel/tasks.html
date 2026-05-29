@@ -68,7 +68,7 @@
               <form method="post" action="{% url 'panel_task_run' task.name %}">
                 {% csrf_token %}
                 <button class="btn btn--ghost btn--sm" type="submit" {% if not task.config.execution_enabled or not task.can_run_without_args %}disabled{% endif %}>
-                  <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#play"></use></svg>
+                  <i data-lucide="play" class="icon"></i>
                   Запустить
                 </button>
               </form>
@@ -77,17 +77,17 @@
                   {% csrf_token %}
                   <input type="hidden" name="run" value="{{ task.latest_run.id }}">
                   <button class="btn btn--danger btn--sm" type="submit">
-                    <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#square"></use></svg>
+                    <i data-lucide="square" class="icon"></i>
                     Остановить
                   </button>
                 </form>
               {% endif %}
               <a class="btn btn--ghost btn--sm" href="{% url 'panel_task_configure' task.name %}">
-                <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#settings"></use></svg>
+                <i data-lucide="settings" class="icon"></i>
                 Настроить
               </a>
               <a class="btn btn--ghost btn--sm" href="{% url 'panel_task_log' task.name %}">
-                <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#scroll-text"></use></svg>
+                <i data-lucide="scroll-text" class="icon"></i>
                 Лог
               </a>
             </div>

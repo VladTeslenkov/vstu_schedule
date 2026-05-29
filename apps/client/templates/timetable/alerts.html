@@ -7,14 +7,14 @@
         data-alert-id="{{ alert.pk }}"
         data-alert-dismissible="{{ alert.is_dismissible|yesno:'1,0' }}"
       >
-        <svg class="alert-icon"><use href="{% static 'icons/lucide.svg' %}#{{ alert.icon_name }}"></use></svg>
+        <i data-lucide="{{ alert.icon_name }}" class="alert-icon"></i>
         <div class="alert-text">
           <strong>{{ alert.display_title }}</strong>
           {{ alert.display_body|linebreaksbr }}
         </div>
         {% if alert.is_dismissible %}
           <button class="icon-button alert-close" type="button" aria-label="{% translate "Close announcement" %}">
-            <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#x"></use></svg>
+            <i data-lucide="x" class="icon"></i>
           </button>
         {% endif %}
       </div>

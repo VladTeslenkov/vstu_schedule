@@ -76,11 +76,11 @@
 
       <div class="filters-actions">
         <button class="btn btn-primary" type="submit">
-        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#search"></use></svg>
+        <i data-lucide="search" class="icon"></i>
         {% translate "Показать" %}
         </button>
         <button class="btn btn-secondary" type="button" id="reset-filters-button">
-        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#rotate-ccw"></use></svg>
+        <i data-lucide="rotate-ccw" class="icon"></i>
         {% translate "Сбросить" %}
         </button>
       </div>
@@ -88,7 +88,7 @@
 
     <div class="filters-toolbar">
       <button class="btn btn-secondary btn-more" type="button" id="more-filters-button">
-        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#sliders-horizontal"></use></svg>
+        <i data-lucide="sliders-horizontal" class="icon"></i>
         <span>{% if addition_filters_visible == "1" %}{% translate "Меньше фильтров" %}{% else %}{% translate "Больше фильтров" %}{% endif %}</span>
       </button>
 

@@ -36,13 +36,13 @@
         data-panel-alert
       >
         {% csrf_token %}
-        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#{{ alert.icon_name }}"></use></svg>
+        <i data-lucide="{{ alert.icon_name }}" class="icon"></i>
         <div class="panel-flash__text">
           <strong>{{ alert.display_title }}</strong>
           <span>{{ alert.display_body|linebreaksbr }}</span>
         </div>
         <button class="panel-flash__close" type="submit" aria-label="Close alert">
-          <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#x"></use></svg>
+          <i data-lucide="x" class="icon"></i>
         </button>
       </form>
     {% endfor %}
@@ -54,15 +54,15 @@
     <nav class="sidebar__nav">
       <div class="sidebar__section-title">Меню</div>
       <a href="{% url 'monitoring_panel' %}" class="{% if active_nav == 'monitoring' %}active{% endif %}">
-        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#activity"></use></svg>
+        <i data-lucide="activity" class="icon"></i>
         <span>Мониторинг</span>
       </a>
       <a href="{% url 'panel_actions' %}" class="{% if active_nav == 'actions' %}active{% endif %}">
-        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#zap"></use></svg>
+        <i data-lucide="zap" class="icon"></i>
         <span>Действия</span>
       </a>
       <a href="{% url 'panel_tasks' %}" class="{% if active_nav == 'tasks' %}active{% endif %}">
-        <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#list-checks"></use></svg>
+        <i data-lucide="list-checks" class="icon"></i>
         <span>Задачи</span>
       </a>
     </nav>
@@ -77,7 +77,7 @@
           <span data-panel-theme-label>Тема: авто</span>
         </button>
         <a href="{% url 'admin:index' %}">
-          <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#settings"></use></svg>
+          <i data-lucide="settings" class="icon"></i>
           <span>Администрирование</span>
         </a>
       </div>
@@ -87,6 +87,10 @@
     </main>
   </div>
 </div>
+<script src="{% static 'vendor/lucide/lucide.min.js' %}"></script>
+<script>
+  lucide.createIcons();
+</script>
 <script src="{% static 'src/panel_theme.js' %}"></script>
 <script>
   document.querySelectorAll("[data-panel-alert]").forEach(function (form) {

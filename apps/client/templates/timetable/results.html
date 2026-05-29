@@ -6,7 +6,7 @@
         <div class="day-bar">
           <div class="day-title">
             <span>
-              <svg class="icon"><use href="{% static 'icons/lucide.svg' %}#calendar"></use></svg>
+              <i data-lucide="calendar" class="icon"></i>
               {{ entry.0.abstract_event.abstract_day.name }}
             </span>
             <span class="day-separator" aria-hidden="true"></span>
@@ -24,7 +24,7 @@
             {% for event in entry %}
               <article class="lesson-card {% if event.is_event_canceled %}lesson-card--canceled{% endif %}">
                 <div class="lesson-time">
-                  <svg class="time-icon"><use href="{% static 'icons/lucide.svg' %}#clock"></use></svg>
+                  <i data-lucide="clock" class="time-icon"></i>
                   <span>{{ event.time_slot_override.start_time }} - {{ event.time_slot_override.end_time }}</span>
                 </div>
                 <div class="lesson-subject">
@@ -43,7 +43,7 @@
                 </div>
                 <div class="lesson-groups">
                   <div class="lesson-meta-title">
-                    <svg class="meta-icon"><use href="{% static 'icons/lucide.svg' %}#users"></use></svg>
+                    <i data-lucide="users" class="meta-icon"></i>
                     {% translate "Группы" %}
                   </div>
                   <div class="chips">
@@ -56,7 +56,7 @@
                 </div>
                 <div class="lesson-teacher">
                   <div class="lesson-meta-title">
-                    <svg class="meta-icon"><use href="{% static 'icons/lucide.svg' %}#user"></use></svg>
+                    <i data-lucide="user" class="meta-icon"></i>
                     {% translate "Преподаватель" %}
                   </div>
                   <div class="teacher">
@@ -69,7 +69,7 @@
                 </div>
                 <div class="lesson-room">
                   <div class="lesson-meta-title">
-                    <svg class="meta-icon"><use href="{% static 'icons/lucide.svg' %}#map-pin"></use></svg>
+                    <i data-lucide="map-pin" class="meta-icon"></i>
                     {% translate "Аудитория" %}
                   </div>
                   <div class="room">
