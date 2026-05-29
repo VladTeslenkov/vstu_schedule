@@ -4,6 +4,12 @@ concurrency = "parallel"
 name = { ru = "Диспетчер настроенных задач", en = "Configured task dispatcher" }
 description = { ru = "Внутренняя задача, которая запускает пользовательские задачи с актуальными настройками панели.", en = "Internal task that queues panel-managed tasks with the latest runtime settings." }
 
+["panel.tasks.run_panel_action"]
+internal = true
+concurrency = "parallel"
+name = { ru = "Действие панели управления", en = "Control panel action" }
+description = { ru = "Внутренняя короткоживущая задача для выполнения действий панели вне HTTP-запроса.", en = "Internal short-lived task for executing control panel actions outside the HTTP request." }
+
 ["panel.tasks.update_timetable"]
 concurrency = "exclusive"
 name = { ru = "Обновление расписания", en = "Timetable update" }

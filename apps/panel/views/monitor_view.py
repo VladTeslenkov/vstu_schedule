@@ -6,9 +6,11 @@ from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.common.models import Alert, FileVersion, Resource, Setting
+from apps.common.selectors import admin_alerts
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +100,23 @@ def monitoring_stats(request: HttpRequest) -> JsonResponse:
             "resources": resources,
         }
     )
+
+
+@staff_member_required
+def admin_alerts_feed(request: HttpRequest) -> JsonResponse:
+    alerts = [
+        {
+            "id": alert.pk,
+            "category": alert.category,
+            "icon_name": alert.icon_name,
+            "title": alert.display_title,
+            "body": alert.display_body,
+            "is_dismissible": alert.is_dismissible,
+            "dismiss_url": reverse("dismiss_admin_alert", args=[alert.pk]),
+        }
+        for alert in admin_alerts()
+    ]
+    return JsonResponse({"alerts": alerts})
 
 
 @staff_member_required

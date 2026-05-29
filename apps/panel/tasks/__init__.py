@@ -1,12 +1,15 @@
 import json
 import logging
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any, cast
 
 from celery import current_app
 from django.conf import settings
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
+from apps.common.models import Alert
+from apps.common.services.alerts import create_alert
 from apps.panel.exceptions import CeleryTaskNotRegisteredError
 from apps.panel.services.task_parameters import celery_task_kwargs
 from vstu_schedule.tasks.decorators import project_task
@@ -15,6 +18,40 @@ from vstu_schedule.tasks.descriptors import get_task_descriptor
 logger = logging.getLogger(__name__)
 
 DISPATCH_CONFIGURED_TASK_NAME = "panel.tasks.dispatch_configured_task"
+
+
+@project_task(name="panel.tasks.run_panel_action", max_retries=0)
+def run_panel_action_task(
+    self: Any,
+    action_id: str,
+    *,
+    upload_path: str = "",
+    mode: str = "",
+) -> dict[str, str]:
+    from apps.panel.services.actions import get_panel_action, run_panel_action
+
+    action = get_panel_action(action_id)
+    try:
+        message = run_panel_action(action_id, upload_path=upload_path, mode=mode)
+        logger.info(
+            "Panel action completed: %s [id=%s]",
+            action_id,
+            self.request.id,
+        )
+        return {"status": "success", "action": action_id, "message": message}
+    except Exception as exc:
+        logger.error("Panel action failed: %s", action_id, exc_info=True)
+        create_alert(
+            title=f"Ошибка действия панели: {action.title}",
+            body=str(exc),
+            category=Alert.Category.DANGER,
+            is_admin=True,
+            is_dismissible=True,
+        )
+        raise
+    finally:
+        if upload_path:
+            Path(upload_path).unlink(missing_ok=True)
 
 
 def _task_apply_options(task_name: str) -> dict[str, Any]:

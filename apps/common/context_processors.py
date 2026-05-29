@@ -5,9 +5,7 @@ from apps.common.selectors import admin_alerts as get_admin_alerts
 
 
 def admin_alerts(request: HttpRequest) -> dict[str, object]:
-    if not request.path.startswith("/panel/timetable_update/") or not getattr(
-        request.user, "is_staff", False
-    ):
+    if not request.path.startswith("/panel/") or not getattr(request.user, "is_staff", False):
         return {}
 
     try:

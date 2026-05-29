@@ -32,6 +32,43 @@ def test_admin_alerts_include_active_admin_alerts():
 
 
 @pytest.mark.django_db
+def test_admin_alerts_feed_returns_active_admin_alerts(admin_client):
+    visible = Alert.objects.create(
+        title="Visible",
+        body="Body",
+        is_admin=True,
+        is_dismissible=True,
+    )
+    Alert.objects.create(title="Public", body="Body")
+    Alert.objects.create(title="Disabled", body="Body", is_admin=True, is_enabled=False)
+
+    response = admin_client.get(reverse("admin_alerts_feed"))
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "alerts": [
+            {
+                "id": visible.pk,
+                "category": visible.category,
+                "icon_name": visible.icon_name,
+                "title": visible.display_title,
+                "body": visible.display_body,
+                "is_dismissible": True,
+                "dismiss_url": reverse("dismiss_admin_alert", args=[visible.pk]),
+            }
+        ]
+    }
+
+
+@pytest.mark.django_db
+def test_admin_alerts_feed_requires_staff_login(client):
+    response = client.get(reverse("admin_alerts_feed"))
+
+    assert response.status_code == 302
+    assert "/admin/login/" in response.url
+
+
+@pytest.mark.django_db
 def test_dismiss_admin_alert_deletes_dismissible_alert(admin_client):
     alert = Alert.objects.create(title="Visible", body="Body", is_admin=True, is_dismissible=True)
 

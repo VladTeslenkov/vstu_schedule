@@ -9,8 +9,10 @@ urlpatterns = [
     path("", RedirectView.as_view(url="/panel/timetable_update/", permanent=False)),
     path("login/", RedirectView.as_view(pattern_name="admin:login", permanent=False)),
     path("actions/", panel.actions_panel, name="panel_actions"),
+    path("actions/run/", panel.run_panel_action, name="panel_action_run"),
     # API и страница мониторинга — под /panel/timetable_update/ (см. обсуждение в PR)
     path("timetable_update/stats/", monitor_view.monitoring_stats, name="monitoring_stats"),
+    path("alerts/", monitor_view.admin_alerts_feed, name="admin_alerts_feed"),
     path(
         "alerts/<int:alert_id>/dismiss/",
         monitor_view.dismiss_admin_alert,

@@ -1,31 +1,133 @@
 {% extends "panel/base.html" %}
 
-{% block title %}Действия — Панель управления{% endblock %}
+{% block title %}Действия - Панель управления{% endblock %}
 {% block topbar_title %}Действия{% endblock %}
 
 {% block content %}
 <header class="page__header">
-  <h1>Действия</h1>
+  <div>
+    <h1>Действия</h1>
+    <p class="page-description">Операции запускаются в фоне и не блокируют HTTP-запрос.</p>
+  </div>
 </header>
 
 <section class="card">
   <div class="card__header">
-    <h2>Быстрые действия</h2>
+    <h2>Импорт из файлов</h2>
   </div>
-  <div class="empty-row">Страница пока не готова.</div>
+  <div class="action-grid">
+    {% for action in file_actions %}
+      <form class="action-panel" method="post" enctype="multipart/form-data" action="{% url 'panel_action_run' %}" data-panel-action-form>
+        {% csrf_token %}
+        <input type="hidden" name="action_id" value="{{ action.action_id }}">
+        <div class="action-panel__content">
+          <h3>{{ action.title }}</h3>
+          <p>{{ action.description }}</p>
+        </div>
+        {% if action.mode_choices %}
+          <label class="field-label" for="{{ action.action_id }}-mode">Режим</label>
+          <select id="{{ action.action_id }}-mode" class="field-select" name="{{ action.mode_field }}">
+            {% for value, label in action.mode_choices %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+        <label class="field-label" for="{{ action.action_id }}-file">Файл</label>
+        <input id="{{ action.action_id }}-file" class="field-input" type="file" name="{{ action.file_field }}" required>
+        <button class="btn btn--primary" type="submit">
+          <i data-lucide="upload" class="icon"></i>
+          <span>{{ action.button_label }}</span>
+        </button>
+        <div class="task-status" hidden data-panel-action-status></div>
+      </form>
+    {% endfor %}
+  </div>
 </section>
 
-<section class="card">
+<section class="card actions-section">
   <div class="card__header">
-    <h2>Пакетные операции</h2>
+    <h2>Обслуживание данных</h2>
   </div>
-  <div class="empty-row">Страница пока не готова.</div>
+  <div class="action-grid action-grid--compact">
+    {% for action in button_actions %}
+      <form class="action-panel" method="post" action="{% url 'panel_action_run' %}" data-panel-action-form>
+        {% csrf_token %}
+        <input type="hidden" name="action_id" value="{{ action.action_id }}">
+        <div class="action-panel__content">
+          <h3>{{ action.title }}</h3>
+          <p>{{ action.description }}</p>
+        </div>
+        <button class="btn {% if action.action_id == 'delete_archive_schedules' %}btn--danger{% else %}btn--primary{% endif %}" type="submit">
+          <i data-lucide="{% if action.action_id == 'delete_archive_schedules' %}trash-2{% else %}play{% endif %}" class="icon"></i>
+          <span>{{ action.button_label }}</span>
+        </button>
+        <div class="task-status" hidden data-panel-action-status></div>
+      </form>
+    {% endfor %}
+  </div>
 </section>
+{% endblock %}
 
-<section class="card">
-  <div class="card__header">
-    <h2>История действий</h2>
-  </div>
-  <div class="empty-row">Страница пока не готова.</div>
-</section>
+{% block scripts %}
+<script>
+  document.querySelectorAll("[data-panel-action-form]").forEach(function (form) {
+    var statusBox = form.querySelector("[data-panel-action-status]");
+    var button = form.querySelector("button[type=submit]");
+
+    function setStatus(kind, text) {
+      statusBox.hidden = false;
+      statusBox.className = "task-status task-status--" + kind;
+      statusBox.textContent = text;
+    }
+
+    function poll(taskId) {
+      var url = form.action + "?task_id=" + encodeURIComponent(taskId);
+      fetch(url)
+        .then(function (response) { return response.json(); })
+        .then(function (payload) {
+          if (payload.status === "running") {
+            setStatus("running", "Выполняется...");
+            window.setTimeout(function () { poll(taskId); }, 2000);
+            return;
+          }
+          if (payload.status === "success") {
+            setStatus("success", "Готово.");
+            button.disabled = false;
+            form.reset();
+            return;
+          }
+          setStatus("error", payload.error_message || "Действие завершилось с ошибкой.");
+          button.disabled = false;
+        })
+        .catch(function () {
+          setStatus("error", "Не удалось получить статус задачи.");
+          button.disabled = false;
+        });
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      button.disabled = true;
+      setStatus("running", "Запуск...");
+      fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      })
+        .then(function (response) { return response.json(); })
+        .then(function (payload) {
+          if (payload.status !== "running") {
+            setStatus("error", payload.error_message || "Не удалось запустить действие.");
+            button.disabled = false;
+            return;
+          }
+          poll(payload.id);
+        })
+        .catch(function () {
+          setStatus("error", "Не удалось запустить действие.");
+          button.disabled = false;
+        });
+    });
+  });
+</script>
 {% endblock %}
