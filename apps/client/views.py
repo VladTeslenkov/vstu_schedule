@@ -3,6 +3,7 @@ from django.shortcuts import redirect, render
 from django.template.defaulttags import register
 
 from apps.client.services.client_helpers import (
+    InvalidDateFilterError,
     TooManyEventsFoundError,
     get_cached_filter_options,
     make_table_data,
@@ -128,6 +129,8 @@ def index(request):
         selected["time_slot"] = _get_list_param(request, "time_slot")
         try:
             context["data"] = make_table_data(selected)
+        except InvalidDateFilterError:
+            context["data"] = []
         except TooManyEventsFoundError as error:
             context["data"] = []
             context["too_many_events_found"] = True

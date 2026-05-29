@@ -101,6 +101,22 @@ def test_schedule_page_shows_too_many_events_state(client, monkeypatch):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"date": "single_date", "left_date": "not-a-date"},
+        {"date": "range_date", "left_date": "2026-05-29", "right_date": "not-a-date"},
+    ],
+)
+def test_schedule_page_handles_invalid_dates_without_server_error(client, params):
+    response = client.get(reverse("schedule:index"), params)
+
+    assert response.status_code == 200
+    assert response.context["data"] == []
+    assert response.context["too_many_events_found"] is False
+
+
+@pytest.mark.django_db
 def test_has_more_events_than_detects_limit():
     Event.objects.bulk_create(Event() for _ in range(251))
 

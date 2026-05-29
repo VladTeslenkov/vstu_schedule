@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import cast
 
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 
 from apps.common.models import AbstractEvent, Event
@@ -53,6 +54,10 @@ class TooManyEventsFoundError(Exception):
     def __init__(self, limit: int) -> None:
         self.limit = limit
         super().__init__(f"Found more than {limit} events.")
+
+
+class InvalidDateFilterError(Exception):
+    """Raised when schedule date filter values cannot be parsed."""
 
 
 def _build_filter_options() -> FilterOptions:
@@ -111,7 +116,10 @@ def get_cached_filter_options() -> FilterOptions:
 
 def make_table_data(filters: dict, max_events: int = MAX_FILTERED_EVENTS) -> list[TableDataRow]:
     """Used to get filtered and formated data ready to visualisation"""
-    events = get_filtered_events(filters)
+    try:
+        events = get_filtered_events(filters)
+    except (ValueError, ValidationError) as exc:
+        raise InvalidDateFilterError(str(exc)) from exc
 
     if has_more_events_than(events, max_events):
         raise TooManyEventsFoundError(max_events)
