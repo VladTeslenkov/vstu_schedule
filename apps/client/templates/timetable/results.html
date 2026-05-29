@@ -12,10 +12,24 @@
             <span class="day-separator" aria-hidden="true"></span>
             <span class="date">{{ entry.0.date }}</span>
           </div>
-          <div class="result-count">{% blocktranslate count lessons_count=entry|length %}Найдено занятие: {{ lessons_count }}{% plural %}Найдено занятий: {{ lessons_count }}{% endblocktranslate %}</div>
+          <div class="day-actions">
+            <div class="result-count">{% blocktranslate count lessons_count=entry|length %}Найдено занятие: {{ lessons_count }}{% plural %}Найдено занятий: {{ lessons_count }}{% endblocktranslate %}</div>
+            <button
+              class="icon-button day-toggle"
+              type="button"
+              aria-expanded="true"
+              aria-controls="day-content-{{ forloop.counter }}"
+              aria-label="{% translate "Свернуть день" %}"
+              title="{% translate "Свернуть день" %}"
+              data-expand-label="{% translate "Развернуть день" %}"
+              data-collapse-label="{% translate "Свернуть день" %}"
+            >
+              <i data-lucide="chevron-up" class="icon day-toggle-icon"></i>
+            </button>
+          </div>
         </div>
 
-        <div class="day-content {% if calendar_visible == "1" %}day-content--with-calendar{% endif %}">
+        <div id="day-content-{{ forloop.counter }}" class="day-content {% if calendar_visible == "1" %}day-content--with-calendar{% endif %}">
           <div class="calendar-slot {% if calendar_visible != "1" %}is-hidden{% endif %}">
             {% include "timetable/calendar.html" %}
           </div>

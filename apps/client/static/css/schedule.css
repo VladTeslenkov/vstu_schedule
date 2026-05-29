@@ -561,6 +561,13 @@ select {
   background: var(--border);
 }
 
+.day-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .result-count {
   padding: 7px 12px;
   border: 1px solid var(--border);
@@ -572,11 +579,36 @@ select {
   white-space: nowrap;
 }
 
+.day-toggle {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--muted);
+  box-shadow: var(--shadow-soft);
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.day-toggle:hover {
+  color: var(--accent);
+}
+
+.day-toggle-icon {
+  transition: transform 0.18s ease;
+}
+
+.day-section.is-collapsed .day-toggle-icon {
+  transform: rotate(180deg);
+}
+
 .day-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: start;
+}
+
+.day-content[hidden] {
+  display: none;
 }
 
 .day-content--with-calendar {
@@ -1145,6 +1177,11 @@ select.control[multiple] option:checked {
   .day-bar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .day-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .day-title {

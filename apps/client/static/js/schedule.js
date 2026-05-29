@@ -252,6 +252,26 @@
     });
   }
 
+  function setupDayToggles() {
+    document.querySelectorAll(".day-toggle").forEach((button) => {
+      const contentId = button.getAttribute("aria-controls");
+      const content = contentId ? document.getElementById(contentId) : null;
+      const daySection = button.closest(".day-section");
+      if (!content || !daySection) return;
+
+      button.addEventListener("click", () => {
+        const isExpanded = button.getAttribute("aria-expanded") === "true";
+        const nextExpanded = !isExpanded;
+        button.setAttribute("aria-expanded", String(nextExpanded));
+        const label = nextExpanded ? button.dataset.collapseLabel || "" : button.dataset.expandLabel || "";
+        button.setAttribute("aria-label", label);
+        button.setAttribute("title", label);
+        content.hidden = !nextExpanded;
+        daySection.classList.toggle("is-collapsed", !nextExpanded);
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("#schedule-filter-form select[multiple]").forEach(createAutocompleteSelect);
 
@@ -267,6 +287,7 @@
       ?.addEventListener("click", resetFilters);
 
     setupPublicAlerts();
+    setupDayToggles();
 
     updateDateFields();
     updateCalendarVisibility();
