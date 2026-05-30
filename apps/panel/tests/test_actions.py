@@ -61,6 +61,8 @@ def test_panel_action_endpoint_queues_uploaded_file(
 
 @pytest.mark.django_db
 def test_panel_action_task_creates_admin_alert_on_failure(monkeypatch):
+    Alert.objects.all().delete()
+
     def fail_action(action_id, *, upload_path="", mode=""):
         raise RuntimeError("broken action")
 

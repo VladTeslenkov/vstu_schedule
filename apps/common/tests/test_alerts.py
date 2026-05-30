@@ -10,6 +10,8 @@ from apps.common.selectors import admin_alerts, public_alerts
 
 @pytest.mark.django_db
 def test_public_alerts_include_only_active_non_admin_alerts():
+    Alert.objects.all().delete()
+
     Alert.objects.create(title="Public", body="Visible")
     Alert.objects.create(title="Admin", body="Hidden", is_admin=True)
     Alert.objects.create(title="Disabled", body="Hidden", is_enabled=False)
