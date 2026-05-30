@@ -48,6 +48,7 @@ $env:DB_ENGINE="django.db.backends.sqlite3"; $env:POSTGRES_DB=":memory:"; uv run
 - Use the standard `logging` module for business-logic logging when needed.
 - Do not add secrets, real tokens, private data, or unnecessary generated files.
 - Prefer unrealistic sample data for public tests instead of real university schedules.
+- When changing user-facing client-side text or messages, update translations in `django.po`; do not hardcode translatable text.
 - New third-party dependencies must be justified and added with `uv`.
 
 ## Checks
