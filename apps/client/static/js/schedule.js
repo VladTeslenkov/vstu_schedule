@@ -1,4 +1,5 @@
 (function () {
+  const filtersStorageKey = "schedule.filters";
   let autocompleteId = 0;
 
   function getOptionText(option) {
@@ -255,13 +256,14 @@
     });
   }
 
-  function toggleExtraFilters() {
+  function setExtraFiltersVisibility(isVisible) {
     const container = document.getElementById("addition-filters-container");
     const state = document.getElementById("filters-visibility-state");
     const button = document.getElementById("more-filters-button");
     if (!container || !state || !button) return;
 
-    const isHidden = container.classList.toggle("is-hidden");
+    const isHidden = !isVisible;
+    container.classList.toggle("is-hidden", isHidden);
     container.hidden = isHidden;
     state.value = isHidden ? "0" : "1";
     button.setAttribute("aria-expanded", String(!isHidden));
@@ -272,7 +274,92 @@
     }
   }
 
+  function toggleExtraFilters() {
+    const container = document.getElementById("addition-filters-container");
+    if (!container) return;
+
+    setExtraFiltersVisibility(container.classList.contains("is-hidden"));
+  }
+
+  function getScheduleFilterForm() {
+    return document.getElementById("schedule-filter-form");
+  }
+
+  function getFormControls(form) {
+    return Array.from(form.elements).filter((element) => element.name);
+  }
+
+  function saveFilters() {
+    const form = getScheduleFilterForm();
+    if (!form) return;
+
+    const filters = {};
+    getFormControls(form).forEach((element) => {
+      if (element.type === "submit" || element.type === "button") return;
+      if (element instanceof HTMLSelectElement && element.multiple) {
+        filters[element.name] = getSelectedOptions(element).map((option) => option.value);
+        return;
+      }
+      if (element.type === "checkbox") {
+        filters[element.name] = element.checked;
+        return;
+      }
+      filters[element.name] = element.value;
+    });
+
+    try {
+      localStorage.setItem(filtersStorageKey, JSON.stringify(filters));
+    } catch (error) {
+      // Browser storage may be unavailable in private mode.
+    }
+  }
+
+  function restoreFilters() {
+    const form = getScheduleFilterForm();
+    if (!form) return;
+
+    let filters;
+    try {
+      filters = JSON.parse(localStorage.getItem(filtersStorageKey) || "null");
+    } catch (error) {
+      filters = null;
+    }
+    if (!filters || typeof filters !== "object") return;
+
+    getFormControls(form).forEach((element) => {
+      if (!Object.prototype.hasOwnProperty.call(filters, element.name)) return;
+      const value = filters[element.name];
+
+      if (element instanceof HTMLSelectElement && element.multiple) {
+        const selectedValues = Array.isArray(value) ? value.map(String) : [];
+        Array.from(element.options).forEach((option) => {
+          option.selected = selectedValues.includes(option.value);
+        });
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        return;
+      }
+      if (element.type === "checkbox") {
+        element.checked = Boolean(value);
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        return;
+      }
+      element.value = String(value);
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    setExtraFiltersVisibility(filters.addition_filters_visible === "1");
+  }
+
+  function clearSavedFilters() {
+    try {
+      localStorage.removeItem(filtersStorageKey);
+    } catch (error) {
+      // Browser storage may be unavailable in private mode.
+    }
+  }
+
   function resetFilters() {
+    clearSavedFilters();
+
     document.querySelectorAll("#schedule-filter-form select").forEach((select) => {
       if (select.id === "date-select") {
         select.value = "today";
@@ -349,8 +436,12 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    const form = getScheduleFilterForm();
+
+    restoreFilters();
     document.querySelectorAll("#schedule-filter-form select[multiple]").forEach(createAutocompleteSelect);
 
+    form?.addEventListener("submit", saveFilters);
     document.getElementById("date-select")?.addEventListener("change", updateDateFields);
     document
       .getElementById("show-calendar-checkbox")
