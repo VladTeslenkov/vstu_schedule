@@ -146,7 +146,9 @@ class ExportController(ApiController):
             ) from exc
 
         response = HttpResponse(exported.body, content_type=exported.content_type)
-        response["X-Export-Filename"] = base64.b64encode(exported.filename.encode("utf-8")).decode("ascii")
+        response["X-Export-Filename"] = base64.b64encode(exported.filename.encode("utf-8")).decode(
+            "ascii"
+        )
         print(exported.filename)
         return response
 
