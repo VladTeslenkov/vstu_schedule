@@ -403,6 +403,8 @@ select {
 
 .btn-primary:hover {
   background: var(--accent-dark);
+  color: white;
+  text-decoration: none;
 }
 
 .btn-secondary {
