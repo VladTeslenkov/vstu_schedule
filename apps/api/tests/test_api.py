@@ -93,11 +93,8 @@ def test_export_filename_includes_selected_reference_filters(client):
     )
 
     assert response.status_code == HTTPStatus.OK
-    assert (
-        response["X-Export-Filename"]
-        == _encoded_filename(
-            "schedule_groups_TEST-101_teachers_Teacher-Example_rooms_B-101_2026-02-02.json"
-        )
+    assert response["X-Export-Filename"] == _encoded_filename(
+        "schedule_groups_TEST-101_teachers_Teacher-Example_rooms_B-101_2026-02-02.json"
     )
 
 
