@@ -289,6 +289,37 @@
     return Array.from(form.elements).filter((element) => element.name);
   }
 
+  function hasQueryFilters(form) {
+    const query = new URLSearchParams(window.location.search);
+    return getFormControls(form).some((element) => query.has(element.name));
+  }
+
+  function applyQueryFilters(form) {
+    const query = new URLSearchParams(window.location.search);
+
+    getFormControls(form).forEach((element) => {
+      if (element instanceof HTMLSelectElement && element.multiple) {
+        const selectedValues = query.getAll(element.name);
+        Array.from(element.options).forEach((option) => {
+          option.selected = selectedValues.includes(option.value);
+        });
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        return;
+      }
+      if (element.type === "checkbox") {
+        element.checked =
+          query.has(element.name) &&
+          query.getAll(element.name).some((value) => value === "1" || value === "true" || value === "on");
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        return;
+      }
+      element.value = query.get(element.name) || (element.id === "date-select" ? "today" : "");
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    setExtraFiltersVisibility(query.get("addition_filters_visible") === "1");
+  }
+
   function saveFilters() {
     const form = getScheduleFilterForm();
     if (!form) return;
@@ -317,6 +348,7 @@
   function restoreFilters() {
     const form = getScheduleFilterForm();
     if (!form) return;
+    if (hasQueryFilters(form)) return;
 
     let filters;
     try {
@@ -437,8 +469,11 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     const form = getScheduleFilterForm();
+    const shouldApplyQueryFilters = form && hasQueryFilters(form);
 
-    restoreFilters();
+    if (form && !shouldApplyQueryFilters) {
+      restoreFilters();
+    }
     document.querySelectorAll("#schedule-filter-form select[multiple]").forEach(createAutocompleteSelect);
 
     form?.addEventListener("submit", saveFilters);
@@ -452,6 +487,10 @@
     document
       .getElementById("reset-filters-button")
       ?.addEventListener("click", resetFilters);
+
+    if (form && shouldApplyQueryFilters) {
+      applyQueryFilters(form);
+    }
 
     setupPublicAlerts();
     setupDayToggles();
