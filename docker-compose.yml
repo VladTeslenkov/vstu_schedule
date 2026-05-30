@@ -22,7 +22,7 @@ services:
     build: .
     image: vstu_schedule:latest 
     # TODO: быстрый костыль. Загрузка больших, занимающих долгое время обработки, файлов может убить HTTP запрос
-    command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --timeout 75 --reload # в продакшене убрать --reload
+    command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --timeout 50 --reload # в продакшене убрать --reload
     ports:
       - "8000:8000"
     volumes:
