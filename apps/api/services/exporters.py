@@ -188,9 +188,9 @@ def _event_description(event: ApiEvent) -> str:
     if event.kind:
         parts.append(event.kind.name)
     if event.groups:
-        parts.append(f"Groups: {_join_names(event.groups)}")
+        parts.append(f"Группы: {_join_names(event.groups)}")
     if event.teachers:
-        parts.append(f"Teachers: {_join_names(event.teachers)}")
+        parts.append(f"Преподаватели: {_join_names(event.teachers)}")
     if event.is_canceled:
-        parts.append("Canceled")
+        parts.append("Отменено")
     return "\n".join(parts)
