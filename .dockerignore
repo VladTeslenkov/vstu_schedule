@@ -8,3 +8,4 @@ docs/
 .tmp*/
 .ruff_cache/
 .git/
+*.mo

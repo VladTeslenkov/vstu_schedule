@@ -52,6 +52,8 @@ COPY --from=builder /opt/venv /opt/venv
 # Копируем код проекта
 COPY . .
 
+RUN python manage.py compilemessages --locale en --ignore .venv
+
 # Права на запуск
 RUN chmod +x /app/entrypoint.sh && \
     mkdir -p /app/static /app/media
