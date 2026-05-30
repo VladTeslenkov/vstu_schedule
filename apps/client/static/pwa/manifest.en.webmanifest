@@ -1,0 +1,23 @@
+{
+  "name": "VSTU Class Schedule",
+  "short_name": "Schedule",
+  "start_url": "/schedule/",
+  "scope": "/schedule/",
+  "display": "standalone",
+  "theme_color": "#0876cf",
+  "background_color": "#f5f7fa",
+  "icons": [
+    {
+      "src": "/static/pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

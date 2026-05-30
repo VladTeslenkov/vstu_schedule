@@ -22,8 +22,13 @@ from django.urls import include
 from django.views.generic import RedirectView
 from dmr.routing import path
 
+from vstu_schedule.pwa import pwa_static_file
+
 urlpatterns = [
     path("", RedirectView.as_view(pattern_name="schedule:index", permanent=True)),
+    path("manifest.en.webmanifest", pwa_static_file, {"filename": "manifest.en.webmanifest"}),
+    path("manifest.ru.webmanifest", pwa_static_file, {"filename": "manifest.ru.webmanifest"}),
+    path("sw.js", pwa_static_file, {"filename": "sw.js"}),
     path("i18n/", include("django.conf.urls.i18n")),
     path("admin/", admin.site.urls),
     path("api/", include(("apps.api.urls", "api"), namespace="api")),

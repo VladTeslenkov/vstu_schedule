@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from django.test import override_settings
 from django.urls import reverse
@@ -21,6 +23,10 @@ def test_schedule_page_renders(client):
     assert 'name="group[]"' not in content
     assert 'aria-controls="addition-filters-container"' in content
     assert 'aria-expanded="false"' in content
+    assert '<meta name="theme-color" content="#0876cf">' in content
+    assert '<link rel="apple-touch-icon" href="/static/pwa/icon-180.png">' in content
+    assert '<link rel="manifest" href="/manifest.ru.webmanifest">' in content
+    assert 'navigator.serviceWorker.register("/sw.js")' in content
     assert "jquery" not in content.lower()
     assert "select2" not in content.lower()
 
@@ -34,8 +40,49 @@ def test_schedule_page_renders_english(client):
     assert '<html lang="en">' in content
     assert "VSTU Class Schedule" in content
     assert "Schedule filters" in content
+    assert '<link rel="manifest" href="/manifest.en.webmanifest">' in content
     assert 'data-autocomplete-placeholder="Start typing"' in content
     assert 'data-remove-label-template="Remove __value__"' in content
+
+
+def _streaming_text(response) -> str:
+    return b"".join(response.streaming_content).decode()
+
+
+@pytest.mark.parametrize(
+    ("url", "name", "short_name"),
+    [
+        ("/manifest.ru.webmanifest", "Расписание занятий ВолгГТУ", "Расписание"),
+        ("/manifest.en.webmanifest", "VSTU Class Schedule", "Schedule"),
+    ],
+)
+def test_pwa_manifest_endpoint(client, url, name, short_name):
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response["Content-Type"].startswith("application/manifest+json")
+    manifest = json.loads(_streaming_text(response))
+    assert manifest["name"] == name
+    assert manifest["short_name"] == short_name
+    assert manifest["start_url"] == "/schedule/"
+    assert manifest["scope"] == "/schedule/"
+    assert manifest["theme_color"] == "#0876cf"
+    assert manifest["background_color"] == "#f5f7fa"
+    assert {icon["sizes"] for icon in manifest["icons"]} == {"192x192", "512x512"}
+    assert all(icon["purpose"] == "any maskable" for icon in manifest["icons"])
+
+
+def test_pwa_service_worker_endpoint(client):
+    response = client.get("/sw.js")
+
+    assert response.status_code == 200
+    assert response["Content-Type"].startswith("application/javascript")
+    assert response["Service-Worker-Allowed"] == "/"
+    content = _streaming_text(response)
+    assert 'self.addEventListener("install"' in content
+    assert "self.skipWaiting()" in content
+    assert 'self.addEventListener("activate"' in content
+    assert "self.clients.claim()" in content
 
 
 @pytest.mark.django_db
