@@ -1,3 +1,4 @@
+import base64
 from datetime import date, time
 from http import HTTPStatus
 
@@ -71,7 +72,7 @@ def test_export_csv(client):
     assert response.status_code == HTTPStatus.OK
     assert response["Content-Type"].startswith("text/csv")
     assert "Content-Disposition" not in response
-    assert response["X-Export-Filename"] == "schedule_2026-02-02.csv"
+    assert response["X-Export-Filename"] == _encoded_filename("schedule_2026-02-02.csv")
     assert "Test discipline" in response.content.decode("utf-8-sig")
 
 
@@ -94,7 +95,9 @@ def test_export_filename_includes_selected_reference_filters(client):
     assert response.status_code == HTTPStatus.OK
     assert (
         response["X-Export-Filename"]
-        == "schedule_groups_TEST-101_teachers_Teacher-Example_rooms_B-101_2026-02-02.json"
+        == _encoded_filename(
+            "schedule_groups_TEST-101_teachers_Teacher-Example_rooms_B-101_2026-02-02.json"
+        )
     )
 
 
@@ -108,7 +111,22 @@ def test_export_filename_prefers_selected_reference_filters(client):
     )
 
     assert response.status_code == HTTPStatus.OK
-    assert response["X-Export-Filename"] == "schedule_groups_TEST-101.json"
+    assert response["X-Export-Filename"] == _encoded_filename("schedule_groups_TEST-101.json")
+
+
+@pytest.mark.django_db
+def test_export_filename_header_encodes_cyrillic_filters(client):
+    _create_event()
+
+    response = client.get(
+        reverse("api:export"),
+        {"group": "ГРУППА-101", "teacher": "Иванов Иван", "format": "json"},
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response["X-Export-Filename"] == _encoded_filename(
+        "schedule_groups_ГРУППА-101_teachers_Иванов-Иван.json"
+    )
 
 
 @pytest.mark.django_db
@@ -227,3 +245,7 @@ def _create_event() -> Event:
     event.participants_override.set([group, teacher])
     event.places_override.set([place])
     return event
+
+
+def _encoded_filename(filename: str) -> str:
+    return base64.b64encode(filename.encode("utf-8")).decode("ascii")
