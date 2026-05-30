@@ -1,6 +1,7 @@
 from typing import Any, ClassVar, cast
 
 from django.contrib import admin, messages
+from django.contrib.admin import AdminSite
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
@@ -19,6 +20,7 @@ from apps.common.models import (
     EventPlace,
     FileVersion,
     Organization,
+    Resource,
     Schedule,
     ScheduleMetadata,
     ScheduleTemplate,
@@ -102,6 +104,15 @@ class FileVersionAdmin(admin.ModelAdmin):
     search_fields = ("resource__name", "resource__path", "url", "hashsum")
     list_filter = ("mimetype", "timestamp", "last_changed")
     readonly_fields = ("timestamp",)
+
+
+@admin.register(Resource)
+class ResourceAdmin(admin.ModelAdmin):
+    list_display = ("name", "path", "deprecated", "last_update")
+    search_fields = ("name", "path", "metadata")
+    list_filter = ("deprecated", "last_update", "tags")
+    readonly_fields = ("last_update",)
+    filter_horizontal = ("tags",)
 
 
 @admin.register(TimetableFileImport)
@@ -470,3 +481,107 @@ class EventCancelAdmin(BaseAdmin):
 
 # TODO: django.core.exceptions.ImproperlyConfigured: The model TokenProxy is abstract, so it cannot be registered with admin.
 ##TokenAdmin.raw_id_fields = ["user"]
+
+
+ADMIN_MODEL_SECTIONS = (
+    (
+        "site_panel",
+        "Сайт и панель",
+        {
+            Alert.__name__,
+            Setting.__name__,
+        },
+    ),
+    (
+        "schedule",
+        "Расписание",
+        {
+            AbstractDay.__name__,
+            AbstractEvent.__name__,
+            AbstractEventChanges.__name__,
+            DayDateOverride.__name__,
+            Department.__name__,
+            Event.__name__,
+            EventCancel.__name__,
+            EventKind.__name__,
+            EventParticipant.__name__,
+            EventPlace.__name__,
+            Organization.__name__,
+            Schedule.__name__,
+            ScheduleMetadata.__name__,
+            ScheduleTemplate.__name__,
+            ScheduleTemplateMetadata.__name__,
+            Subject.__name__,
+            TimeSlot.__name__,
+        },
+    ),
+    (
+        "files",
+        "Файловое хранилище",
+        {
+            FileVersion.__name__,
+            Resource.__name__,
+            Tag.__name__,
+            TimetableFileImport.__name__,
+        },
+    ),
+)
+
+
+def _install_admin_model_sections() -> None:
+    if hasattr(admin.site, "_vstu_original_get_app_list"):
+        return
+
+    original_get_app_list = admin.site.get_app_list
+    admin.site._vstu_original_get_app_list = original_get_app_list  # type: ignore[attr-defined]
+
+    section_by_model = {
+        model_name: (section_key, section_name)
+        for section_key, section_name, model_names in ADMIN_MODEL_SECTIONS
+        for model_name in model_names
+    }
+
+    def get_app_list(
+        self: AdminSite,
+        request: HttpRequest,
+        app_label: str | None = None,
+    ) -> list[dict[str, Any]]:
+        app_list = original_get_app_list(request, app_label)
+        sectioned_apps: list[dict[str, Any]] = []
+
+        for app in app_list:
+            if app["app_label"] != "common":
+                sectioned_apps.append(app)
+                continue
+
+            grouped_models: dict[str, dict[str, Any]] = {
+                section_key: {
+                    **app,
+                    "app_label": f"common_{section_key}",
+                    "name": section_name,
+                    "models": [],
+                }
+                for section_key, section_name, _model_names in ADMIN_MODEL_SECTIONS
+            }
+            ungrouped_models = []
+            for model in app["models"]:
+                section = section_by_model.get(model["object_name"])
+                if section is None:
+                    ungrouped_models.append(model)
+                    continue
+
+                section_key, section_name = section
+                grouped_app = grouped_models[section_key]
+                grouped_app["name"] = section_name
+                grouped_app["models"].append(model)
+
+            sectioned_apps.extend(app for app in grouped_models.values() if app["models"])
+            if ungrouped_models:
+                sectioned_apps.append({**app, "models": ungrouped_models})
+
+        return sectioned_apps
+
+    admin.site.get_app_list = get_app_list.__get__(admin.site, AdminSite)
+
+
+_install_admin_model_sections()
