@@ -1,0 +1,27 @@
+/* Login page additions on top of panel.css. */
+.login-page {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-page .login-shell {
+  width: min(100%, 420px);
+}
+
+.login-page .login-card .card__header {
+  justify-content: center;
+}
+
+.login-page .login-card .card__header h1 {
+  color: var(--panel-text);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.login-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}

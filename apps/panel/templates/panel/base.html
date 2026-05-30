@@ -1,0 +1,102 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Панель управления{% endblock %}</title>
+  <link rel="icon" href="{% static 'icons/favicon.ico' %}" type="image/x-icon">
+  <script>
+    (function () {
+      var storedTheme = "auto";
+      try {
+        storedTheme = localStorage.getItem("panel.theme") || "auto";
+      } catch (error) {
+        storedTheme = "auto";
+      }
+      var isLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+      document.documentElement.dataset.theme = storedTheme === "auto"
+        ? (isLight ? "light" : "dark")
+        : storedTheme;
+      document.documentElement.dataset.themeChoice = storedTheme;
+    })();
+  </script>
+  <link rel="stylesheet" href="{% static 'style/panel.css' %}">
+  {% block styles %}{% endblock %}
+</head>
+<body class="panel-page {% block body_class %}{% endblock %}">
+  <section class="panel-flashes" aria-label="Admin alerts" data-panel-alerts data-panel-alerts-url="{% url 'admin_alerts_feed' %}">
+    {% csrf_token %}
+    {% for alert in admin_alerts %}
+      <form
+        class="panel-flash panel-flash--{{ alert.category }}"
+        method="post"
+        action="{% url 'dismiss_admin_alert' alert.pk %}"
+        data-panel-alert-id="{{ alert.pk }}"
+        data-panel-alert-dismissible="{{ alert.is_dismissible|yesno:'1,0' }}"
+        data-panel-alert
+      >
+        {% csrf_token %}
+        <i data-lucide="{{ alert.icon_name }}" class="icon"></i>
+        <div class="panel-flash__text">
+          <strong>{{ alert.display_title }}</strong>
+          <span>{{ alert.display_body|linebreaksbr }}</span>
+        </div>
+        <button class="panel-flash__close" type="submit" aria-label="Close alert">
+          <i data-lucide="x" class="icon"></i>
+        </button>
+      </form>
+    {% endfor %}
+  </section>
+<div class="panel-shell">
+  <aside class="sidebar">
+    <div class="sidebar__brand">ВолгГТУ расписания</div>
+    <nav class="sidebar__nav">
+      <div class="sidebar__section-title">Меню</div>
+      <a href="{% url 'monitoring_panel' %}" class="{% if active_nav == 'monitoring' %}active{% endif %}">
+        <i data-lucide="activity" class="icon"></i>
+        <span>Мониторинг</span>
+      </a>
+      <a href="{% url 'panel_actions' %}" class="{% if active_nav == 'actions' %}active{% endif %}">
+        <i data-lucide="zap" class="icon"></i>
+        <span>Действия</span>
+      </a>
+      <a href="{% url 'panel_tasks' %}" class="{% if active_nav == 'tasks' %}active{% endif %}">
+        <i data-lucide="list-checks" class="icon"></i>
+        <span>Задачи</span>
+      </a>
+      <a href="{% url 'panel_api_clients' %}" class="{% if active_nav == 'api_clients' %}active{% endif %}">
+        <i data-lucide="key-round" class="icon"></i>
+        <span>API-клиенты</span>
+      </a>
+    </nav>
+  </aside>
+
+  <div class="panel-main">
+    <header class="topbar">
+      <span class="topbar__logo">{% block topbar_title %}Панель управления{% endblock %}</span>
+      <div class="topbar__links">
+        {% block topbar_actions %}{% endblock %}
+        <button class="theme-toggle-button" type="button" data-panel-theme-toggle>
+          <span data-panel-theme-label>Тема: авто</span>
+        </button>
+        <a href="{% url 'admin:index' %}">
+          <i data-lucide="settings" class="icon"></i>
+          <span>Администрирование</span>
+        </a>
+      </div>
+    </header>
+    <main class="page">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script src="{% static 'vendor/lucide/lucide.min.js' %}"></script>
+<script>
+  lucide.createIcons();
+</script>
+<script src="{% static 'src/panel_theme.js' %}"></script>
+<script src="{% static 'src/panel_alerts.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

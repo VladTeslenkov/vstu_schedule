@@ -1,0 +1,267 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: vstu-schedule\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-29 15:32+0300\n"
+"PO-Revision-Date: 2026-05-29 00:00+0300\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\templates\timetable\alerts.html:2
+msgid "Объявления"
+msgstr "Announcements"
+
+#: .\templates\timetable\alerts.html:6
+msgid "Расписание может изменяться."
+msgstr "The schedule may change."
+
+#: .\templates\timetable\alerts.html:7
+msgid "Актуальную информацию уточняйте на официальном сайте университета."
+msgstr "Check the university website for up-to-date information."
+
+#: .\templates\timetable\alerts.html:9
+msgid "Закрыть объявление"
+msgstr "Close announcement"
+
+#: .\templates\timetable\empty.html:4
+msgid "Занятий не найдено"
+msgstr "No classes found"
+
+#: .\templates\timetable\empty.html:5
+msgid "Попробуйте изменить период или убрать часть фильтров."
+msgstr "Try changing the period or removing some filters."
+
+#: .\templates\timetable\filters.html:2 .\templates\timetable\filters.html:5
+msgid "Фильтры расписания"
+msgstr "Schedule filters"
+
+#: .\templates\timetable\filters.html:6
+msgid "Выберите дату, группу, преподавателя или аудиторию."
+msgstr "Choose a date, group, teacher, or room."
+
+#: .\templates\timetable\filters.html:14
+msgid "Начните вводить"
+msgstr "Start typing"
+
+#: .\templates\timetable\filters.html:15
+msgid "Ничего не найдено"
+msgstr "No matches found"
+
+#: .\templates\timetable\filters.html:16
+msgid "Удалить __value__"
+msgstr "Remove __value__"
+
+#: .\templates\timetable\filters.html:17 .\templates\timetable\filters.html:92
+msgid "Больше фильтров"
+msgstr "More filters"
+
+#: .\templates\timetable\filters.html:18 .\templates\timetable\filters.html:92
+msgid "Меньше фильтров"
+msgstr "Fewer filters"
+
+#: .\templates\timetable\filters.html:22
+msgid "Период"
+msgstr "Period"
+
+#: .\templates\timetable\filters.html:25
+msgid "На сегодня"
+msgstr "Today"
+
+#: .\templates\timetable\filters.html:26
+msgid "На завтра"
+msgstr "Tomorrow"
+
+#: .\templates\timetable\filters.html:27
+msgid "На эту неделю"
+msgstr "This week"
+
+#: .\templates\timetable\filters.html:28
+msgid "На следующую неделю"
+msgstr "Next week"
+
+#: .\templates\timetable\filters.html:29
+msgid "На дату"
+msgstr "Specific date"
+
+#: .\templates\timetable\filters.html:30
+msgid "На диапазон дат"
+msgstr "Date range"
+
+#: .\templates\timetable\filters.html:37
+msgid "Дата"
+msgstr "Date"
+
+#: .\templates\timetable\filters.html:43
+msgid "До"
+msgstr "Until"
+
+#: .\templates\timetable\filters.html:51
+msgid "Группа"
+msgstr "Group"
+
+#: .\templates\timetable\filters.html:60 .\templates\timetable\results.html:60
+msgid "Преподаватель"
+msgstr "Teacher"
+
+#: .\templates\timetable\filters.html:69 .\templates\timetable\results.html:73
+msgid "Аудитория"
+msgstr "Room"
+
+#: .\templates\timetable\filters.html:80
+msgid "Показать"
+msgstr "Show"
+
+#: .\templates\timetable\filters.html:84
+msgid "Сбросить"
+msgstr "Reset"
+
+#: .\templates\timetable\filters.html:98
+msgid "Показывать календарь"
+msgstr "Show calendar"
+
+#: .\templates\timetable\filters.html:106
+msgid "Предмет"
+msgstr "Subject"
+
+#: .\templates\timetable\filters.html:115
+msgid "Тип занятия"
+msgstr "Class type"
+
+#: .\templates\timetable\filters.html:124
+msgid "Время"
+msgstr "Time"
+
+#: .\templates\timetable\footer.html:6
+msgid "Официальный сайт ВолгГТУ"
+msgstr "Official VSTU website"
+
+#: .\templates\timetable\footer.html:10
+msgid "Официальный источник расписаний"
+msgstr "Official schedule source"
+
+#: .\templates\timetable\footer.html:16
+msgid "© Волгоградский государственный технический университет, 2026"
+msgstr "© Volgograd State Technical University, 2026"
+
+#: .\templates\timetable\header.html:4 .\templates\timetable\header.html:8
+msgid "Волгоградский государственный технический университет"
+msgstr "Volgograd State Technical University"
+
+#: .\templates\timetable\header.html:5
+msgid "ВолгГТУ"
+msgstr "VSTU"
+
+#: .\templates\timetable\header.html:7
+msgid "Расписание занятий"
+msgstr "Class Schedule"
+
+#: .\templates\timetable\header.html:12
+msgid "Возможны неточности в расписании"
+msgstr "The schedule may contain inaccuracies"
+
+#: .\templates\timetable\header.html:19
+msgid "Язык"
+msgstr "Language"
+
+#: .\templates\timetable\header.html:28
+msgid "Официальный сайт"
+msgstr "Official website"
+
+#: .\templates\timetable\index.html:8
+msgid "Расписание занятий ВолгГТУ"
+msgstr "VSTU Class Schedule"
+
+#: .\templates\timetable\error.html:4
+msgid "Страница не найдена"
+msgstr "Page not found"
+
+#: .\templates\timetable\error.html:5
+msgid ""
+"Запрошенная страница недоступна. Если вы уверены, что ссылка должна работать, "
+"обратитесь к администратору."
+msgstr ""
+"The requested page is unavailable. If you are sure the link should work, "
+"please contact the administrator."
+
+#: .\templates\timetable\error.html:4
+msgid "Произошла ошибка"
+msgstr "Something went wrong"
+
+#: .\templates\timetable\error.html:5
+msgid ""
+"Сервис временно не смог обработать запрос. Пожалуйста, обратитесь к администратору."
+msgstr ""
+"The service could not process the request right now. Please contact the "
+"administrator."
+
+#: .\templates\timetable\error.html:9
+msgid "Вернуться на главную"
+msgstr "Return to the home page"
+
+#: .\templates\timetable\results.html:2
+msgid "Расписание на выбранный период"
+msgstr "Schedule for the selected period"
+
+#: .\templates\timetable\results.html:15
+msgid "Экспорт"
+msgstr "Export"
+
+#: .\templates\timetable\results.html:15
+#, python-format
+msgid "Найдено занятие: %(lessons_count)s"
+msgid_plural "Найдено занятий: %(lessons_count)s"
+msgstr[0] "%(lessons_count)s class found"
+msgstr[1] "%(lessons_count)s classes found"
+
+#: .\templates\timetable\results.html:37
+#, python-format
+msgid "только %(date)s"
+msgstr "only on %(date)s"
+
+#: .\templates\timetable\results.html:40
+msgid "отменено"
+msgstr "canceled"
+
+#: .\templates\timetable\results.html:47
+msgid "Группы"
+msgstr "Groups"
+
+#: .\templates\timetable\results.html:53
+msgid "Не указаны"
+msgstr "Not specified"
+
+#: .\templates\timetable\results.html:66
+msgid "Не указан"
+msgstr "Not specified"
+
+#: .\templates\timetable\results.html:79
+msgid "Не указана"
+msgstr "Not specified"
+
+#: .\templates\timetable\welcome.html:4
+msgid "Выберите параметры расписания"
+msgstr "Choose schedule parameters"
+
+#: .\templates\timetable\welcome.html:5
+msgid ""
+"Доступен поиск занятий по группе, преподавателю, аудитории, предмету и "
+"периоду."
+msgstr "Search classes by group, teacher, room, subject, and period."
+
+#: .\templates\timetable\too_many.html:4
+msgid "Найдено слишком много занятий"
+msgstr "Too many classes found"
+
+#: .\templates\timetable\too_many.html:5
+#, python-format
+msgid ""
+"По этому запросу найдено больше %(limit)s занятий. Сократите запрос: выберите меньший "
+"диапазон дат или добавьте фильтры по группе, преподавателю, аудитории или предмету."
+msgstr ""
+"This search found more than %(limit)s classes. Narrow your search: choose a shorter "
+"date range or add filters by group, teacher, room, or subject."

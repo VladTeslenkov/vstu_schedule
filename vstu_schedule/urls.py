@@ -18,11 +18,24 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include
+from django.views.generic import RedirectView
+from dmr.routing import path
+
+from vstu_schedule.pwa import pwa_static_file
 
 urlpatterns = [
+    path("", RedirectView.as_view(pattern_name="schedule:index", permanent=True)),
+    path("manifest.en.webmanifest", pwa_static_file, {"filename": "manifest.en.webmanifest"}),
+    path("manifest.ru.webmanifest", pwa_static_file, {"filename": "manifest.ru.webmanifest"}),
+    path("sw.js", pwa_static_file, {"filename": "sw.js"}),
+    path("i18n/", include("django.conf.urls.i18n")),
     path("admin/", admin.site.urls),
-    path("timetable/", include("apps.client.urls")),
+    path("api/", include(("apps.api.urls", "api"), namespace="api")),
+    path("schedule/", include(("apps.client.urls", "client"), namespace="schedule")),
+    path("timetable/", RedirectView.as_view(pattern_name="schedule:index", permanent=False)),
+    path("visualization/", RedirectView.as_view(pattern_name="schedule:index", permanent=False)),
+    path("panel/", include("apps.panel.urls")),
     # Освободить корень проекта для включения остальных подсистем.
     # path('', include('apps.client.urls')),
 ]
@@ -30,3 +43,6 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+handler404 = "vstu_schedule.error_handlers.handler404"
+handler500 = "vstu_schedule.error_handlers.handler500"

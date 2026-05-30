@@ -22,15 +22,17 @@ services:
     build: .
     image: vstu_schedule:latest 
     # TODO: быстрый костыль. Загрузка больших, занимающих долгое время обработки, файлов может убить HTTP запрос
-    command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --timeout 300 --reload # в продакшене убрать --reload
+    command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --timeout 50 --reload # в продакшене убрать --reload
     ports:
       - "8000:8000"
     volumes:
-      - .:/app        # поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
+      - .:/app    # Поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
       - static_volume:/app/static
       - media_volume:/app/media
       - ./logs:/app/logs
-      - /app/.venv  # скрыть .venv папку внутри контейнера. УБРАТЬ В ПРОДАКШЕНЕ
+      - data_volume:/app/data
+      # Скрыть .venv хоста внутри контейнера. УБРАТЬ В ПРОДАКШЕНЕ
+      - /app/.venv
     env_file: .env
     depends_on:
       db:
@@ -43,6 +45,11 @@ services:
     command: celery -A vstu_schedule worker -l info
     environment:
       - SERVICE_NAME=worker
+    volumes:
+      - .:/app        # Поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
+      - data_volume:/app/data
+      - ./logs:/app/logs
+      - /app/.venv
     env_file: .env
     depends_on:
       db:
@@ -55,12 +62,18 @@ services:
     environment:
       - SERVICE_NAME=beat
     command: celery -A vstu_schedule beat -l info -S django
+    volumes:
+      - .:/app        # Поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
+      - ./logs:/app/logs
+      - /app/.venv
     env_file: .env
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  # Опциональный фронт: docker compose --profile prod up — nginx на :80 перед приложением
   nginx:
     image: nginx:1.27-alpine
     restart: always
@@ -79,3 +92,4 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
+  data_volume:

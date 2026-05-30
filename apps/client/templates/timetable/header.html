@@ -1,0 +1,33 @@
+{% load i18n static %}
+<header class="page-header">
+  <div class="header-inner">
+    <div class="brand" aria-label="{% translate "Волгоградский государственный технический университет" %}">
+      <img class="brand-logo" src="{% static 'icons/vstu_white.png' %}" alt="{% translate "ВолгГТУ" %}">
+      <div class="brand-text">
+        <h1 class="brand-title">{% translate "Расписание занятий" %}</h1>
+        <div class="brand-subtitle">{% translate "Волгоградский государственный технический университет" %}</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div>{% translate "Возможны неточности в расписании" %}</div>
+      <div class="header-actions">
+        {% get_current_language as LANGUAGE_CODE %}
+        {% get_available_languages as LANGUAGES %}
+        <form class="language-form" action="{% url 'set_language' %}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <label class="visually-hidden" for="language-select">{% translate "Язык" %}</label>
+          <select class="language-select" id="language-select" name="language" onchange="this.form.submit()">
+            {% for code, name in LANGUAGES %}
+              <option value="{{ code }}" {% if code == LANGUAGE_CODE %}selected{% endif %}>{{ code|upper }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        <a class="header-link" href="https://www.vstu.ru/" rel="noopener">
+          <i data-lucide="external-link" class="icon" aria-hidden="true"></i>
+          {% translate "Официальный сайт" %}
+        </a>
+      </div>
+    </div>
+  </div>
+</header>

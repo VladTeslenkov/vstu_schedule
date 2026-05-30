@@ -1,0 +1,111 @@
+{% extends "panel/base.html" %}
+{% load static %}
+
+{% block title %}Настройка задачи — Панель управления{% endblock %}
+{% block topbar_title %}Celery · Настройка{% endblock %}
+
+{% block content %}
+<header class="page__header">
+  <div>
+    <h1>{{ task_metadata.title }}</h1>
+    <div class="muted">{{ task_name }}</div>
+    {% if task_metadata.description %}
+      <p class="page-description">{{ task_metadata.description }}</p>
+    {% endif %}
+  </div>
+  <div class="header-actions">
+    <a class="btn btn--ghost" href="{% url 'panel_tasks' %}">Назад</a>
+  </div>
+</header>
+
+<section class="card form-card">
+  <div class="card__header">
+    <h2>Параметры запуска</h2>
+    {% if required_arguments %}
+      <span class="card__hint danger-hint">ручной запуск без аргументов недоступен</span>
+    {% endif %}
+  </div>
+  <form method="post" class="settings-body">
+    {% csrf_token %}
+    {% if error %}
+      <p class="form-error">{{ error }}</p>
+    {% endif %}
+
+    <label class="toggle-row">
+      <input type="checkbox" name="execution_enabled" {% if config.execution_enabled %}checked{% endif %}>
+      <span>Разрешить выполнение задачи</span>
+    </label>
+
+    <label class="toggle-row">
+      <input type="checkbox" name="schedule_enabled" {% if schedule_enabled %}checked{% endif %}>
+      <span>Включить автозапуск по расписанию</span>
+    </label>
+
+    <div class="cron-grid">
+      <div class="field-group">
+        <label class="field-label" for="cron_minute">Минуты</label>
+        <input id="cron_minute" class="field-input" name="cron_minute" value="{{ config.cron_minute }}" placeholder="0">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="cron_hour">Часы</label>
+        <input id="cron_hour" class="field-input" name="cron_hour" value="{{ config.cron_hour }}" placeholder="*">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="cron_day_of_month">Дни месяца</label>
+        <input id="cron_day_of_month" class="field-input" name="cron_day_of_month" value="{{ config.cron_day_of_month }}" placeholder="*">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="cron_month_of_year">Месяцы</label>
+        <input id="cron_month_of_year" class="field-input" name="cron_month_of_year" value="{{ config.cron_month_of_year }}" placeholder="*">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="cron_day_of_week">Дни недели</label>
+        <input id="cron_day_of_week" class="field-input" name="cron_day_of_week" value="{{ config.cron_day_of_week }}" placeholder="*">
+      </div>
+    </div>
+
+    <div class="two-col two-col--narrow">
+      <div class="field-group">
+        <label class="field-label" for="soft_time_limit_seconds">Мягкий таймаут, сек</label>
+        <input id="soft_time_limit_seconds" class="field-input" type="number" min="1" name="soft_time_limit_seconds" value="{{ config.soft_time_limit_seconds|default_if_none:'' }}">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="time_limit_seconds">Жёсткий таймаут, сек</label>
+        <input id="time_limit_seconds" class="field-input" type="number" min="1" name="time_limit_seconds" value="{{ config.time_limit_seconds|default_if_none:'' }}">
+      </div>
+    </div>
+
+    {% if task_parameter_rows %}
+      <div class="card__header">
+        <h2>Task parameters</h2>
+      </div>
+      <div class="two-col">
+        {% for row in task_parameter_rows %}
+          <div class="field-group">
+            <label class="field-label" for="param_{{ row.descriptor.name }}">
+              {{ row.descriptor.label.ru|default:row.descriptor.name }}
+              {% if row.descriptor.required %}*{% endif %}
+            </label>
+            {% if row.descriptor.type == "bool" %}
+              <label class="toggle-row">
+                <input id="param_{{ row.descriptor.name }}" type="checkbox" name="param_{{ row.descriptor.name }}" {% if row.value %}checked{% endif %}>
+                <span>{{ row.descriptor.description.ru|default:row.descriptor.name }}</span>
+              </label>
+            {% else %}
+              <input id="param_{{ row.descriptor.name }}" class="field-input" type="{{ row.input_type }}" name="param_{{ row.descriptor.name }}" value="{{ row.value|default_if_none:'' }}">
+              {% if row.descriptor.description.ru %}
+                <div class="muted">{{ row.descriptor.description.ru }}</div>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <button class="btn btn--primary" type="submit">
+      <i data-lucide="save" class="icon"></i>
+      Сохранить
+    </button>
+  </form>
+</section>
+{% endblock %}

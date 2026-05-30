@@ -17,12 +17,27 @@ This file complements `docs/developers.md` and provides concise working rules fo
 ## Architecture Rules
 
 - Treat `common` as a shared library-like app. Do not add web views to it.
+- Treat `apps/api/schemas.py` and `apps/api/services/serialization.py` as the stable public API contract. When changing timetable ORM models, relations, enum/status choices, or helper methods used by API serialization, check and update API schemas, serialization, and contract tests. Do not make incompatible public DTO changes without explicit API versioning or an agreed migration plan.
 - Put complex business logic in `services/`, not in models or views.
 - Django ORM may be used in business logic when it keeps the code simpler.
 - Use selector functions in `selectors.py` for reusable database reads.
 - Avoid fat models: keep only behavior that naturally belongs to the model itself.
 - Views should contain only HTTP and web concerns; move shared or complex logic into `services/`.
 - Migrations should cover schema and data changes; do not require separate SQL scripts.
+- When changing Django models, create or update migrations with Django management commands, not by hand. Run migration generation against an in-memory SQLite database so the command does not require a real PostgreSQL server:
+
+```powershell
+$env:DB_ENGINE="django.db.backends.sqlite3"; $env:POSTGRES_DB=":memory:"; uv run python manage.py makemigrations
+```
+
+- After model changes, run a migration check before the final response when possible. Use the same in-memory SQLite override:
+
+```powershell
+$env:DB_ENGINE="django.db.backends.sqlite3"; $env:POSTGRES_DB=":memory:"; uv run python manage.py makemigrations --check --dry-run
+```
+
+- Do not manually write normal schema migrations. Manual migration files are acceptable only for Django migration graph maintenance such as merge migrations, or for carefully reviewed custom data migrations when Django cannot generate the needed operation.
+- `makemigrations` should not need a local database service. If it still cannot run because of another environment problem, mention that in the final response and do not silently skip the migration step.
 
 ## Code Style
 
@@ -33,6 +48,7 @@ This file complements `docs/developers.md` and provides concise working rules fo
 - Use the standard `logging` module for business-logic logging when needed.
 - Do not add secrets, real tokens, private data, or unnecessary generated files.
 - Prefer unrealistic sample data for public tests instead of real university schedules.
+- When changing user-facing client-side text or messages, update translations in `django.po`; do not hardcode translatable text.
 - New third-party dependencies must be justified and added with `uv`.
 
 ## Checks
@@ -89,6 +105,7 @@ docker compose up -d --build
 
 - Running locally without Docker is possible, but it requires an available PostgreSQL database and, when needed, Celery/Redis.
 - To partially disable Celery in local mode, set `DISABLE_CELERY=1` in `.env.local`.
+- Celery tasks declared in an app `tasks` package must be exported from its `__init__.py`, described in `tasks/tasks.toml`, and registered with `vstu_schedule.tasks.decorators.project_task`.
 - New dependencies will not appear inside already running containers without rebuilding the images.
 
 ## Working With Changes

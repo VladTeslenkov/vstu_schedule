@@ -1,0 +1,170 @@
+{% extends "panel/base.html" %}
+{% load static %}
+
+{% block title %}Мониторинг — Расписание ВолгГТУ{% endblock %}
+{% block body_class %}monitoring-page{% endblock %}
+{% block topbar_title %}Расписание · Мониторинг{% endblock %}
+{% block styles %}
+  <link rel="stylesheet" href="{% static 'style/monitoring.css' %}">
+{% endblock %}
+
+{% block content %}
+  <header class="page__header">
+    <h1>Панель мониторинга</h1>
+    <div class="header-actions">
+      <span id="lastRefresh" class="refresh-hint"></span>
+      <button class="btn btn--ghost" onclick="loadData()">
+        <i data-lucide="refresh-cw" class="icon"></i>
+        Обновить
+      </button>
+      <button id="runTaskBtn" class="btn btn--primary" onclick="runUpdate()">
+        <i data-lucide="play" class="icon"></i>
+        Запустить обновление
+      </button>
+    </div>
+  </header>
+
+  <section class="stats-grid">
+    <div class="stat-card stat-card--accent">
+      <div class="stat-card__label">Активных файлов</div>
+      <div class="stat-card__value" id="statActive">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Всего ресурсов</div>
+      <div class="stat-card__value" id="statTotal">—</div>
+    </div>
+    <div class="stat-card stat-card--warn">
+      <div class="stat-card__label">Устаревших</div>
+      <div class="stat-card__value" id="statDeprecated">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__label">Версий файлов</div>
+      <div class="stat-card__value" id="statVersions">—</div>
+    </div>
+  </section>
+
+  <div class="two-col two-col--narrow">
+    <section class="card">
+      <div class="card__header">
+        <h2>Планировщик</h2>
+        <span id="schedulerBadge" class="badge">—</span>
+      </div>
+      <div class="info-grid" id="schedulerInfo">
+        <div class="info-row"><span class="info-row__label">Интервал</span><span id="schInterval">—</span></div>
+        <div class="info-row"><span class="info-row__label">Последний запуск</span><span id="schLastRun">—</span></div>
+        <div class="info-row"><span class="info-row__label">Всего запусков</span><span id="schRunCount">—</span></div>
+        <div class="info-row"><span class="info-row__label">Последнее изменение файлов</span><span id="schLastUpdate">—</span></div>
+      </div>
+      <div id="taskStatus" class="task-status" style="display:none"></div>
+    </section>
+
+    <section class="card">
+      <div class="card__header">
+        <h2>Настройки обновления</h2>
+      </div>
+      <div class="settings-body">
+        <div class="field-group">
+          <label class="field-label" for="scanFrequency">Частота сканирования (мин)</label>
+          <select id="scanFrequency" class="field-select">
+            <option value="120" {% if time_update_value == "120" %}selected{% endif %}>120</option>
+            <option value="180" {% if time_update_value == "180" %}selected{% endif %}>180</option>
+            <option value="240" {% if time_update_value == "240" %}selected{% endif %}>240</option>
+            <option value="360" {% if time_update_value == "360" %}selected{% endif %}>360</option>
+            <option value="420" {% if time_update_value == "420" %}selected{% endif %}>420</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="rootUrl">Корневая ссылка для анализа</label>
+          <input id="rootUrl" type="url" class="field-input" value="{{ analyze_url_value }}" placeholder="https://...">
+        </div>
+        <button id="applySettingsBtn" class="btn btn--primary btn--full" onclick="applySettings()" disabled>
+          Применить изменения
+        </button>
+        <div id="settingsStatus" class="task-status" style="display:none"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="two-col">
+    <section class="card">
+      <div class="card__header">
+        <h2>Ресурсы</h2>
+        <div class="filter-tabs">
+          <button class="filter-tab active" onclick="filterResources('all', this)">Все</button>
+          <button class="filter-tab" onclick="filterResources('active', this)">Актуальные</button>
+          <button class="filter-tab" onclick="filterResources('deprecated', this)">Устаревшие</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Имя</th><th>Путь</th><th>Обновлён</th><th>Статус</th><th></th></tr></thead>
+          <tbody id="resourcesBody"><tr><td colspan="5" class="empty-row">Загрузка...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card__header">
+        <h2>Последние изменения</h2>
+        <span class="card__hint">последние 20</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Файл</th><th>Обнаружен</th><th>Хэш</th><th>Тип</th></tr></thead>
+          <tbody id="versionsBody"><tr><td colspan="4" class="empty-row">Загрузка...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card__header">
+      <h2>Очистка системы</h2>
+      <span class="card__hint danger-hint">Внимание: действие необратимо</span>
+    </div>
+    <div class="clear-body">
+      <div class="clear-options">
+        <label class="clear-option">
+          <input type="radio" name="clearTarget" value="Хранилище" checked>
+          <span class="clear-option__label">
+            <strong>Хранилище</strong>
+            <small>Удалить файлы из DATA_STORAGE_DIR</small>
+          </span>
+        </label>
+        <label class="clear-option">
+          <input type="radio" name="clearTarget" value="База данных">
+          <span class="clear-option__label">
+            <strong>База данных</strong>
+            <small>Удалить записи Resource, FileVersion, Tag</small>
+          </span>
+        </label>
+        <label class="clear-option">
+          <input type="radio" name="clearTarget" value="Логи задач">
+          <span class="clear-option__label">
+            <strong>Логи задач</strong>
+            <small>Удалить историю запусков и сохранённые логи Celery-задач</small>
+          </span>
+        </label>
+        <label class="clear-option">
+          <input type="radio" name="clearTarget" value="Вся система">
+          <span class="clear-option__label">
+            <strong>Вся система</strong>
+            <small>Хранилище + база данных (Resource, FileVersion, Tag)</small>
+          </span>
+        </label>
+      </div>
+      <button class="btn btn--danger" onclick="runClear()">Очистить</button>
+    </div>
+    <div id="clearStatus" class="task-status" style="display:none"></div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.MONITOR_CTX = {
+    timeUpdate: "{{ time_update_value }}",
+    analyzeUrl: "{{ analyze_url_value }}",
+  };
+</script>
+<script src="{% static 'src/monitoring.js' %}"></script>
+{% endblock %}

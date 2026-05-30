@@ -1,0 +1,103 @@
+{% extends "panel/base.html" %}
+{% load static %}
+
+{% block title %}Задачи — Панель управления{% endblock %}
+{% block topbar_title %}Задачи{% endblock %}
+
+{% block content %}
+<header class="page__header">
+  <h1>Задачи</h1>
+</header>
+
+<section class="card">
+  <div class="card__header">
+    <h2>Зарегистрированные задачи</h2>
+    <span class="card__hint">{{ tasks|length }}</span>
+  </div>
+  <div class="table-wrap table-wrap--loose">
+    <table class="data-table task-table">
+      <thead>
+        <tr>
+          <th>Задача</th>
+          <th>Выполнение</th>
+          <th>Автозапуск</th>
+          <th>Последний запуск</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for task in tasks %}
+        <tr>
+          <td>
+            <div class="task-name">{{ task.metadata.title }}</div>
+            <div class="muted">{{ task.name }}</div>
+            {% if task.metadata.description %}
+              <div class="task-description">{{ task.metadata.description }}</div>
+            {% endif %}
+            {% if task.required_arguments %}
+              <div class="muted">Нужны аргументы: {{ task.required_arguments|join:", " }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if task.config.execution_enabled %}
+              <span class="badge badge--success">разрешено</span>
+            {% else %}
+              <span class="badge badge--danger">запрещено</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if task.schedule_enabled %}
+              <span class="badge badge--success">включён</span>
+              <div class="muted">{{ task.config.cron_expression }}</div>
+            {% else %}
+              <span class="badge badge--muted">отключён</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if task.latest_run %}
+              <span class="badge {% if task.latest_run.status == 'SUCCESS' %}badge--success{% elif task.latest_run.status == 'FAILURE' %}badge--danger{% else %}badge--muted{% endif %}">
+                {{ task.latest_run.status }}
+              </span>
+              <div class="muted">{{ task.latest_run.queued_at|date:"d.m.Y H:i:s" }}</div>
+            {% else %}
+              <span class="muted">запусков нет</span>
+            {% endif %}
+          </td>
+          <td class="table-actions">
+            <div class="table-actions__inner">
+              <form method="post" action="{% url 'panel_task_run' task.name %}">
+                {% csrf_token %}
+                <button class="btn btn--ghost btn--sm" type="submit" {% if not task.config.execution_enabled or not task.can_run_without_args %}disabled{% endif %}>
+                  <i data-lucide="play" class="icon"></i>
+                  Запустить
+                </button>
+              </form>
+              {% if task.latest_run_can_stop %}
+                <form method="post" action="{% url 'panel_task_stop' task.name %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="run" value="{{ task.latest_run.id }}">
+                  <button class="btn btn--danger btn--sm" type="submit">
+                    <i data-lucide="square" class="icon"></i>
+                    Остановить
+                  </button>
+                </form>
+              {% endif %}
+              <a class="btn btn--ghost btn--sm" href="{% url 'panel_task_configure' task.name %}">
+                <i data-lucide="settings" class="icon"></i>
+                Настроить
+              </a>
+              <a class="btn btn--ghost btn--sm" href="{% url 'panel_task_log' task.name %}">
+                <i data-lucide="scroll-text" class="icon"></i>
+                Лог
+              </a>
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="empty-row">Задачи не найдены</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

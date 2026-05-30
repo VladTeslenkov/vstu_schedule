@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -18,8 +19,11 @@ from vstu_schedule.utils import dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-load_dotenv(BASE_DIR / ".env.local")  # ignored in docker
+# Пути для сервиса обновления расписания
+TEMP_DIR = BASE_DIR / "temp"
+DATA_STORAGE_DIR = BASE_DIR / "data"
+if os.getenv("RUNNING_IN_DOCKER") != "1":
+    load_dotenv(BASE_DIR / ".env.local")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -35,6 +39,9 @@ DEBUG = dotenv.get_bool("DEBUG")
 ALLOWED_HOSTS = dotenv.get_list("ALLOWED_HOSTS", default=["*"])
 CSRF_TRUSTED_ORIGINS = dotenv.get_list("CSRF_TRUSTED_ORIGINS", default=[])
 
+REDIS_URL = dotenv.get("REDIS_URL", "redis://redis:6379/0")
+REDIS_CACHE_URL = dotenv.get("REDIS_CACHE_URL", "redis://redis:6379/1")
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -45,7 +52,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_celery_beat",
+    "dmr",
     "apps.common",
+    "apps.api",
     "apps.panel",
     "apps.client",
 ]
@@ -53,6 +62,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -72,6 +82,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.common.context_processors.admin_alerts",
             ],
         },
     },
@@ -83,18 +94,24 @@ WSGI_APPLICATION = "vstu_schedule.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+DB_ENGINE = dotenv.get("DB_ENGINE", "django.db.backends.postgresql")
+
 DATABASES = {
     "default": {
-        "ENGINE": dotenv.get("DB_ENGINE", "django.db.backends.postgresql"),
+        "ENGINE": DB_ENGINE,
         "NAME": dotenv.get("POSTGRES_DB"),
         "USER": dotenv.get("POSTGRES_USER"),
         "PASSWORD": dotenv.get("POSTGRES_PASSWORD"),
         "HOST": dotenv.get("DB_HOST", "db"),
         "PORT": dotenv.get("DB_PORT", 5432),
-        "OPTIONS": {
-            "pool": not DEBUG,
-            "connect_timeout": 10,
-        },
+        "OPTIONS": (
+            {
+                "pool": not DEBUG,
+                "connect_timeout": 10,
+            }
+            if DB_ENGINE != "django.db.backends.sqlite3"
+            else {}
+        ),
     }
 }
 
@@ -121,7 +138,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = "ru-ru"
+LANGUAGE_CODE = "ru"
+LANGUAGES = [
+    ("ru", "Русский"),
+    ("en", "English"),
+]
 TIME_ZONE = "Europe/Volgograd"
 USE_I18N = True
 USE_TZ = True
@@ -138,8 +159,31 @@ STATICFILES_DIRS = [
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Timetable and client limits
+CLIENT_FILTER_OPTIONS_CACHE_KEY = "client:schedule:filter-options:v1"
+CLIENT_FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS = 2 * 60 * 60
+CLIENT_MAX_FILTERED_EVENTS = 250
+TIMETABLE_FILE_DOWNLOAD_TIMEOUT_SECONDS = 30
+TIMETABLE_MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024
+TIMETABLE_WEB_REQUEST_TIMEOUT_SECONDS = 10
+
+# API settings
+API_ACCESS_TOKEN_SECONDS = 15 * 60
+API_EXPORT_ANONYMOUS_RATE_LIMIT = 30
+API_EXPORT_ANONYMOUS_RATE_WINDOW_SECONDS = 60
+API_TOKEN_RATE_LIMIT = 10
+API_TOKEN_RATE_WINDOW_SECONDS = 60
+API_MODEL_LIST_LIMIT = 500
+
 # Celery Beat Config
 DISABLE_CELERY = dotenv.get_bool("DISABLE_CELERY", default=False)
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_CACHE_URL,
+    }
+}
 
 if DISABLE_CELERY:
     # --- Режим БЕЗ Celery (Синхронный) ---
@@ -156,6 +200,7 @@ else:
 
 # Общие настройки Celery
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_TASK_TRACK_STARTED = True
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -190,11 +235,20 @@ LOGGING = {
             "backupCount": 5,  # Хранить 5 последних файлов
             "formatter": "verbose",
         },
+        "task_db": {
+            "class": "apps.panel.services.task_logging.CeleryTaskLogHandler",
+            "level": "INFO",
+        },
     },
     "loggers": {
         # Ваш основной логгер для приложений
         "apps": {
-            "handlers": ["console", "file"],
+            "handlers": ["console", "file", "task_db"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "vstu_schedule": {
+            "handlers": ["console", "file", "task_db"],
             "level": "INFO",
             "propagate": True,
         },
@@ -206,11 +260,12 @@ LOGGING = {
         },
         # Логгер для Celery
         "celery": {
-            "handlers": ["console", "file"],
+            "handlers": ["console", "file", "task_db"],
             "level": "INFO",
             "propagate": False,
         },
     },
 }
 
+LOGIN_URL = "/panel/login/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

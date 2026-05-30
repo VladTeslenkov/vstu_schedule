@@ -29,17 +29,21 @@ RUN uv sync --frozen --no-dev --no-install-project
 FROM python:3.13-slim
 
 # Настройки Python
+# Добавляем виртуальное окружение в PATH и объявляем его основным
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    # Добавляем виртуальное окружение в PATH и объявляем его основным
+    RUNNING_IN_DOCKER=1 \
     VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 
-# Устанавливаем только библиотеку для работы с Postgres
+# Устанавливаем runtime-зависимости:
+# - libpq5 для Postgres
+# - gettext для Django compilemessages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    gettext \
     && rm -rf /var/lib/apt/lists/*
 
 # Копируем готовое виртуальное окружение из билдера (теперь там реальные файлы, а не ссылки)
@@ -47,6 +51,8 @@ COPY --from=builder /opt/venv /opt/venv
 
 # Копируем код проекта
 COPY . .
+
+RUN python manage.py compilemessages --locale en --ignore .venv
 
 # Права на запуск
 RUN chmod +x /app/entrypoint.sh && \

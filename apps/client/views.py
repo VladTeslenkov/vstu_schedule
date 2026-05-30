@@ -1,19 +1,18 @@
-from django.shortcuts import render
+from django.http import QueryDict
+from django.shortcuts import redirect, render
 from django.template.defaulttags import register
+from django.utils.translation import gettext_lazy as _
 
-from apps.client.services.client_helpers import make_table_data
+from apps.client.exceptions import InvalidDateFilterError, TooManyEventsFoundError
+from apps.client.services.client_helpers import (
+    get_cached_filter_options,
+    make_table_data,
+)
 from apps.common.models import Event
+from apps.common.selectors import public_alerts
 from apps.common.services.timetable.utilities import (
     is_events_follow_each_other,
     is_similar_events,
-)
-from apps.common.services.timetable.utilities.model_helpers import (
-    get_all_groups,
-    get_all_kinds,
-    get_all_places,
-    get_all_subjects,
-    get_all_teachers,
-    get_all_time_slots,
 )
 
 
@@ -65,49 +64,134 @@ def is_time_slot_already_selected(time_slot: str, selected_time_slots: str | lis
         return time_slot == selected_time_slots
 
 
+@register.filter
+def lesson_kind_class(kind: object) -> str:
+    kind_name = str(kind).casefold()
+    if "лаб" in kind_name:
+        return "chip-kind--lab"
+    if "пра" in kind_name or "пр." in kind_name:
+        return "chip-kind--practice"
+    if "лек" in kind_name:
+        return "chip-kind--lecture"
+    return ""
+
+
+def _get_list_param(request, name: str) -> list[str]:
+    values = request.GET.getlist(name)
+    return values or request.GET.getlist(f"{name}[]")
+
+
+def _clean_get_params(params: QueryDict) -> QueryDict:
+    cleaned = params.copy()
+    for name in list(cleaned):
+        values = [value for value in cleaned.getlist(name) if value != ""]
+        if values:
+            cleaned.setlist(name, values)
+        else:
+            del cleaned[name]
+
+    if cleaned.get("addition_filters_visible") == "0":
+        del cleaned["addition_filters_visible"]
+
+    return cleaned
+
+
 def index(request):
-    context = {}
+    cleaned_get = _clean_get_params(request.GET)
+    if request.method == "GET" and cleaned_get.urlencode() != request.GET.urlencode():
+        query = cleaned_get.urlencode()
+        return redirect(f"{request.path}?{query}" if query else request.path)
 
-    if request.method == "POST":
-        selected = {}
+    context: dict[str, object] = {"too_many_events_found": False}
+    selected = {
+        "date": "today",
+        "left_date": "",
+        "right_date": "",
+        "group": [],
+        "teacher": [],
+        "place": [],
+        "subject": [],
+        "kind": [],
+        "time_slot": [],
+    }
 
-        if "date" in request.POST:
-            selected["date"] = request.POST.get("date") or "today"
-        else:
-            selected["date"] = "today"
+    has_filters = bool(request.GET)
+    if has_filters:
+        selected["date"] = request.GET.get("date") or "today"
+        selected["left_date"] = request.GET.get("left_date") or ""
+        selected["right_date"] = request.GET.get("right_date") or ""
+        selected["group"] = _get_list_param(request, "group")
+        selected["teacher"] = _get_list_param(request, "teacher")
+        selected["place"] = _get_list_param(request, "place")
+        selected["subject"] = _get_list_param(request, "subject")
+        selected["kind"] = _get_list_param(request, "kind")
+        selected["time_slot"] = _get_list_param(request, "time_slot")
+        try:
+            context["data"] = make_table_data(selected)
+        except InvalidDateFilterError:
+            context["data"] = []
+        except TooManyEventsFoundError as error:
+            context["data"] = []
+            context["too_many_events_found"] = True
+            context["max_filtered_events"] = error.limit
 
-        if "left_date" in request.POST:
-            selected["left_date"] = request.POST.get("left_date") or ""
-        else:
-            selected["left_date"] = ""
-
-        if "right_date" in request.POST:
-            selected["right_date"] = request.POST.get("right_date") or ""
-        else:
-            selected["right_date"] = ""
-
-        selected["group"] = request.POST.getlist("group[]") or ""
-        selected["teacher"] = request.POST.getlist("teacher[]") or ""
-        selected["place"] = request.POST.getlist("place[]") or ""
-        selected["subject"] = request.POST.getlist("subject[]") or ""
-        selected["kind"] = request.POST.getlist("kind[]") or ""
-        selected["time_slot"] = request.POST.getlist("time_slot[]") or ""
-
-        context["selected"] = selected
-        context["data"] = make_table_data(selected)
-
-    context["groups"] = get_all_groups().values_list("name", flat=True)
-    context["teachers"] = get_all_teachers().values_list("name", flat=True)
-    context["places"] = [str(p) for p in get_all_places()]
-    context["subjects"] = get_all_subjects().values_list("name", flat=True)
-    context["kinds"] = get_all_kinds().values_list("name", flat=True)
-    context["time_slots"] = [str(ts) for ts in get_all_time_slots()]
+    context["selected"] = selected
+    context.update(get_cached_filter_options())
 
     context["addition_filters_visible"] = (
-        request.POST.get("addition_filters_visible")
-        if "addition_filters_visible" in request.POST
+        request.GET.get("addition_filters_visible")
+        if "addition_filters_visible" in request.GET
         else "0"
     )
-    context["calendar_visibile"] = "1" if "calendar_visibility" in request.POST else "0"
+    context["calendar_visible"] = "1" if "calendar_visibility" in request.GET else "0"
+    context["has_filters"] = has_filters
+    context["export_query"] = cleaned_get.urlencode()
+    context["alerts"] = public_alerts()
 
     return render(request, "timetable/index.html", context=context)
+
+
+def page_not_found(request, exception=None):
+    context = _error_context(
+        title=_("Страница не найдена"),
+        message=_(
+            "Запрошенная страница недоступна. Если вы уверены, что ссылка должна работать, "
+            "обратитесь к администратору."
+        ),
+    )
+    return render(request, "timetable/index.html", context=context, status=404)
+
+
+def server_error(request):
+    context = _error_context(
+        title=_("Произошла ошибка"),
+        message=_(
+            "Сервис временно не смог обработать запрос. Пожалуйста, обратитесь к администратору."
+        ),
+    )
+    return render(request, "timetable/index.html", context=context, status=500)
+
+
+def _error_context(*, title, message) -> dict[str, object]:
+    return {
+        "error_page": {
+            "title": title,
+            "message": message,
+        },
+        "has_filters": False,
+        "too_many_events_found": False,
+        "selected": {
+            "date": "today",
+            "left_date": "",
+            "right_date": "",
+            "group": [],
+            "teacher": [],
+            "place": [],
+            "subject": [],
+            "kind": [],
+            "time_slot": [],
+        },
+        "addition_filters_visible": "0",
+        "calendar_visible": "0",
+        "alerts": [],
+    }

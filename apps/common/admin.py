@@ -1,15 +1,16 @@
 from typing import Any, ClassVar, cast
 
 from django.contrib import admin, messages
+from django.contrib.admin import AdminSite
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-from django.http import HttpRequest, HttpResponse, HttpResponseBase, HttpResponseRedirect
-from django.urls import path
+from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 
 from apps.common.models import (
     AbstractDay,
     AbstractEvent,
     AbstractEventChanges,
+    Alert,
     DayDateOverride,
     Department,
     Event,
@@ -17,27 +18,24 @@ from apps.common.models import (
     EventKind,
     EventParticipant,
     EventPlace,
+    FileVersion,
     Organization,
+    Resource,
     Schedule,
     ScheduleMetadata,
     ScheduleTemplate,
     ScheduleTemplateMetadata,
+    Setting,
     Subject,
+    Tag,
     TimeSlot,
+    TimetableFileImport,
 )
 from apps.common.selectors import Selector
 from apps.common.services.timetable.export.exporter import export_abstract_event_changes
-from apps.common.services.timetable.load.event_importer_legacy import (
-    EventImporterLegacy,
-)
-from apps.common.services.timetable.load.reference_importer import ReferenceImporter
 from apps.common.services.timetable.read.filters import (
     DateFilter,
     EventFilter,
-)
-from apps.common.services.timetable.utilities.model_helpers import (
-    create_common_abstract_days,
-    create_common_time_slots,
 )
 from apps.common.services.timetable.utilities.validators import check_abstract_event
 from apps.common.services.timetable.write.factories import (
@@ -63,77 +61,96 @@ class BaseAdmin(admin.ModelAdmin):
         obj.save()
 
 
+@admin.register(Alert)
+class AlertAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "category",
+        "is_enabled",
+        "is_admin",
+        "is_dismissible",
+        "starts_at",
+        "expires_at",
+        "created_at",
+    )
+    list_filter = (
+        "category",
+        "is_enabled",
+        "is_admin",
+        "is_dismissible",
+        "starts_at",
+        "expires_at",
+    )
+    search_fields = ("title", "body", "title_en", "body_en")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (None, {"fields": ("title", "body", "title_en", "body_en")}),
+        ("Display", {"fields": ("category", "is_enabled", "is_admin", "is_dismissible")}),
+        ("Schedule", {"fields": ("starts_at", "expires_at")}),
+        ("System", {"fields": ("created_at", "updated_at")}),
+    )
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("name", "category")
+    search_fields = ("name", "category")
+    list_filter = ("category",)
+
+
+@admin.register(FileVersion)
+class FileVersionAdmin(admin.ModelAdmin):
+    list_display = ("resource", "mimetype", "timestamp", "last_changed", "hashsum")
+    search_fields = ("resource__name", "resource__path", "url", "hashsum")
+    list_filter = ("mimetype", "timestamp", "last_changed")
+    readonly_fields = ("timestamp",)
+
+
+@admin.register(Resource)
+class ResourceAdmin(admin.ModelAdmin):
+    list_display = ("name", "path", "deprecated", "last_update")
+    search_fields = ("name", "path", "metadata")
+    list_filter = ("deprecated", "last_update", "tags")
+    readonly_fields = ("last_update",)
+    filter_horizontal = ("tags",)
+
+
+@admin.register(TimetableFileImport)
+class TimetableFileImportAdmin(admin.ModelAdmin):
+    list_display = ("file_version", "status", "started_at", "finished_at")
+    search_fields = (
+        "file_version__resource__name",
+        "file_version__resource__path",
+        "error",
+    )
+    list_filter = ("status", "started_at", "finished_at")
+    readonly_fields = ("started_at",)
+
+
+@admin.register(Setting)
+class SettingAdmin(admin.ModelAdmin):
+    list_display = ("key", "value", "description")
+    search_fields = ("key", "value", "description")
+
+
 @admin.register(Subject)
 class SubjectAdmin(BaseAdmin):
-    change_list_template = "../templates/timetable/admin/subjectChangeListExtend.html"
     list_display = ("name",)
     search_fields = ("name",)
-
-    def get_urls(self):
-        return [
-            path("import_subject_reference/", self.import_subject_reference),
-            *super().get_urls(),
-        ]
-
-    def import_subject_reference(self, request):
-        if request.method == "POST" and request.FILES.get("subject_reference_file"):
-            ReferenceImporter.import_subject_reference(
-                request.FILES["subject_reference_file"].read()
-            )
-            messages.success(request, "Импорт успешно произведён")
-
-        return HttpResponseRedirect("../")
 
 
 @admin.register(EventParticipant)
 class EventParticipantAdmin(BaseAdmin):
-    change_list_template = "../templates/timetable/admin/eventParticipantChangeListExtend.html"
     list_display = ("name", "role")
     search_fields = ("name", "role")
     list_filter = ("role",)
 
-    def get_urls(self):
-        return [
-            path("import_teacher_reference/", self.import_teacher_reference),
-            path("import_student_reference/", self.import_student_reference),
-            *super().get_urls(),
-        ]
-
-    def import_teacher_reference(self, request):
-        if request.method == "POST" and request.FILES.get("teacher_reference_file"):
-            ReferenceImporter.import_teacher_reference(
-                request.FILES["teacher_reference_file"].read()
-            )
-            messages.success(request, "Импорт успешно произведён")
-
-        return HttpResponseRedirect("../")
-
-    def import_student_reference(self, request):
-        if request.method == "POST" and request.FILES.get("student_reference_file"):
-            ReferenceImporter.import_student_reference(
-                request.FILES["student_reference_file"].read()
-            )
-            messages.success(request, "Импорт успешно произведён")
-
-        return HttpResponseRedirect("../")
-
 
 @admin.register(EventPlace)
 class EventPlaceAdmin(BaseAdmin):
-    change_list_template = "../templates/timetable/admin/eventPlaceChangeListExtend.html"
     list_display = ("building", "room")
     search_fields = ("building", "room")
     list_filter = ("building",)
-
-    def get_urls(self):
-        return [path("import_place_reference/", self.import_place_reference), *super().get_urls()]
-
-    def import_place_reference(self, request):
-        if request.method == "POST" and request.FILES.get("place_reference_file"):
-            ReferenceImporter.import_place_reference(request.FILES["place_reference_file"].read())
-            messages.success(request, "Импорт успешно произведён")
-
-        return HttpResponseRedirect("../")
 
 
 @admin.register(EventKind)
@@ -172,7 +189,6 @@ class ScheduleTemplateAdmin(BaseAdmin):
 
 @admin.register(Schedule)
 class ScheduleAdmin(BaseAdmin):
-    change_list_template = "../templates/timetable/admin/scheduleChangeListExtend.html"
     list_display = ("faculty", "status", "course", "semester", "years")
     search_fields = ("schedule_template__metadata__faculty", "schedule_template__metadata__scope")
     list_filter = (
@@ -185,29 +201,6 @@ class ScheduleAdmin(BaseAdmin):
     )
 
     actions = ("extended_delete",)
-
-    def get_urls(self):
-        return [
-            path("import_schedule/", self.import_schedule_data),
-            path("delete_archive_schedules/", self.delete_archive_schedules),
-            *super().get_urls(),
-        ]
-
-    def import_schedule_data(self, request):
-        if request.method == "POST" and request.FILES.get("selected_file"):
-            if "common_import" in request.POST:
-                ReferenceImporter.import_schedule(request.FILES["selected_file"].read(), True)
-            elif "delete_import" in request.POST:
-                ReferenceImporter.import_schedule(request.FILES["selected_file"].read(), False)
-            messages.success(request, "Импорт успешно произведён")
-
-        return HttpResponseRedirect("../")
-
-    ## TODO: add confirming page
-    def delete_archive_schedules(self, request):
-        Schedule.objects.filter(status=Schedule.Status.ARCHIVE).delete()
-
-        return HttpResponseRedirect("../")
 
     ## TODO: ...
     @admin.action(description="Удалить выбранные Расписания и их Метаданные расписания")
@@ -361,7 +354,6 @@ class AbstractEventChangesAdmin(BaseAdmin):
 
 @admin.register(AbstractEvent)
 class AbstractEventAdmin(BaseAdmin):
-    change_list_template = "../templates/timetable/admin/abstractEventChangeListExtend.html"
     list_display = ("datemodified", "subject", "abstract_day", "time_slot")
     search_fields = (
         "participants__name",
@@ -373,19 +365,6 @@ class AbstractEventAdmin(BaseAdmin):
     list_filter = ("kind__name",)
 
     actions = ("delete_events", "fill", "check_fields")
-
-    def get_urls(self):
-        return [path("import_data/", self.import_event_data), *super().get_urls()]
-
-    def import_event_data(self, request):
-        if request.method == "POST" and request.FILES.get("selected_file"):
-            ## TODO: when working with big files should use chunks() instead
-            EventImporterLegacy.import_event_data(request.FILES["selected_file"].read())
-            messages.success(
-                request, f'Успешно произведён импорт из файла: "{request.FILES["selected_file"]}"'
-            )
-
-        return HttpResponseRedirect("../")
 
     @admin.action(description="Удалить связанные события")
     def delete_events(modeladmin, request, queryset):
@@ -423,18 +402,8 @@ class AbstractEventAdmin(BaseAdmin):
 
 @admin.register(AbstractDay)
 class AbstractDayAdmin(BaseAdmin):
-    change_list_template = "../templates/timetable/admin/abstractDayChangeListExtend.html"
     list_display = ("name", "day_number")
     search_fields = ("name", "day_number")
-
-    def get_urls(self):
-        return [path("create_abstract_days/", self.create_abstract_days), *super().get_urls()]
-
-    def create_abstract_days(self, request):
-        if create_common_abstract_days():
-            messages.success(request, "Стандарные абстрактные дни успешно созданы")
-
-        return HttpResponseRedirect("../")
 
 
 @admin.register(Department)
@@ -456,35 +425,9 @@ class DepartmentAdmin(BaseAdmin):
 
             return queryset
 
-    change_list_template = "../templates/timetable/admin/departmentChangeListExtend.html"
     list_display = ("name", "shortname", "organization_name")
     search_fields = ("name", "shortname", "organization__name")
     list_filter = (HasParentDepartmentFilter, "organization__name")
-
-    def get_urls(self):
-        return [
-            path("import_faculty_reference/", self.import_faculty_reference),
-            path("import_department_reference/", self.import_department_reference),
-            *super().get_urls(),
-        ]
-
-    def import_faculty_reference(self, request):
-        if request.method == "POST" and request.FILES.get("faculty_reference_file"):
-            ReferenceImporter.import_faculty_reference(
-                request.FILES["faculty_reference_file"].read()
-            )
-            messages.success(request, "Импорт успешно произведён")
-
-        return HttpResponseRedirect("../")
-
-    def import_department_reference(self, request):
-        if request.method == "POST" and request.FILES.get("department_reference_file"):
-            ReferenceImporter.import_department_reference(
-                request.FILES["department_reference_file"].read()
-            )
-            messages.success(request, "Импорт успешно произведён")
-
-        return HttpResponseRedirect("../")
 
     @admin.display(
         description=get_model_field_verbose_name(Department, "organization"),
@@ -496,39 +439,16 @@ class DepartmentAdmin(BaseAdmin):
 
 @admin.register(Organization)
 class OrganizationAdmin(BaseAdmin):
-    change_list_template = "../templates/timetable/admin/organizationChangeListExtend.html"
     list_display = ("name",)
     search_fields = ("name",)
     list_filter = ("name",)
 
-    def get_urls(self):
-        return [path("create_organization/", self.create_organization), *super().get_urls()]
-
-    def create_organization(self, request):
-        try:
-            Organization.objects.get(name="ВолгГТУ")
-        except Organization.DoesNotExist:
-            Organization.objects.create(name="ВолгГТУ")
-            messages.success(request, "Учреждение (ВолгГТУ) успешно создано")
-
-        return HttpResponseRedirect("../")
-
 
 @admin.register(TimeSlot)
 class TimeSlotAdmin(BaseAdmin):
-    change_list_template = "../templates/timetable/admin/timeSlotChangeListExtend.html"
     list_display = ("alt_name", "start_time", "end_time")
     search_fields = ("alt_name", "start_time", "end_time")
     list_filter = ("alt_name",)
-
-    def get_urls(self):
-        return [path("create_time_slots/", self.create_time_slots), *super().get_urls()]
-
-    def create_time_slots(self, request):
-        if create_common_time_slots():
-            messages.success(request, "Стандарные учебные часы успешно созданы")
-
-        return HttpResponseRedirect("../")
 
 
 @admin.register(DayDateOverride)
@@ -561,3 +481,107 @@ class EventCancelAdmin(BaseAdmin):
 
 # TODO: django.core.exceptions.ImproperlyConfigured: The model TokenProxy is abstract, so it cannot be registered with admin.
 ##TokenAdmin.raw_id_fields = ["user"]
+
+
+ADMIN_MODEL_SECTIONS = (
+    (
+        "site_panel",
+        "Сайт и панель",
+        {
+            Alert.__name__,
+            Setting.__name__,
+        },
+    ),
+    (
+        "schedule",
+        "Расписание",
+        {
+            AbstractDay.__name__,
+            AbstractEvent.__name__,
+            AbstractEventChanges.__name__,
+            DayDateOverride.__name__,
+            Department.__name__,
+            Event.__name__,
+            EventCancel.__name__,
+            EventKind.__name__,
+            EventParticipant.__name__,
+            EventPlace.__name__,
+            Organization.__name__,
+            Schedule.__name__,
+            ScheduleMetadata.__name__,
+            ScheduleTemplate.__name__,
+            ScheduleTemplateMetadata.__name__,
+            Subject.__name__,
+            TimeSlot.__name__,
+        },
+    ),
+    (
+        "files",
+        "Файловое хранилище",
+        {
+            FileVersion.__name__,
+            Resource.__name__,
+            Tag.__name__,
+            TimetableFileImport.__name__,
+        },
+    ),
+)
+
+
+def _install_admin_model_sections() -> None:
+    if hasattr(admin.site, "_vstu_original_get_app_list"):
+        return
+
+    original_get_app_list = admin.site.get_app_list
+    admin.site._vstu_original_get_app_list = original_get_app_list  # type: ignore[attr-defined]
+
+    section_by_model = {
+        model_name: (section_key, section_name)
+        for section_key, section_name, model_names in ADMIN_MODEL_SECTIONS
+        for model_name in model_names
+    }
+
+    def get_app_list(
+        self: AdminSite,
+        request: HttpRequest,
+        app_label: str | None = None,
+    ) -> list[dict[str, Any]]:
+        app_list = original_get_app_list(request, app_label)
+        sectioned_apps: list[dict[str, Any]] = []
+
+        for app in app_list:
+            if app["app_label"] != "common":
+                sectioned_apps.append(app)
+                continue
+
+            grouped_models: dict[str, dict[str, Any]] = {
+                section_key: {
+                    **app,
+                    "app_label": f"common_{section_key}",
+                    "name": section_name,
+                    "models": [],
+                }
+                for section_key, section_name, _model_names in ADMIN_MODEL_SECTIONS
+            }
+            ungrouped_models = []
+            for model in app["models"]:
+                section = section_by_model.get(model["object_name"])
+                if section is None:
+                    ungrouped_models.append(model)
+                    continue
+
+                section_key, section_name = section
+                grouped_app = grouped_models[section_key]
+                grouped_app["name"] = section_name
+                grouped_app["models"].append(model)
+
+            sectioned_apps.extend(app for app in grouped_models.values() if app["models"])
+            if ungrouped_models:
+                sectioned_apps.append({**app, "models": ungrouped_models})
+
+        return sectioned_apps
+
+    admin.site.get_app_list = get_app_list.__get__(admin.site, AdminSite)
+
+
+_install_admin_model_sections()

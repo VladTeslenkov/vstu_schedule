@@ -2,11 +2,30 @@ from collections.abc import Mapping
 from typing import Any, Literal, cast
 
 from django.db.models import Q, QuerySet
+from django.utils import timezone
 
 import apps.common.services.timetable.read.filters as filters
 from apps.common.models import (
+    Alert,
     CommonModel,
 )
+
+
+def active_alerts() -> QuerySet[Alert]:
+    now = timezone.now()
+    return Alert.objects.filter(
+        Q(starts_at__isnull=True) | Q(starts_at__lte=now),
+        Q(expires_at__isnull=True) | Q(expires_at__gt=now),
+        is_enabled=True,
+    )
+
+
+def public_alerts() -> QuerySet[Alert]:
+    return active_alerts().filter(is_admin=False)
+
+
+def admin_alerts() -> QuerySet[Alert]:
+    return active_alerts().filter(is_admin=True)
 
 
 class Selector:

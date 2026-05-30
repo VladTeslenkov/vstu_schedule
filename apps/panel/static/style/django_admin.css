@@ -1,0 +1,350 @@
+:root,
+html[data-theme="light"] {
+  --primary: #1976d2;
+  --secondary: #135ca5;
+  --accent: #e3f2fd;
+  --primary-fg: #ffffff;
+  --body-bg: #f5f9ff;
+  --body-fg: #1d2939;
+  --body-quiet-color: #667085;
+  --body-loud-color: #101828;
+  --header-color: #ffffff;
+  --header-branding-color: #ffffff;
+  --header-bg: #1976d2;
+  --header-link-color: #e3f2fd;
+  --breadcrumbs-fg: #e3f2fd;
+  --breadcrumbs-link-fg: #ffffff;
+  --breadcrumbs-bg: #135ca5;
+  --link-fg: #1976d2;
+  --link-hover-color: #0d47a1;
+  --link-selected-fg: #0d47a1;
+  --button-fg: #ffffff;
+  --button-bg: #1976d2;
+  --button-hover-bg: #135ca5;
+  --default-button-bg: #1976d2;
+  --default-button-hover-bg: #135ca5;
+  --delete-button-bg: #d32f2f;
+  --delete-button-hover-bg: #b71c1c;
+  --object-tools-fg: #ffffff;
+  --object-tools-bg: #1976d2;
+  --object-tools-hover-bg: #135ca5;
+  --hairline-color: #d7e3f4;
+  --border-color: #c8d7ea;
+  --darkened-bg: #edf4fc;
+  --selected-bg: #e3f2fd;
+  --selected-row: #e3f2fd;
+}
+
+html[data-theme="dark"] {
+  --primary: #1976d2;
+  --secondary: #125da8;
+  --accent: #90caf9;
+  --primary-fg: #ffffff;
+  --body-bg: #0f1724;
+  --body-fg: #e6edf7;
+  --body-quiet-color: #a8b3c7;
+  --body-loud-color: #ffffff;
+  --header-color: #ffffff;
+  --header-branding-color: #ffffff;
+  --header-bg: #0d47a1;
+  --header-link-color: #d7ecff;
+  --breadcrumbs-fg: #d7ecff;
+  --breadcrumbs-link-fg: #ffffff;
+  --breadcrumbs-bg: #093673;
+  --link-fg: #90caf9;
+  --link-hover-color: #bbdefb;
+  --link-selected-fg: #ffffff;
+  --button-fg: #ffffff;
+  --button-bg: #1976d2;
+  --button-hover-bg: #125da8;
+  --default-button-bg: #1976d2;
+  --default-button-hover-bg: #125da8;
+  --delete-button-bg: #d32f2f;
+  --delete-button-hover-bg: #b71c1c;
+  --object-tools-fg: #ffffff;
+  --object-tools-bg: #1976d2;
+  --object-tools-hover-bg: #125da8;
+  --hairline-color: #24364f;
+  --border-color: #344761;
+  --darkened-bg: #172338;
+  --selected-bg: #16365f;
+  --selected-row: #16365f;
+}
+
+#header {
+  box-shadow: 0 2px 12px rgba(25, 118, 210, 0.18);
+}
+
+#branding h1,
+#branding h1 a:link,
+#branding h1 a:visited,
+#site-name,
+#site-name a:link,
+#site-name a:visited {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+#user-tools {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+#user-tools a.admin-panel-link {
+  background: #ffffff;
+  border-radius: 6px;
+  color: #1976d2;
+  font-weight: 700;
+  padding: 6px 10px;
+  text-decoration: none;
+}
+
+#user-tools a.admin-panel-link:hover {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+  background: #1976d2;
+}
+
+div.breadcrumbs {
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.button,
+input[type="submit"],
+input[type="button"],
+button,
+.submit-row input,
+a.button {
+  appearance: none;
+  background: #1976d2;
+  border: 0;
+  font-weight: 400;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 6px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.2;
+  padding: 9px 14px;
+  text-decoration: none;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease;
+}
+
+a.button,
+button,
+.object-tools button {
+  padding: 4px 5px;
+}
+
+.button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover,
+button:hover,
+.submit-row input:hover,
+a.button:hover {
+  background: #135ca5;
+  color: #ffffff;
+}
+
+.button:focus-visible,
+input[type="submit"]:focus-visible,
+input[type="button"]:focus-visible,
+button:focus-visible,
+.submit-row input:focus-visible,
+a.button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.22);
+  outline: none;
+}
+
+button[disabled],
+input[type="submit"][disabled],
+input[type="button"][disabled],
+.button[disabled] {
+  background: #98a2b3;
+  cursor: not-allowed;
+}
+
+.deletelink,
+.submit-row a.deletelink,
+input[type="submit"].deletelink,
+button.deletelink {
+  background: #d32f2f;
+}
+
+.deletelink:hover,
+.submit-row a.deletelink:hover,
+input[type="submit"].deletelink:hover,
+button.deletelink:hover {
+  background: #b71c1c;
+}
+
+.admin-login-page {
+  background: #f5f9ff;
+}
+
+.admin-login-page #container {
+  background: transparent;
+  box-sizing: border-box;
+  display: block;
+  margin: clamp(32px, 8vh, 72px) auto 24px;
+  max-width: 468px;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.admin-login-page #header {
+  display: none;
+}
+
+.admin-login-page .main {
+  display: block;
+  min-height: 0;
+}
+
+.admin-login-page #content-start {
+  display: block;
+  min-height: 0;
+  padding: 0;
+}
+
+.admin-login-page #content {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.admin-login-page #content-main {
+  float: none;
+  width: 100%;
+}
+
+.admin-login-shell {
+  box-sizing: border-box;
+  min-height: 0;
+  padding: 30px 24px;
+  width: 100%;
+}
+
+.admin-login-card {
+  background: #ffffff;
+  border: 1px solid #d7e3f4;
+  border-radius: 10px;
+  box-sizing: border-box;
+  box-shadow: 0 22px 60px rgba(25, 118, 210, 0.16);
+  color: #1d2939;
+  height: auto;
+  max-width: 420px;
+  min-height: 0;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.admin-login-card__header {
+  align-items: center;
+  border-bottom: 1px solid #d7e3f4;
+  display: flex;
+  justify-content: center;
+  min-height: 58px;
+  padding: 16px 20px;
+}
+
+.admin-login-card__header h1 {
+  color: #1d2939;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.admin-login-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+}
+
+.admin-login-card .form-row {
+  border: 0;
+  float: none;
+  padding: 0;
+}
+
+.admin-login-card label {
+  color: #344054;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.admin-login-card input[type="text"],
+.admin-login-card input[type="password"] {
+  background: #ffffff;
+  border: 1px solid #c8d7ea;
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: #1d2939;
+  font-size: 14px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.admin-login-card input[type="text"]:focus,
+.admin-login-card input[type="password"]:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.14);
+  outline: none;
+}
+
+.admin-login-card .submit-row {
+  background: transparent;
+  border: 0;
+  margin: 2px 0 0;
+  padding: 0;
+  text-align: left;
+}
+
+.admin-login-card .submit-row input {
+  background: #1976d2;
+  border-radius: 6px;
+  box-sizing: border-box;
+  display: block;
+  font-weight: 700;
+  padding: 11px 16px;
+  text-align: center;
+  width: 100%;
+}
+
+.admin-login-card .submit-row input:hover {
+  background: #135ca5;
+}
+
+.admin-login-card .errornote {
+  margin: 16px 22px 0;
+}
+
+.admin-login-card .password-reset-link {
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .admin-login-shell {
+    padding: 20px 12px;
+  }
+
+  .admin-login-card form {
+    padding: 18px;
+  }
+}

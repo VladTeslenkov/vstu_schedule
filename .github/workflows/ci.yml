@@ -87,5 +87,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --group dev
 
+      - name: Install gettext
+        run: sudo apt-get update && sudo apt-get install -y gettext
+
+      - name: Compile translations
+        run: uv run python manage.py compilemessages --ignore .venv
+
       - name: Run tests
         run: uv run pytest

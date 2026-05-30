@@ -1,9 +1,19 @@
+import logging
+import time
 from collections import defaultdict
 from datetime import timedelta
 from typing import cast
 
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 
+from apps.client.exceptions import InvalidDateFilterError, TooManyEventsFoundError
+from apps.common.constants import (
+    CLIENT_FILTER_OPTIONS_CACHE_KEY,
+    CLIENT_FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS,
+    CLIENT_MAX_FILTERED_EVENTS,
+)
 from apps.common.models import AbstractEvent, Event
 from apps.common.selectors import Selector
 from apps.common.services.timetable.read.filters import (
@@ -20,6 +30,14 @@ from apps.common.services.timetable.utilities import (
     is_events_follow_each_other,
     is_similar_events,
 )
+from apps.common.services.timetable.utilities.model_helpers import (
+    get_all_groups,
+    get_all_kinds,
+    get_all_places,
+    get_all_subjects,
+    get_all_teachers,
+    get_all_time_slots,
+)
 from apps.common.services.timetable.write.factories import (
     calculate_semester_filling_parameters,
 )
@@ -28,11 +46,88 @@ CalendarData = tuple[list[str], list[list[int | str]]]
 EventGroup = list[Event]
 RowSpans = list[int]
 TableDataRow = tuple[EventGroup, RowSpans, CalendarData]
+MAX_FILTERED_EVENTS = CLIENT_MAX_FILTERED_EVENTS
+FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS = CLIENT_FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS
+FILTER_OPTIONS_CACHE_KEY = CLIENT_FILTER_OPTIONS_CACHE_KEY
+
+type FilterOptions = dict[str, list[str]]
+
+logger = logging.getLogger(__name__)
+_process_filter_options_cache: tuple[float, FilterOptions] | None = None
 
 
-def make_table_data(filters: dict) -> list[TableDataRow]:
+def _build_filter_options() -> FilterOptions:
+    return {
+        "groups": list(get_all_groups().values_list("name", flat=True)),
+        "teachers": list(get_all_teachers().values_list("name", flat=True)),
+        "places": [str(place) for place in get_all_places()],
+        "subjects": list(get_all_subjects().values_list("name", flat=True)),
+        "kinds": list(get_all_kinds().values_list("name", flat=True)),
+        "time_slots": [str(time_slot) for time_slot in get_all_time_slots()],
+    }
+
+
+def _get_process_cached_filter_options() -> FilterOptions | None:
+    if _process_filter_options_cache is None:
+        return None
+
+    expires_at, options = _process_filter_options_cache
+    if expires_at <= time.monotonic():
+        return None
+
+    return options
+
+
+def _set_process_cached_filter_options(options: FilterOptions) -> None:
+    global _process_filter_options_cache
+    _process_filter_options_cache = (
+        time.monotonic() + FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS,
+        options,
+    )
+
+
+def get_cached_filter_options() -> FilterOptions:
+    try:
+        cached_options = cache.get(FILTER_OPTIONS_CACHE_KEY)
+    except Exception as exc:
+        logger.warning("Filter options cache read failed; falling back to process memory: %s", exc)
+        process_cached_options = _get_process_cached_filter_options()
+        if process_cached_options is not None:
+            return process_cached_options
+    else:
+        if cached_options is not None:
+            options = cast(FilterOptions, cached_options)
+            return options
+
+    options = _build_filter_options()
+
+    try:
+        cache.set(FILTER_OPTIONS_CACHE_KEY, options, FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS)
+    except Exception as exc:
+        logger.warning("Filter options cache write failed; using process memory only: %s", exc)
+        _set_process_cached_filter_options(options)
+
+    return options
+
+
+def make_table_data(filters: dict, max_events: int = MAX_FILTERED_EVENTS) -> list[TableDataRow]:
     """Used to get filtered and formated data ready to visualisation"""
+    try:
+        events = get_filtered_events(filters)
+    except (ValueError, ValidationError) as exc:
+        raise InvalidDateFilterError(str(exc)) from exc
 
+    if has_more_events_than(events, max_events):
+        raise TooManyEventsFoundError(max_events)
+
+    entries = format_events(events)
+    row_spans = make_row_spans(entries)
+    calendar = make_calendar(entries)
+
+    return list(zip(entries, row_spans, calendar, strict=True))
+
+
+def get_filtered_events(filters: dict) -> QuerySet[Event]:
     reader = Selector()
     # Currently working ONLY with ACTIVE Schedules
     # TODO: selector for ARCHIVE and other Schdules
@@ -73,18 +168,21 @@ def make_table_data(filters: dict) -> list[TableDataRow]:
     reader.find_models(Event)
 
     if filters["teacher"]:
-        entries = format_events(
+        return (
             reader.get_found_models()
             .filter(**ParticipantFilter.by_name(filters["teacher"]))
             .distinct()
         )
-    else:
-        entries = format_events(reader.get_found_models())
 
-    row_spans = make_row_spans(entries)
-    calendar = make_calendar(entries)
+    return reader.get_found_models()
 
-    return list(zip(entries, row_spans, calendar, strict=True))
+
+def has_more_events_than(events: QuerySet[Event], limit: int) -> bool:
+    if limit < 0:
+        raise ValueError("limit must not be negative")
+
+    limited_event_ids = events.order_by().values_list("pk", flat=True).distinct()[: limit + 1]
+    return len(limited_event_ids) > limit
 
 
 def format_events(events: QuerySet) -> list[EventGroup]:

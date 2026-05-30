@@ -1,0 +1,55 @@
+{% load i18n static %}
+<!DOCTYPE html>
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% translate "Расписание занятий ВолгГТУ" %}</title>
+  <meta name="theme-color" content="#0876cf">
+  <link rel="icon" href="{% static 'icons/favicon.ico' %}" type="image/x-icon">
+  <link rel="apple-touch-icon" href="{% static 'pwa/icon-180.png' %}">
+  {% if LANGUAGE_CODE == "en" %}
+    <link rel="manifest" href="/manifest.en.webmanifest">
+  {% else %}
+    <link rel="manifest" href="/manifest.ru.webmanifest">
+  {% endif %}
+  <link href="{% static 'css/schedule.css' %}" rel="stylesheet">
+</head>
+<body>
+  {% include "timetable/header.html" %}
+
+  <main class="main">
+    <div class="container">
+      {% include "timetable/alerts.html" %}
+      {% if not error_page %}
+        {% include "timetable/filters.html" %}
+      {% endif %}
+
+      {% if error_page %}
+        {% include "timetable/error.html" %}
+      {% elif not has_filters %}
+        {% include "timetable/welcome.html" %}
+      {% elif too_many_events_found %}
+        {% include "timetable/too_many.html" %}
+      {% elif data|length == 0 %}
+        {% include "timetable/empty.html" %}
+      {% else %}
+        {% include "timetable/results.html" %}
+      {% endif %}
+    </div>
+  </main>
+
+  {% include "timetable/footer.html" %}
+  <script src="{% static 'vendor/lucide/lucide.min.js' %}"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+  <script src="{% static 'js/schedule.js' %}"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js");
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+/* ===== STATS GRID ===== */
+.monitoring-page .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 900px) {
+  .monitoring-page .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 500px) {
+  .monitoring-page .stats-grid { grid-template-columns: 1fr; }
+}
+
+.monitoring-page .stat-card {
+  background: var(--panel-surface);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  padding: 20px 22px;
+  transition: transform 0.15s;
+}
+
+.monitoring-page .stat-card:hover { transform: translateY(-1px); }
+
+.monitoring-page .stat-card--accent {
+  border-color: var(--panel-accent);
+  background: var(--panel-accent-soft);
+}
+
+.monitoring-page .stat-card--warn {
+  border-color: var(--panel-warn);
+  background: var(--panel-warn-soft);
+}
+
+.monitoring-page .stat-card__label {
+  font-size: 11px;
+  color: var(--panel-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.monitoring-page .stat-card__value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.monitoring-page .stat-card--accent .stat-card__value { color: var(--panel-accent); }
+.monitoring-page .stat-card--warn .stat-card__value { color: var(--panel-warn); }
+
+/* ===== CLEAR SECTION ===== */
+.monitoring-page .clear-body {
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.monitoring-page .clear-options {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.monitoring-page .clear-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  min-width: 160px;
+}
+
+.monitoring-page .clear-option:hover { border-color: var(--panel-danger); }
+
+.monitoring-page .clear-option input[type="radio"] {
+  margin-top: 3px;
+  accent-color: var(--panel-danger);
+}
+
+.monitoring-page .clear-option__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.monitoring-page .clear-option__label strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.monitoring-page .clear-option__label small {
+  font-size: 11px;
+  color: var(--panel-text-muted);
+}
