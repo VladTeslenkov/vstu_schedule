@@ -23,20 +23,20 @@ This file complements `docs/developers.md` and provides concise working rules fo
 - Avoid fat models: keep only behavior that naturally belongs to the model itself.
 - Views should contain only HTTP and web concerns; move shared or complex logic into `services/`.
 - Migrations should cover schema and data changes; do not require separate SQL scripts.
-- When changing Django models, create or update migrations with Django management commands, not by hand:
+- When changing Django models, create or update migrations with Django management commands, not by hand. Run migration generation against an in-memory SQLite database so the command does not require a real PostgreSQL server:
 
 ```powershell
-uv run python manage.py makemigrations
+$env:DB_ENGINE="django.db.backends.sqlite3"; $env:POSTGRES_DB=":memory:"; uv run python manage.py makemigrations
 ```
 
-- After model changes, run a migration check before the final response when possible:
+- After model changes, run a migration check before the final response when possible. Use the same in-memory SQLite override:
 
 ```powershell
-uv run python manage.py makemigrations --check --dry-run
+$env:DB_ENGINE="django.db.backends.sqlite3"; $env:POSTGRES_DB=":memory:"; uv run python manage.py makemigrations --check --dry-run
 ```
 
 - Do not manually write normal schema migrations. Manual migration files are acceptable only for Django migration graph maintenance such as merge migrations, or for carefully reviewed custom data migrations when Django cannot generate the needed operation.
-- If `makemigrations` cannot run because the local database or environment is unavailable, mention that in the final response and do not silently skip the migration step.
+- `makemigrations` should not need a local database service. If it still cannot run because of another environment problem, mention that in the final response and do not silently skip the migration step.
 
 ## Code Style
 
