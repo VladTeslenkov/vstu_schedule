@@ -1,0 +1,12 @@
+{% load i18n %}
+<section class="state-card state-card--error" role="alert">
+  <i data-lucide="circle-alert" class="state-icon" aria-hidden="true"></i>
+  <h2>{{ error_page.title }}</h2>
+  <p>{{ error_page.message }}</p>
+  <div class="state-actions">
+    <a class="btn btn-primary" href="{% url 'schedule:index' %}">
+      <i data-lucide="home" class="icon" aria-hidden="true"></i>
+      <span>{% translate "Вернуться на главную" %}</span>
+    </a>
+  </div>
+</section>

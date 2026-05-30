@@ -176,9 +176,40 @@ msgstr "Official website"
 msgid "Расписание занятий ВолгГТУ"
 msgstr "VSTU Class Schedule"
 
+#: .\templates\timetable\error.html:4
+msgid "Страница не найдена"
+msgstr "Page not found"
+
+#: .\templates\timetable\error.html:5
+msgid ""
+"Запрошенная страница недоступна. Если вы уверены, что ссылка должна работать, "
+"обратитесь к администратору."
+msgstr ""
+"The requested page is unavailable. If you are sure the link should work, "
+"please contact the administrator."
+
+#: .\templates\timetable\error.html:4
+msgid "Произошла ошибка"
+msgstr "Something went wrong"
+
+#: .\templates\timetable\error.html:5
+msgid ""
+"Сервис временно не смог обработать запрос. Пожалуйста, обратитесь к администратору."
+msgstr ""
+"The service could not process the request right now. Please contact the "
+"administrator."
+
+#: .\templates\timetable\error.html:9
+msgid "Вернуться на главную"
+msgstr "Return to the home page"
+
 #: .\templates\timetable\results.html:2
 msgid "Расписание на выбранный период"
 msgstr "Schedule for the selected period"
+
+#: .\templates\timetable\results.html:15
+msgid "Экспорт"
+msgstr "Export"
 
 #: .\templates\timetable\results.html:15
 #, python-format

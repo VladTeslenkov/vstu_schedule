@@ -87,3 +87,10 @@ name = { ru = "Очистка хранилища", en = "Storage cleanup" }
 description = { ru = "Очищает выбранный компонент системы. Для ручного запуска нужны аргументы, поэтому задача отображается только для настройки и просмотра логов.", en = "Clears a selected system component. It requires arguments for manual runs, so it is shown for configuration and logs only." }
 soft_time_limit_seconds = 600
 time_limit_seconds = 900
+
+["panel.tasks.delete_revoked_api_clients"]
+concurrency = "exclusive"
+name = { ru = "Удалить отозванных API-клиентов", en = "Delete revoked API clients" }
+description = { ru = "Удаляет API-клиентов, которые уже отозваны. Автозапуск по умолчанию не включен.", en = "Deletes API clients that have already been revoked. No automatic schedule is enabled by default." }
+soft_time_limit_seconds = 300
+time_limit_seconds = 600

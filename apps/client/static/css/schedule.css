@@ -520,9 +520,122 @@ select {
   color: var(--muted);
 }
 
+.state-card--error .state-icon {
+  color: var(--danger);
+}
+
+.state-actions {
+  margin-top: 8px;
+}
+
 .schedule-list {
   display: grid;
   gap: 14px;
+}
+
+.export-menu {
+  position: relative;
+  flex: 0 0 auto;
+  outline: none;
+}
+
+.export-menu__summary {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid #d7e3f4;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: #52647b;
+  cursor: default;
+  font-size: 0.78rem;
+  font-weight: 700;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.export-menu__summary::-webkit-details-marker {
+  display: none;
+}
+
+.export-menu__summary .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.export-menu[open] .export-menu__summary,
+.export-menu__summary:focus-visible,
+.export-menu:hover .export-menu__summary {
+  border-color: #c4d6eb;
+  color: var(--accent);
+  outline: none;
+}
+
+.export-menu[open] .export-menu__summary .icon:last-child {
+  transform: rotate(180deg);
+}
+
+.export-menu__list {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  display: grid;
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+  transform: translateY(-4px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease,
+    visibility 0.12s ease;
+  visibility: hidden;
+}
+
+.export-menu[open] .export-menu__list {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.export-menu__list button,
+.export-menu__disabled {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #22344c;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: left;
+}
+
+.export-menu__list button:hover,
+.export-menu__list button:focus {
+  background: var(--accent-soft);
+  color: #164b85;
+  outline: 2px solid rgba(8, 118, 207, 0.35);
+  outline-offset: -2px;
+}
+
+.export-menu__disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .day-section {
@@ -1183,7 +1296,12 @@ select.control[multiple] option:checked {
 
   .day-actions {
     width: 100%;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .result-count {
+    margin-right: auto;
   }
 
   .day-title {

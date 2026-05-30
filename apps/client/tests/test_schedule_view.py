@@ -1,4 +1,5 @@
 import pytest
+from django.test import override_settings
 from django.urls import reverse
 
 from apps.client.services import client_helpers
@@ -46,6 +47,25 @@ def test_schedule_page_accessibility_landmarks(client):
     assert 'role="status"' in content
     assert 'aria-hidden="true"' in content
     assert "hidden" in content
+
+
+@override_settings(DEBUG=False)
+def test_client_404_renders_schedule_error_page(client):
+    response = client.get("/missing-page/", HTTP_ACCEPT_LANGUAGE="en")
+
+    assert response.status_code == 404
+    content = response.content.decode()
+    assert "Page not found" in content
+    assert "Return to the home page" in content
+    assert "Schedule filters" not in content
+
+
+@override_settings(DEBUG=False)
+def test_api_404_keeps_json_error_response(client):
+    response = client.get("/api/missing/", HTTP_ACCEPT="application/json")
+
+    assert response.status_code == 404
+    assert response["Content-Type"].startswith("application/json")
 
 
 @pytest.mark.django_db

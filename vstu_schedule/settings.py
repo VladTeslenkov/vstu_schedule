@@ -52,7 +52,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_celery_beat",
+    "dmr",
     "apps.common",
+    "apps.api",
     "apps.panel",
     "apps.client",
 ]
@@ -92,18 +94,24 @@ WSGI_APPLICATION = "vstu_schedule.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+DB_ENGINE = dotenv.get("DB_ENGINE", "django.db.backends.postgresql")
+
 DATABASES = {
     "default": {
-        "ENGINE": dotenv.get("DB_ENGINE", "django.db.backends.postgresql"),
+        "ENGINE": DB_ENGINE,
         "NAME": dotenv.get("POSTGRES_DB"),
         "USER": dotenv.get("POSTGRES_USER"),
         "PASSWORD": dotenv.get("POSTGRES_PASSWORD"),
         "HOST": dotenv.get("DB_HOST", "db"),
         "PORT": dotenv.get("DB_PORT", 5432),
-        "OPTIONS": {
-            "pool": not DEBUG,
-            "connect_timeout": 10,
-        },
+        "OPTIONS": (
+            {
+                "pool": not DEBUG,
+                "connect_timeout": 10,
+            }
+            if DB_ENGINE != "django.db.backends.sqlite3"
+            else {}
+        ),
     }
 }
 
@@ -150,6 +158,22 @@ STATICFILES_DIRS = [
 ]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Timetable and client limits
+CLIENT_FILTER_OPTIONS_CACHE_KEY = "client:schedule:filter-options:v1"
+CLIENT_FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS = 2 * 60 * 60
+CLIENT_MAX_FILTERED_EVENTS = 250
+TIMETABLE_FILE_DOWNLOAD_TIMEOUT_SECONDS = 30
+TIMETABLE_MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024
+TIMETABLE_WEB_REQUEST_TIMEOUT_SECONDS = 10
+
+# API settings
+API_ACCESS_TOKEN_SECONDS = 15 * 60
+API_EXPORT_ANONYMOUS_RATE_LIMIT = 30
+API_EXPORT_ANONYMOUS_RATE_WINDOW_SECONDS = 60
+API_TOKEN_RATE_LIMIT = 10
+API_TOKEN_RATE_WINDOW_SECONDS = 60
+API_MODEL_LIST_LIMIT = 500
 
 # Celery Beat Config
 DISABLE_CELERY = dotenv.get_bool("DISABLE_CELERY", default=False)

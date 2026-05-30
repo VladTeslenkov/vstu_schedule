@@ -214,8 +214,8 @@ button.deletelink:hover {
   align-items: center;
   display: grid;
   min-height: 100vh;
-  padding: 24px;
-  place-items: center;
+  padding: clamp(56px, 12vh, 120px) 24px 24px;
+  place-items: start center;
 }
 
 .admin-login-card {
@@ -312,4 +312,21 @@ button.deletelink:hover {
 
 .admin-login-card .password-reset-link {
   text-align: center;
+}
+
+@media (max-height: 620px) {
+  .admin-login-shell {
+    min-height: auto;
+    padding-top: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-login-shell {
+    padding: 20px 12px;
+  }
+
+  .admin-login-card form {
+    padding: 18px;
+  }
 }

@@ -64,6 +64,10 @@
         <i data-lucide="list-checks" class="icon"></i>
         <span>Задачи</span>
       </a>
+      <a href="{% url 'panel_api_clients' %}" class="{% if active_nav == 'api_clients' %}active{% endif %}">
+        <i data-lucide="key-round" class="icon"></i>
+        <span>API-клиенты</span>
+      </a>
     </nav>
   </aside>
 

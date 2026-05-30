@@ -17,6 +17,7 @@ This file complements `docs/developers.md` and provides concise working rules fo
 ## Architecture Rules
 
 - Treat `common` as a shared library-like app. Do not add web views to it.
+- Treat `apps/api/schemas.py` and `apps/api/services/serialization.py` as the stable public API contract. When changing timetable ORM models, relations, enum/status choices, or helper methods used by API serialization, check and update API schemas, serialization, and contract tests. Do not make incompatible public DTO changes without explicit API versioning or an agreed migration plan.
 - Put complex business logic in `services/`, not in models or views.
 - Django ORM may be used in business logic when it keeps the code simpler.
 - Use selector functions in `selectors.py` for reusable database reads.

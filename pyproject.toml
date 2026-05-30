@@ -21,6 +21,8 @@ dependencies = [
     "xlsxwriter>=3.2.9",
     "xxhash>=3.7.0",
     "rapidfuzz>=3.14.5",
+    "django-modern-rest[jwt,msgspec,openapi]>=0.10.0",
+    "icalendar>=7.1.2",
 ]
 [dependency-groups]
 dev = [
@@ -29,7 +31,7 @@ dev = [
     "pyright>=1.1.409",
     "pytest>=9.0.2",
     "pytest-django>=4.11.1",
-    "ruff>=0.15.12",
+    "ruff>=0.15.15",
 ]
 
 [tool.pyright]

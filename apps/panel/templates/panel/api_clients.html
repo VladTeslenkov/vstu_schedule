@@ -1,0 +1,85 @@
+{% extends "panel/base.html" %}
+
+{% block title %}API-клиенты - Панель управления{% endblock %}
+{% block topbar_title %}API-клиенты{% endblock %}
+
+{% block content %}
+<header class="page__header">
+  <div>
+    <h1>API-клиенты</h1>
+    <p class="page-description">Клиенты получают короткоживущий access token по client id и secret.</p>
+  </div>
+</header>
+
+{% if created_client and created_secret %}
+  <section class="card">
+    <div class="card__header">
+      <h2>Новый секрет</h2>
+    </div>
+    <div class="task-status task-status--success">
+      <strong>Client ID:</strong> {{ created_client.client_id }}<br>
+      <strong>Client secret:</strong> {{ created_secret }}
+    </div>
+  </section>
+{% endif %}
+
+<section class="card">
+  <div class="card__header">
+    <h2>Создать клиента</h2>
+  </div>
+  <form class="action-panel" method="post">
+    {% csrf_token %}
+    <label class="field-label" for="api-client-name">Название</label>
+    <input id="api-client-name" class="field-input" type="text" name="name" maxlength="255" required>
+    <button class="btn btn--primary" type="submit">
+      <i data-lucide="plus" class="icon"></i>
+      <span>Создать</span>
+    </button>
+  </form>
+</section>
+
+<section class="card">
+  <div class="card__header">
+    <h2>Клиенты</h2>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Название</th>
+          <th>Client ID</th>
+          <th>Статус</th>
+          <th>Последний доступ</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for client in clients %}
+          <tr>
+            <td>{{ client.name }}</td>
+            <td><code>{{ client.client_id }}</code></td>
+            <td>{% if client.is_active %}активен{% else %}отозван{% endif %}</td>
+            <td>{{ client.last_used_at|default:"-" }}</td>
+            <td>
+              <form method="post" action="{% url 'panel_api_client_rotate' client.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button class="btn btn--secondary" type="submit">Ротация</button>
+              </form>
+              {% if client.is_active %}
+                <form method="post" action="{% url 'panel_api_client_revoke' client.pk %}" style="display:inline">
+                  {% csrf_token %}
+                  <button class="btn btn--danger" type="submit">Отозвать</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5">API-клиенты пока не созданы.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

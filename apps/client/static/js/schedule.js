@@ -467,6 +467,38 @@
     });
   }
 
+  function setupExportMenu() {
+    const menu = document.querySelector("[data-export-menu]");
+    if (!menu) return;
+    const list = menu.querySelector("[data-export-menu-list]");
+    if (!list) return;
+
+    list.querySelectorAll("[data-export-link]").forEach((item) => {
+      item.addEventListener("click", async () => {
+        menu.removeAttribute("open");
+        const response = await fetch(item.dataset.exportLink, {
+          headers: { Accept: "*/*" },
+        });
+        if (!response.ok) {
+          throw new Error("Export failed");
+        }
+        const blob = await response.blob();
+        const link = document.createElement("a");
+        const objectUrl = URL.createObjectURL(blob);
+        const filenameHeader = response.headers.get("X-Export-Filename");
+        const filenameFromHeader = filenameHeader ? new TextDecoder().decode(
+          Uint8Array.from(atob(filenameHeader), c => c.charCodeAt(0))
+        ) : null;
+        link.href = objectUrl;
+        link.download = filenameFromHeader || item.dataset.exportFilename || "schedule";
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     const form = getScheduleFilterForm();
     const shouldApplyQueryFilters = form && hasQueryFilters(form);
@@ -494,6 +526,7 @@
 
     setupPublicAlerts();
     setupDayToggles();
+    setupExportMenu();
 
     updateDateFields();
     updateCalendarVisibility();

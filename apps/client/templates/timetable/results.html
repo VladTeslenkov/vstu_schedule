@@ -14,6 +14,21 @@
           </div>
           <div class="day-actions">
             <div class="result-count">{% blocktranslate count lessons_count=entry|length %}Найдено занятие: {{ lessons_count }}{% plural %}Найдено занятий: {{ lessons_count }}{% endblocktranslate %}</div>
+            {% if forloop.first %}
+              <details class="export-menu" data-export-menu>
+                <summary class="export-menu__summary">
+                  <i data-lucide="download" class="icon" aria-hidden="true"></i>
+                  <span>{% translate "Экспорт" %}</span>
+                  <i data-lucide="chevron-down" class="icon" aria-hidden="true"></i>
+                </summary>
+                <div class="export-menu__list" role="menu" data-export-menu-list>
+                  <button role="menuitem" type="button" data-export-link="{% url 'api:export' %}?{{ export_query }}{% if export_query %}&{% endif %}format=csv" data-export-filename="schedule.csv">CSV</button>
+                  <button role="menuitem" type="button" data-export-link="{% url 'api:export' %}?{{ export_query }}{% if export_query %}&{% endif %}format=ics" data-export-filename="schedule.ics">ICS (iCalendar)</button>
+                  <button role="menuitem" type="button" data-export-link="{% url 'api:export' %}?{{ export_query }}{% if export_query %}&{% endif %}format=json" data-export-filename="schedule.json">JSON</button>
+                  <span class="export-menu__disabled" aria-disabled="true">XLS</span>
+                </div>
+              </details>
+            {% endif %}
             <button
               class="icon-button day-toggle"
               type="button"

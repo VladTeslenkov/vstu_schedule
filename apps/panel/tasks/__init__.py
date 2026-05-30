@@ -182,6 +182,17 @@ def clear_storage_task(self: Any, component: str) -> dict[str, str]:
         raise
 
 
+@project_task(name="panel.tasks.delete_revoked_api_clients")
+def delete_revoked_api_clients_task(self: Any) -> dict[str, int | str]:
+    """Delete revoked API clients. Manual maintenance task, disabled by default."""
+    logger.info("Task started: delete_revoked_api_clients [id=%s]", self.request.id)
+    from apps.api.services.cleanup import delete_revoked_api_clients
+
+    deleted_count = delete_revoked_api_clients()
+    logger.info("Task delete_revoked_api_clients completed: deleted=%s", deleted_count)
+    return {"status": "success", "deleted_count": deleted_count}
+
+
 def configure_periodic_update(interval_minutes: int) -> None:
     """
     Создаёт или обновляет периодическую задачу обновления расписания в Celery Beat.

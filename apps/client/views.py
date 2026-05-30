@@ -1,6 +1,7 @@
 from django.http import QueryDict
 from django.shortcuts import redirect, render
 from django.template.defaulttags import register
+from django.utils.translation import gettext_lazy as _
 
 from apps.client.exceptions import InvalidDateFilterError, TooManyEventsFoundError
 from apps.client.services.client_helpers import (
@@ -96,11 +97,10 @@ def _clean_get_params(params: QueryDict) -> QueryDict:
 
 
 def index(request):
-    if request.method == "GET":
-        cleaned_get = _clean_get_params(request.GET)
-        if cleaned_get.urlencode() != request.GET.urlencode():
-            query = cleaned_get.urlencode()
-            return redirect(f"{request.path}?{query}" if query else request.path)
+    cleaned_get = _clean_get_params(request.GET)
+    if request.method == "GET" and cleaned_get.urlencode() != request.GET.urlencode():
+        query = cleaned_get.urlencode()
+        return redirect(f"{request.path}?{query}" if query else request.path)
 
     context: dict[str, object] = {"too_many_events_found": False}
     selected = {
@@ -145,6 +145,53 @@ def index(request):
     )
     context["calendar_visible"] = "1" if "calendar_visibility" in request.GET else "0"
     context["has_filters"] = has_filters
+    context["export_query"] = cleaned_get.urlencode()
     context["alerts"] = public_alerts()
 
     return render(request, "timetable/index.html", context=context)
+
+
+def page_not_found(request, exception=None):
+    context = _error_context(
+        title=_("Страница не найдена"),
+        message=_(
+            "Запрошенная страница недоступна. Если вы уверены, что ссылка должна работать, "
+            "обратитесь к администратору."
+        ),
+    )
+    return render(request, "timetable/index.html", context=context, status=404)
+
+
+def server_error(request):
+    context = _error_context(
+        title=_("Произошла ошибка"),
+        message=_(
+            "Сервис временно не смог обработать запрос. Пожалуйста, обратитесь к администратору."
+        ),
+    )
+    return render(request, "timetable/index.html", context=context, status=500)
+
+
+def _error_context(*, title, message) -> dict[str, object]:
+    return {
+        "error_page": {
+            "title": title,
+            "message": message,
+        },
+        "has_filters": False,
+        "too_many_events_found": False,
+        "selected": {
+            "date": "today",
+            "left_date": "",
+            "right_date": "",
+            "group": [],
+            "teacher": [],
+            "place": [],
+            "subject": [],
+            "kind": [],
+            "time_slot": [],
+        },
+        "addition_filters_visible": "0",
+        "calendar_visible": "0",
+        "alerts": [],
+    }
