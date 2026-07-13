@@ -114,7 +114,7 @@ class WebParser:
             link_url = urljoin(web_url, href)
 
             # Проверяем, что ссылка ведёт на файл
-            if cls.is_file_with_extension(link_url, [".xls", ".xlsx", ".doc", ".docx"]):
+            if cls.is_file_with_extension(link_url, [".xls", ".xlsx", ".xlsm", ".doc", ".docx"]):
                 # Добавляем новую директорию в путь
                 current_path = cls.__add_to_path(current_path, link_name, True)
 

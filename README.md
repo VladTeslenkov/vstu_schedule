@@ -10,6 +10,13 @@
 
 Возможно, для работы сборки переводов на Windows требуется установить `GNU gettext`, например через `winget install --id=GnuWin32.GetText -e`
 
+# для локальной разработки поднять Redis
+docker run -d --name redis -p 6379:6379 redis 
+# Worker
+uv run celery -A vstu_schedule worker -l info --pool=solo 
+# celery beat
+uv run celery -A vstu_schedule beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler 
+
 **[Инструкции для новых разработчиков](/docs/developers.md)**
 
 **Перед отправкой коммита:**
