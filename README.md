@@ -8,14 +8,15 @@
 
 **Локальная разработка**: установите пакетный менеджер `uv` и выполните `uv sync`, после чего будет создано виртуальное окружение проекта в папке `.venv`, перед запуском настройте окружение в файле `.env.local` (см. содержимое `.env.example`). Убедитесь, что имеете запущенную базу данных PostgreSQL
 
+В случае, если необходимо поднять отдельные контейнеры
+```bash
+docker run -d --name redis -p 6379:6379 redis # redis
+uv run celery -A vstu_schedule worker -l info --pool=solo  # worker
+uv run celery -A vstu_schedule beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler # celery beat
+```
+
 Возможно, для работы сборки переводов на Windows требуется установить `GNU gettext`, например через `winget install --id=GnuWin32.GetText -e`
 
-# для локальной разработки поднять Redis
-docker run -d --name redis -p 6379:6379 redis 
-# Worker
-uv run celery -A vstu_schedule worker -l info --pool=solo 
-# celery beat
-uv run celery -A vstu_schedule beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler 
 
 **[Инструкции для новых разработчиков](/docs/developers.md)**
 
