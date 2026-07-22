@@ -1,5 +1,5 @@
 # --- Этап 1: Сборка (Builder) ---
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Копируем uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -26,7 +26,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # --- Этап 2: Финальный образ (Runtime) ---
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 # Настройки Python
 # Добавляем виртуальное окружение в PATH и объявляем его основным
