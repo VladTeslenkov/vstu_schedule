@@ -3,6 +3,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from apps.common.models import Alert
+from apps.panel.services import actions
+from apps.panel.services.actions import run_panel_action
 from apps.panel.tasks import run_panel_action_task
 
 
@@ -76,3 +78,41 @@ def test_panel_action_task_creates_admin_alert_on_failure(monkeypatch):
     assert alert.is_dismissible is True
     assert alert.category == Alert.Category.DANGER
     assert "broken action" in alert.body
+
+
+@pytest.mark.parametrize(
+    "action_id",
+    [
+        "import_subject_reference",
+        "import_teacher_reference",
+        "import_student_reference",
+        "import_place_reference",
+        "import_events",
+        "create_time_slots",
+    ],
+)
+def test_panel_actions_invalidate_filter_options_cache_after_success(
+    monkeypatch,
+    tmp_path,
+    action_id,
+):
+    invalidations = []
+
+    monkeypatch.setattr(
+        actions, "invalidate_cached_filter_options", lambda: invalidations.append(1)
+    )
+    monkeypatch.setattr(actions.ReferenceImporter, "import_subject_reference", lambda data: None)
+    monkeypatch.setattr(actions.ReferenceImporter, "import_teacher_reference", lambda data: None)
+    monkeypatch.setattr(actions.ReferenceImporter, "import_student_reference", lambda data: None)
+    monkeypatch.setattr(actions.ReferenceImporter, "import_place_reference", lambda data: None)
+    monkeypatch.setattr(actions.EventImporter, "import_events", lambda data: None)
+    monkeypatch.setattr(actions, "create_common_time_slots", lambda: True)
+    upload_path = tmp_path / "reference.json"
+    upload_path.write_text("[]", encoding="utf-8")
+
+    run_panel_action(
+        action_id,
+        upload_path=str(upload_path) if action_id != "create_time_slots" else "",
+    )
+
+    assert invalidations == [1]

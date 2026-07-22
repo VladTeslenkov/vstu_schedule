@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from apps.client.services.client_helpers import invalidate_cached_filter_options
 from apps.common.models import Organization, Schedule
 from apps.common.services.timetable.load.event_importer import EventImporter
 from apps.common.services.timetable.load.reference_importer import ReferenceImporter
@@ -118,6 +119,16 @@ PANEL_ACTIONS: tuple[PanelAction, ...] = (
 )
 
 PANEL_ACTIONS_BY_ID = {action.action_id: action for action in PANEL_ACTIONS}
+FILTER_OPTIONS_INVALIDATING_ACTION_IDS = frozenset(
+    {
+        "import_subject_reference",
+        "import_teacher_reference",
+        "import_student_reference",
+        "import_place_reference",
+        "import_events",
+        "create_time_slots",
+    }
+)
 
 
 def get_panel_action(action_id: str) -> PanelAction:
@@ -132,47 +143,53 @@ def run_panel_action(action_id: str, *, upload_path: str = "", mode: str = "") -
     if action.kind == "file" and not upload_path:
         raise ValueError(f"Action {action_id!r} requires an uploaded file.")
 
+    message: str
     match action_id:
         case "import_subject_reference":
             ReferenceImporter.import_subject_reference(_read_upload(upload_path))
-            return "Справочник дисциплин импортирован."
+            message = "Справочник дисциплин импортирован."
         case "import_teacher_reference":
             ReferenceImporter.import_teacher_reference(_read_upload(upload_path))
-            return "Справочник преподавателей импортирован."
+            message = "Справочник преподавателей импортирован."
         case "import_student_reference":
             ReferenceImporter.import_student_reference(_read_upload(upload_path))
-            return "Справочник групп импортирован."
+            message = "Справочник групп импортирован."
         case "import_place_reference":
             ReferenceImporter.import_place_reference(_read_upload(upload_path))
-            return "Справочник аудиторий импортирован."
+            message = "Справочник аудиторий импортирован."
         case "import_faculty_reference":
             ReferenceImporter.import_faculty_reference(_read_upload(upload_path))
-            return "Справочник факультетов импортирован."
+            message = "Справочник факультетов импортирован."
         case "import_department_reference":
             ReferenceImporter.import_department_reference(_read_upload(upload_path))
-            return "Справочник кафедр импортирован."
+            message = "Справочник кафедр импортирован."
         case "import_schedule":
             if mode not in {"common", "delete"}:
                 raise ValueError("Unknown schedule import mode.")
             ReferenceImporter.import_schedule(_read_upload(upload_path), mode == "common")
-            return "Расписание импортировано."
+            message = "Расписание импортировано."
         case "import_events":
             EventImporter.import_events(_read_upload(upload_path))
-            return "Занятия импортированы."
+            message = "Занятия импортированы."
         case "create_abstract_days":
             create_common_abstract_days()
-            return "Стандартные абстрактные дни созданы."
+            message = "Стандартные абстрактные дни созданы."
         case "create_time_slots":
             create_common_time_slots()
-            return "Стандартные учебные часы созданы."
+            message = "Стандартные учебные часы созданы."
         case "create_organization":
             Organization.objects.get_or_create(name="ВолгГТУ")
-            return "Организация ВолгГТУ создана или уже существовала."
+            message = "Организация ВолгГТУ создана или уже существовала."
         case "delete_archive_schedules":
             deleted_count, _ = Schedule.objects.filter(status=Schedule.Status.ARCHIVE).delete()
-            return f"Архивные расписания удалены: {deleted_count}."
+            message = f"Архивные расписания удалены: {deleted_count}."
         case _:
             raise ValueError(f"Unknown panel action: {action_id}")
+
+    if action_id in FILTER_OPTIONS_INVALIDATING_ACTION_IDS:
+        invalidate_cached_filter_options()
+
+    return message
 
 
 def _read_upload(upload_path: str) -> str:

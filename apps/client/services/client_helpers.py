@@ -86,6 +86,22 @@ def _set_process_cached_filter_options(options: FilterOptions) -> None:
     )
 
 
+def _has_empty_filter_options(options: FilterOptions) -> bool:
+    return any(not values for values in options.values())
+
+
+def invalidate_cached_filter_options() -> None:
+    """Remove shared and local copies after reference data changes."""
+
+    global _process_filter_options_cache
+    _process_filter_options_cache = None
+
+    try:
+        cache.delete(FILTER_OPTIONS_CACHE_KEY)
+    except Exception as exc:
+        logger.warning("Filter options cache invalidation failed: %s", exc)
+
+
 def get_cached_filter_options() -> FilterOptions:
     try:
         cached_options = cache.get(FILTER_OPTIONS_CACHE_KEY)
@@ -97,9 +113,13 @@ def get_cached_filter_options() -> FilterOptions:
     else:
         if cached_options is not None:
             options = cast(FilterOptions, cached_options)
-            return options
+            if not _has_empty_filter_options(options):
+                return options
+            invalidate_cached_filter_options()
 
     options = _build_filter_options()
+    if _has_empty_filter_options(options):
+        return options
 
     try:
         cache.set(FILTER_OPTIONS_CACHE_KEY, options, FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS)

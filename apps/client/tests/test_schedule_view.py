@@ -246,25 +246,95 @@ def test_filter_options_prefers_django_cache_when_process_cache_exists(monkeypat
 
     process_options = {
         "groups": ["process"],
-        "teachers": [],
-        "places": [],
-        "subjects": [],
-        "kinds": [],
-        "time_slots": [],
+        "teachers": ["Process teacher"],
+        "places": ["P 101"],
+        "subjects": ["Process subject"],
+        "kinds": ["Practice"],
+        "time_slots": ["10:10"],
     }
     redis_options = {
         "groups": ["redis"],
-        "teachers": [],
-        "places": [],
-        "subjects": [],
-        "kinds": [],
-        "time_slots": [],
+        "teachers": ["Redis teacher"],
+        "places": ["R 101"],
+        "subjects": ["Redis subject"],
+        "kinds": ["Lecture"],
+        "time_slots": ["08:30"],
     }
 
     monkeypatch.setattr(client_helpers, "cache", WorkingCache())
     client_helpers._set_process_cached_filter_options(process_options)
 
     assert client_helpers.get_cached_filter_options() == redis_options
+
+
+def test_filter_options_with_empty_reference_are_not_cached(monkeypatch):
+    class WorkingCache:
+        def get(self, key):
+            return None
+
+        def set(self, key, value, timeout):
+            raise AssertionError("empty filter options must not be cached")
+
+    options = {
+        "groups": [],
+        "teachers": ["Teacher"],
+        "places": ["A 101"],
+        "subjects": ["Subject"],
+        "kinds": ["Lecture"],
+        "time_slots": ["08:30"],
+    }
+    monkeypatch.setattr(client_helpers, "cache", WorkingCache())
+    monkeypatch.setattr(client_helpers, "_build_filter_options", lambda: options)
+
+    assert client_helpers.get_cached_filter_options() == options
+
+
+def test_filter_options_discards_cached_empty_reference(monkeypatch):
+    class WorkingCache:
+        def __init__(self):
+            self.deleted_keys = []
+
+        def get(self, key):
+            return cached_options
+
+        def delete(self, key):
+            self.deleted_keys.append(key)
+
+        def set(self, key, value, timeout):
+            raise AssertionError("empty filter options must not be cached")
+
+    cached_options = {
+        "groups": [],
+        "teachers": ["Teacher"],
+        "places": ["A 101"],
+        "subjects": ["Subject"],
+        "kinds": ["Lecture"],
+        "time_slots": ["08:30"],
+    }
+    cache = WorkingCache()
+    monkeypatch.setattr(client_helpers, "cache", cache)
+    monkeypatch.setattr(client_helpers, "_build_filter_options", lambda: cached_options)
+
+    assert client_helpers.get_cached_filter_options() == cached_options
+    assert cache.deleted_keys == [client_helpers.FILTER_OPTIONS_CACHE_KEY]
+
+
+def test_invalidate_cached_filter_options_clears_shared_and_process_caches(monkeypatch):
+    class WorkingCache:
+        def __init__(self):
+            self.deleted_keys = []
+
+        def delete(self, key):
+            self.deleted_keys.append(key)
+
+    cache = WorkingCache()
+    monkeypatch.setattr(client_helpers, "cache", cache)
+    client_helpers._set_process_cached_filter_options({"groups": ["group"]})
+
+    client_helpers.invalidate_cached_filter_options()
+
+    assert client_helpers._process_filter_options_cache is None
+    assert cache.deleted_keys == [client_helpers.FILTER_OPTIONS_CACHE_KEY]
 
 
 @pytest.mark.parametrize(
