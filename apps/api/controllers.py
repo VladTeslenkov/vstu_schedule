@@ -1,7 +1,7 @@
 import base64
 from http import HTTPStatus
 
-from django.http import HttpResponse
+from django.http import HttpResponse, QueryDict
 from dmr import APIError, Body, Controller, ResponseSpec, modify, validate
 from dmr.errors import format_error
 from dmr.plugins.msgspec import MsgspecSerializer
@@ -25,6 +25,13 @@ from apps.api.services.filters import filters_from_query, get_events_for_query
 from apps.api.services.rate_limits import (
     enforce_anonymous_export_rate_limit,
     enforce_token_rate_limit,
+)
+from apps.api.services.schedule_exporters import export_schedule
+from apps.api.services.schedule_exports import (
+    build_schedule_events,
+    get_schedule_events_for_query,
+    schedule_export_record_count,
+    schedule_filters_from_query,
 )
 from apps.api.services.serialization import (
     serialize_events,
@@ -105,7 +112,7 @@ class ReferencePlacesController(ApiController):
 
 
 class ExportController(ApiController):
-    """Export the current timetable visualization request."""
+    """Export dated events or the abstract schedule."""
 
     @validate(
         ResponseSpec(
@@ -122,23 +129,41 @@ class ExportController(ApiController):
         validate_negotiation=False,
     )
     def get(self) -> HttpResponse:
-        """Return selected timetable events as JSON, CSV, or iCalendar."""
+        """Return selected events or schedule as JSON, CSV, or iCalendar."""
         format_name = _requested_format(self.request)
         unlimited = is_unlimited_request(self.request)
         if not unlimited:
             enforce_anonymous_export_rate_limit(self.request)
 
-        filters = filters_from_query(self.request.GET)
-        events = get_events_for_query(self.request.GET)
-        if not unlimited and has_more_events_than(events, CLIENT_MAX_FILTERED_EVENTS):
-            raise APIError(
-                format_error(f"Too many events found. Limit is {CLIENT_MAX_FILTERED_EVENTS}."),
-                status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
-            )
-
-        serialized_events = serialize_events(list(events))
         try:
-            exported = export_events(serialized_events, format_name, filters)
+            if _has_explicit_date_filter(self.request.GET):
+                filters = filters_from_query(self.request.GET)
+                events = get_events_for_query(self.request.GET)
+                if not unlimited and has_more_events_than(events, CLIENT_MAX_FILTERED_EVENTS):
+                    raise APIError(
+                        format_error(
+                            f"Too many events found. Limit is {CLIENT_MAX_FILTERED_EVENTS}."
+                        ),
+                        status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                    )
+                exported = export_events(serialize_events(list(events)), format_name, filters)
+            else:
+                filters = schedule_filters_from_query(self.request.GET)
+                schedule_events = build_schedule_events(
+                    list(get_schedule_events_for_query(self.request.GET))
+                )
+                if (
+                    not unlimited
+                    and schedule_export_record_count(schedule_events) > CLIENT_MAX_FILTERED_EVENTS
+                ):
+                    raise APIError(
+                        format_error(
+                            "Too many schedule records found. "
+                            f"Limit is {CLIENT_MAX_FILTERED_EVENTS}."
+                        ),
+                        status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                    )
+                exported = export_schedule(schedule_events, format_name, filters)
         except ValueError as exc:
             raise APIError(
                 format_error(str(exc)),
@@ -150,6 +175,10 @@ class ExportController(ApiController):
             "ascii"
         )
         return response
+
+
+def _has_explicit_date_filter(query: QueryDict) -> bool:
+    return any(query.get(name) for name in ("date", "left_date", "right_date"))
 
 
 def _requested_format(request) -> str:

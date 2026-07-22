@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from django.template.loader import render_to_string
 from django.test import override_settings
 from django.urls import reverse
 
@@ -43,6 +44,25 @@ def test_schedule_page_renders_english(client):
     assert '<link rel="manifest" href="/manifest.en.webmanifest">' in content
     assert 'data-autocomplete-placeholder="Start typing"' in content
     assert 'data-remove-label-template="Remove __value__"' in content
+
+
+def test_export_dropdown_is_a_reusable_mode_component():
+    content = render_to_string(
+        "timetable/components/export_dropdown.html",
+        {"export_query": "date=range_date&left_date=2026-02-01&group=TEST-101"},
+    )
+
+    assert 'data-export-url="/api/export/"' in content
+    assert (
+        'data-export-query="date=range_date&amp;left_date=2026-02-01&amp;group=TEST-101"' in content
+    )
+    assert 'value="events"' in content
+    assert 'value="schedule"' in content
+    assert 'data-export-format="csv"' in content
+    assert 'data-export-format="ics"' in content
+    assert 'data-export-format="json"' in content
+    assert "Занятия — конкретные события за выбранный период" in content
+    assert "Расписание — повторяющийся план активных расписаний" in content
 
 
 def _streaming_text(response) -> str:

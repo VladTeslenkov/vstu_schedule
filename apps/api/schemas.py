@@ -54,6 +54,12 @@ class ApiScheduleMetadata(msgspec.Struct):
     department: ApiDepartment | None
 
 
+class ApiAbstractDay(msgspec.Struct):
+    id: int
+    name: str
+    day_number: int
+
+
 class ApiEvent(msgspec.Struct):
     id: int
     date: date | None
@@ -80,6 +86,51 @@ class ApiExportResponse(msgspec.Struct):
     count: int
     filters: dict[str, Any]
     events: list[ApiEvent]
+
+
+class ApiScheduleRecurrence(msgspec.Struct):
+    kind: str
+    first_date: date
+    last_date: date
+    interval_days: int | None
+    occurrence_count: int
+
+
+class ApiScheduleException(msgspec.Struct):
+    event_id: int
+    original_date: date
+    date: date
+    subject: ApiSubject | None
+    kind: ApiEventKind | None
+    time_slot: ApiTimeSlot | None
+    groups: list[ApiParticipant]
+    teachers: list[ApiParticipant]
+    places: list[ApiPlace]
+    is_canceled: bool
+    is_moved: bool
+    is_modified: bool
+
+
+class ApiScheduleEvent(msgspec.Struct):
+    id: int
+    abstract_day: ApiAbstractDay
+    subject: ApiSubject | None
+    kind: ApiEventKind | None
+    time_slot: ApiTimeSlot | None
+    groups: list[ApiParticipant]
+    teachers: list[ApiParticipant]
+    places: list[ApiPlace]
+    schedule: ApiScheduleMetadata | None
+    recurrence: ApiScheduleRecurrence
+    exceptions: list[ApiScheduleException]
+
+
+class ApiScheduleExportResponse(msgspec.Struct):
+    mode: str
+    filters: dict[str, Any]
+    schedule_event_count: int
+    exception_count: int
+    schedule_events: list[ApiScheduleEvent]
 
 
 class ApiTokenRequest(msgspec.Struct):

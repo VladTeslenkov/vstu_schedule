@@ -211,6 +211,27 @@ msgstr "Schedule for the selected period"
 msgid "Экспорт"
 msgstr "Export"
 
+msgid "Режим экспорта"
+msgstr "Export mode"
+
+msgid "Занятия"
+msgstr "Classes"
+
+msgid "Расписание"
+msgstr "Schedule"
+
+msgid "Занятия — конкретные события за выбранный период, включая отмены и изменения"
+msgstr "Classes — specific events for the selected period, including cancellations and changes"
+
+msgid "Расписание — повторяющийся план активных расписаний; выбранный период дат не применяется"
+msgstr "Schedule — recurring plan for active schedules; the selected date period is ignored"
+
+msgid "Формат экспорта"
+msgstr "Export format"
+
+msgid "Не удалось экспортировать расписание"
+msgstr "Could not export the schedule"
+
 #: .\templates\timetable\results.html:15
 #, python-format
 msgid "Найдено занятие: %(lessons_count)s"

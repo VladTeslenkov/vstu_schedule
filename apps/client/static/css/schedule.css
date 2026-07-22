@@ -584,7 +584,7 @@ select {
   z-index: 10;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 190px;
+  width: min(310px, calc(100vw - 28px));
   display: grid;
   gap: 3px;
   padding: 6px;
@@ -624,6 +624,94 @@ select {
   font-weight: 600;
   text-decoration: none;
   text-align: left;
+}
+
+.export-mode-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 0 0 5px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f5f8fc;
+}
+
+.export-mode-option {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+.export-mode-option > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.export-mode-option > span:first-of-type {
+  display: flex;
+  justify-content: center;
+  padding: 7px 8px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.export-mode-option > input:checked + span {
+  background: white;
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(18, 52, 86, 0.16);
+}
+
+.export-mode-option > input:focus-visible + span {
+  outline: 2px solid rgba(8, 118, 207, 0.45);
+  outline-offset: 1px;
+}
+
+.export-mode-tooltip {
+  position: absolute;
+  z-index: 12;
+  right: 0;
+  bottom: calc(100% + 7px);
+  width: min(250px, calc(100vw - 48px));
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #1f3048;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(3px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.export-mode-option:hover .export-mode-tooltip,
+.export-mode-option:focus-within .export-mode-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.export-format-list {
+  display: grid;
+  gap: 3px;
+}
+
+.export-menu__error {
+  padding: 6px 9px;
+  color: var(--danger);
+  font-size: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .export-menu__list,
+  .export-mode-tooltip {
+    transition: none;
+  }
 }
 
 .export-menu__list button:hover,

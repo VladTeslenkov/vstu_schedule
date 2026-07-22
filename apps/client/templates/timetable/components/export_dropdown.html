@@ -1,0 +1,38 @@
+{% load i18n %}
+{% translate "Занятия — конкретные события за выбранный период, включая отмены и изменения" as events_help %}
+{% translate "Расписание — повторяющийся план активных расписаний; выбранный период дат не применяется" as schedule_help %}
+<details
+  class="export-menu"
+  data-export-menu
+  data-export-url="{% url 'api:export' %}"
+  data-export-query="{{ export_query }}"
+  data-export-error-message="{% translate 'Не удалось экспортировать расписание' %}"
+>
+  <summary class="export-menu__summary">
+    <i data-lucide="download" class="icon" aria-hidden="true"></i>
+    <span>{% translate "Экспорт" %}</span>
+    <i data-lucide="chevron-down" class="icon" aria-hidden="true"></i>
+  </summary>
+  <div class="export-menu__list" data-export-menu-list>
+    <fieldset class="export-mode-switcher">
+      <legend class="visually-hidden">{% translate "Режим экспорта" %}</legend>
+      <label class="export-mode-option">
+        <input type="radio" name="export-mode" value="events" aria-describedby="export-events-help" checked>
+        <span>{% translate "Занятия" %}</span>
+        <span id="export-events-help" class="export-mode-tooltip" role="tooltip">{{ events_help }}</span>
+      </label>
+      <label class="export-mode-option">
+        <input type="radio" name="export-mode" value="schedule" aria-describedby="export-schedule-help">
+        <span>{% translate "Расписание" %}</span>
+        <span id="export-schedule-help" class="export-mode-tooltip" role="tooltip">{{ schedule_help }}</span>
+      </label>
+    </fieldset>
+    <div class="export-format-list" aria-label="{% translate 'Формат экспорта' %}">
+      <button type="button" data-export-format="csv">CSV</button>
+      <button type="button" data-export-format="ics">ICS (iCalendar)</button>
+      <button type="button" data-export-format="json">JSON</button>
+      <span class="export-menu__disabled" aria-disabled="true">XLS</span>
+    </div>
+    <span class="export-menu__error" data-export-error role="alert" hidden></span>
+  </div>
+</details>

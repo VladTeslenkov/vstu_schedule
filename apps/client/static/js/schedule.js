@@ -1,5 +1,6 @@
 (function () {
   const filtersStorageKey = "schedule.filters";
+  const exportModeStorageKey = "schedule.exportMode";
   let autocompleteId = 0;
 
   function getOptionText(option) {
@@ -473,28 +474,68 @@
     const list = menu.querySelector("[data-export-menu-list]");
     if (!list) return;
 
-    list.querySelectorAll("[data-export-link]").forEach((item) => {
-      item.addEventListener("click", async () => {
-        menu.removeAttribute("open");
-        const response = await fetch(item.dataset.exportLink, {
-          headers: { Accept: "*/*" },
-        });
-        if (!response.ok) {
-          throw new Error("Export failed");
+    const modeInputs = Array.from(list.querySelectorAll('input[name="export-mode"]'));
+    let exportMode = "events";
+    try {
+      const savedMode = localStorage.getItem(exportModeStorageKey);
+      if (savedMode === "events" || savedMode === "schedule") exportMode = savedMode;
+    } catch (error) {
+      // Browser storage may be unavailable in private mode.
+    }
+    modeInputs.forEach((input) => {
+      input.checked = input.value === exportMode;
+      input.addEventListener("change", () => {
+        if (!input.checked) return;
+        exportMode = input.value;
+        try {
+          localStorage.setItem(exportModeStorageKey, exportMode);
+        } catch (error) {
+          // Browser storage may be unavailable in private mode.
         }
-        const blob = await response.blob();
-        const link = document.createElement("a");
-        const objectUrl = URL.createObjectURL(blob);
-        const filenameHeader = response.headers.get("X-Export-Filename");
-        const filenameFromHeader = filenameHeader ? new TextDecoder().decode(
-          Uint8Array.from(atob(filenameHeader), c => c.charCodeAt(0))
-        ) : null;
-        link.href = objectUrl;
-        link.download = filenameFromHeader || item.dataset.exportFilename || "schedule";
-        document.body.append(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(objectUrl);
+      });
+    });
+
+    list.querySelectorAll("[data-export-format]").forEach((item) => {
+      item.addEventListener("click", async () => {
+        const errorMessage = list.querySelector("[data-export-error]");
+        if (errorMessage) {
+          errorMessage.hidden = true;
+          errorMessage.textContent = "";
+        }
+        item.disabled = true;
+        try {
+          const url = new URL(menu.dataset.exportUrl || "/api/export/", window.location.origin);
+          const params = new URLSearchParams(menu.dataset.exportQuery || "");
+          if (exportMode === "schedule") {
+            ["date", "left_date", "right_date"].forEach((name) => params.delete(name));
+          }
+          params.set("format", item.dataset.exportFormat);
+          url.search = params.toString();
+          const response = await fetch(url, { headers: { Accept: "*/*" } });
+          if (!response.ok) throw new Error("Export failed");
+
+          const blob = await response.blob();
+          const link = document.createElement("a");
+          const objectUrl = URL.createObjectURL(blob);
+          const filenameHeader = response.headers.get("X-Export-Filename");
+          const filenameFromHeader = filenameHeader ? new TextDecoder().decode(
+            Uint8Array.from(atob(filenameHeader), c => c.charCodeAt(0))
+          ) : null;
+          link.href = objectUrl;
+          link.download = filenameFromHeader || "schedule";
+          document.body.append(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(objectUrl);
+          menu.removeAttribute("open");
+        } catch (error) {
+          if (errorMessage) {
+            errorMessage.textContent = menu.dataset.exportErrorMessage || "Export failed";
+            errorMessage.hidden = false;
+          }
+        } finally {
+          item.disabled = false;
+        }
       });
     });
   }
