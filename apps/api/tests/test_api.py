@@ -128,7 +128,6 @@ def test_export_schedule_ics_uses_recurring_event(client):
 def test_export_schedule_includes_full_moved_exception(client):
     event = _create_event()
     event.date = date(2026, 2, 1)
-    event.is_event_overriden = True
     event.save()
     date_override = DayDateOverride.objects.create(
         day_source=date(2026, 2, 1),
@@ -151,7 +150,7 @@ def test_export_schedule_includes_full_moved_exception(client):
     assert exception["groups"][0]["name"] == "TEST-101"
     assert exception["places"][0]["display_name"] == "B 101"
     assert exception["is_moved"] is True
-    assert exception["is_modified"] is True
+    assert exception["is_modified"] is False
 
 
 @pytest.mark.django_db
@@ -171,6 +170,51 @@ def test_export_schedule_ics_uses_recurrence_id_for_moved_exception(client):
     assert content.count(f"UID:schedule-event-{event.abstract_event.pk}@vstu-schedule") == 2
     assert "RECURRENCE-ID;TZID=Europe/Volgograd:20260201T083000" in content
     assert "DTSTART;TZID=Europe/Volgograd:20260203T083000" in content
+
+
+@pytest.mark.django_db
+def test_export_schedule_ignores_stale_overridden_flag(client):
+    event = _create_event()
+    Event.objects.filter(pk=event.pk).update(is_event_overriden=True)
+
+    response = client.get(reverse("api:export"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["exception_count"] == 0
+    assert response.json()["schedule_events"][0]["exceptions"] == []
+
+
+@pytest.mark.django_db
+def test_export_schedule_detects_actual_change_without_overridden_flag(client):
+    event = _create_event()
+    changed_subject = Subject.objects.create(name="Changed discipline")
+    Event.objects.filter(pk=event.pk).update(
+        subject_override=changed_subject,
+        is_event_overriden=False,
+    )
+
+    response = client.get(reverse("api:export"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["exception_count"] == 1
+    exception = response.json()["schedule_events"][0]["exceptions"][0]
+    assert exception["subject"]["name"] == "Changed discipline"
+    assert exception["is_modified"] is True
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("relation", ["participants_override", "places_override"])
+def test_export_schedule_detects_actual_relation_change(client, relation):
+    event = _create_event()
+    getattr(event, relation).clear()
+    Event.objects.filter(pk=event.pk).update(is_event_overriden=False)
+
+    response = client.get(reverse("api:export"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["exception_count"] == 1
+    exception = response.json()["schedule_events"][0]["exceptions"][0]
+    assert exception["is_modified"] is True
 
 
 @pytest.mark.django_db

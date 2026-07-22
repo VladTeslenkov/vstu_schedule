@@ -2,7 +2,7 @@ from collections.abc import Mapping
 from datetime import date, timedelta
 from typing import Any
 
-from django.db.models import Prefetch, Q, QuerySet
+from django.db.models import Prefetch, QuerySet
 from django.http import QueryDict
 
 from apps.api.schemas import (
@@ -62,21 +62,15 @@ def get_schedule_events_for_query(query: Mapping[str, Any]) -> QuerySet[Abstract
             **TimeSlotFilter.from_display_name_abstract_event_relative(filters["time_slot"])
         )
 
-    exceptions = (
-        Event.objects.filter(
-            Q(is_event_canceled=True) | Q(date_override__isnull=False) | Q(is_event_overriden=True)
-        )
-        .select_related(
-            "date_override",
-            "subject_override",
-            "kind_override",
-            "time_slot_override",
-        )
-        .prefetch_related(
-            "participants_override",
-            "participants_override__department",
-            "places_override",
-        )
+    related_events = Event.objects.select_related(
+        "date_override",
+        "subject_override",
+        "kind_override",
+        "time_slot_override",
+    ).prefetch_related(
+        "participants_override",
+        "participants_override__department",
+        "places_override",
     )
     return (
         schedule_events.select_related(
@@ -95,7 +89,7 @@ def get_schedule_events_for_query(query: Mapping[str, Any]) -> QuerySet[Abstract
             "participants",
             "participants__department",
             "places",
-            Prefetch("event_set", queryset=exceptions, to_attr="export_exceptions"),
+            Prefetch("event_set", queryset=related_events, to_attr="export_related_events"),
         )
         .distinct()
     )
@@ -135,10 +129,7 @@ def build_schedule_events(abstract_events: list[AbstractEvent]) -> list[ApiSched
                 if abstract_event.schedule
                 else None,
                 recurrence=recurrence,
-                exceptions=[
-                    _serialize_exception(event)
-                    for event in getattr(abstract_event, "export_exceptions", [])
-                ],
+                exceptions=_build_exceptions(abstract_event),
             )
         )
     return result
@@ -207,7 +198,34 @@ def _build_recurrence(abstract_event: AbstractEvent) -> ApiScheduleRecurrence | 
     )
 
 
-def _serialize_exception(event: Event) -> ApiScheduleException:
+def _build_exceptions(abstract_event: AbstractEvent) -> list[ApiScheduleException]:
+    exceptions = []
+    for event in getattr(abstract_event, "export_related_events", []):
+        is_modified = _event_differs_from_abstract(event, abstract_event)
+        if event.is_event_canceled or event.date_override is not None or is_modified:
+            exceptions.append(_serialize_exception(event, is_modified=is_modified))
+    return exceptions
+
+
+def _event_differs_from_abstract(event: Event, abstract_event: AbstractEvent) -> bool:
+    if (
+        event.subject_override != abstract_event.subject
+        or event.kind_override != abstract_event.kind
+        or event.time_slot_override != abstract_event.time_slot
+    ):
+        return True
+
+    event_participant_ids = {participant.pk for participant in event.participants_override.all()}
+    abstract_participant_ids = {participant.pk for participant in abstract_event.participants.all()}
+    if event_participant_ids != abstract_participant_ids:
+        return True
+
+    event_place_ids = {place.pk for place in event.places_override.all()}
+    abstract_place_ids = {place.pk for place in abstract_event.places.all()}
+    return event_place_ids != abstract_place_ids
+
+
+def _serialize_exception(event: Event, *, is_modified: bool) -> ApiScheduleException:
     if event.date is None:
         raise ValueError(f"Schedule exception {event.pk} has no date.")
     participants = list(event.participants_override.all())
@@ -237,7 +255,7 @@ def _serialize_exception(event: Event) -> ApiScheduleException:
         places=serialize_places(list(event.places_override.all())),
         is_canceled=event.is_event_canceled,
         is_moved=event.date_override is not None,
-        is_modified=event.is_event_overriden,
+        is_modified=is_modified,
     )
 
 
