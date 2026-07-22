@@ -475,17 +475,20 @@
     if (!list) return;
 
     const modeInputs = Array.from(list.querySelectorAll('input[name="export-mode"]'));
-    let exportMode = "events";
-    try {
-      const savedMode = localStorage.getItem(exportModeStorageKey);
-      if (savedMode === "events" || savedMode === "schedule") exportMode = savedMode;
-    } catch (error) {
-      // Browser storage may be unavailable in private mode.
+    const fixedMode = menu.dataset.exportFixedMode;
+    let exportMode = fixedMode === "schedule" ? "schedule" : "events";
+    if (!fixedMode) {
+      try {
+        const savedMode = localStorage.getItem(exportModeStorageKey);
+        if (savedMode === "events" || savedMode === "schedule") exportMode = savedMode;
+      } catch (error) {
+        // Browser storage may be unavailable in private mode.
+      }
     }
     modeInputs.forEach((input) => {
       input.checked = input.value === exportMode;
       input.addEventListener("change", () => {
-        if (!input.checked) return;
+        if (!input.checked || fixedMode) return;
         exportMode = input.value;
         try {
           localStorage.setItem(exportModeStorageKey, exportMode);

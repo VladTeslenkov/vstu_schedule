@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from django.conf import settings
 from django.template.loader import render_to_string
 from django.test import override_settings
 from django.urls import reverse
@@ -58,6 +59,7 @@ def test_export_dropdown_is_a_reusable_mode_component():
     )
     assert 'value="events"' in content
     assert 'value="schedule"' in content
+    assert "data-export-fixed-mode" not in content
     assert 'data-export-format="csv"' in content
     assert 'data-export-format="ics"' in content
     assert 'data-export-format="json"' in content
@@ -185,7 +187,7 @@ def test_schedule_page_keeps_visible_addition_filters_param(client):
 @pytest.mark.django_db
 def test_schedule_page_shows_too_many_events_state(client, monkeypatch):
     def make_too_many_events_data(filters):
-        raise TooManyEventsFoundError(250)
+        raise TooManyEventsFoundError(settings.CLIENT_MAX_FILTERED_EVENTS)
 
     monkeypatch.setattr("apps.client.views.make_table_data", make_too_many_events_data)
 
@@ -194,10 +196,15 @@ def test_schedule_page_shows_too_many_events_state(client, monkeypatch):
     assert response.status_code == 200
     assert response.context["too_many_events_found"] is True
     assert response.context["data"] == []
+    assert settings.CLIENT_MAX_FILTERED_EVENTS == 350
     content = response.content.decode()
     assert 'data-lucide="shield-alert"' in content
     assert "Too many classes found" in content
-    assert "more than 250 classes" in content
+    assert "more than 350 classes" in content
+    assert 'class="state-actions state-actions--centered"' in content
+    assert 'data-export-fixed-mode="schedule"' in content
+    assert 'name="export-mode"' not in content
+    assert "Export schedule" in content or "Экспорт расписания" in content
 
 
 @pytest.mark.django_db

@@ -211,6 +211,9 @@ msgstr "Schedule for the selected period"
 msgid "Экспорт"
 msgstr "Export"
 
+msgid "Экспорт расписания"
+msgstr "Export schedule"
+
 msgid "Режим экспорта"
 msgstr "Export mode"
 

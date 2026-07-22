@@ -530,6 +530,11 @@ select {
   margin-top: 8px;
 }
 
+.state-actions--centered {
+  display: flex;
+  justify-content: center;
+}
+
 .schedule-list {
   display: grid;
   gap: 14px;
