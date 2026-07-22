@@ -696,7 +696,7 @@ select {
 }
 
 .export-mode-option:hover .export-mode-tooltip,
-.export-mode-option:focus-within .export-mode-tooltip {
+.export-mode-option > input:focus-visible ~ .export-mode-tooltip {
   opacity: 1;
   transform: translateY(0);
 }

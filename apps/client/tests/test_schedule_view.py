@@ -67,6 +67,13 @@ def test_export_dropdown_is_a_reusable_mode_component():
     assert "Расписание — повторяющийся план активных расписаний" in content
 
 
+def test_export_tooltip_hides_when_keyboard_focus_leaves_option():
+    css = (settings.BASE_DIR / "apps/client/static/css/schedule.css").read_text(encoding="utf-8")
+
+    assert ".export-mode-option > input:focus-visible ~ .export-mode-tooltip" in css
+    assert ".export-mode-option:focus-within .export-mode-tooltip" not in css
+
+
 def _streaming_text(response) -> str:
     return b"".join(response.streaming_content).decode()
 
