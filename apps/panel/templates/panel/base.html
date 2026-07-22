@@ -1,4 +1,4 @@
-{% load static %}
+{% load alert_markdown static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -40,7 +40,7 @@
         <i data-lucide="{{ alert.icon_name }}" class="icon"></i>
         <div class="panel-flash__text">
           <strong>{{ alert.display_title }}</strong>
-          <span>{{ alert.display_body|linebreaksbr }}</span>
+          <span>{{ alert.display_body|alert_body_markdown }}</span>
         </div>
         <button class="panel-flash__close" type="submit" aria-label="Close alert">
           <i data-lucide="x" class="icon"></i>

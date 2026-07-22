@@ -72,7 +72,7 @@
     const title = document.createElement("strong");
     title.textContent = alert.title;
     const body = document.createElement("span");
-    body.textContent = alert.body;
+    body.innerHTML = alert.body_html;
 
     const closeButton = document.createElement("button");
     closeButton.className = "panel-flash__close";

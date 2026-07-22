@@ -1,8 +1,22 @@
 from datetime import timedelta
 
 from django.utils import timezone
+from markdown_it import MarkdownIt
 
 from apps.common.models import Alert
+
+_ALERT_MARKDOWN = MarkdownIt(
+    "commonmark",
+    {
+        "breaks": True,
+        "html": False,
+    },
+).disable("image")
+
+
+def render_alert_body(body: str) -> str:
+    """Render the supported safe inline Markdown subset for an alert body."""
+    return _ALERT_MARKDOWN.renderInline(body)
 
 
 def create_alert(

@@ -1,4 +1,4 @@
-{% load i18n static %}
+{% load alert_markdown i18n static %}
 {% if alerts %}
   <section class="alerts" aria-label="{% translate "Announcements" %}">
     {% for alert in alerts %}
@@ -11,7 +11,7 @@
         <i data-lucide="{{ alert.icon_name }}" class="alert-icon" aria-hidden="true"></i>
         <div class="alert-text">
           <strong>{{ alert.display_title }}</strong>
-          {{ alert.display_body|linebreaksbr }}
+          {{ alert.display_body|alert_body_markdown }}
         </div>
         {% if alert.is_dismissible %}
           <button class="icon-button alert-close" type="button" aria-label="{% translate "Close announcement" %}">

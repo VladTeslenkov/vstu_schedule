@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 
 from apps.common.models import Alert, FileVersion, Resource, Setting
 from apps.common.selectors import admin_alerts
+from apps.common.services.alerts import render_alert_body
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ def admin_alerts_feed(request: HttpRequest) -> JsonResponse:
             "icon_name": alert.icon_name,
             "title": alert.display_title,
             "body": alert.display_body,
+            "body_html": render_alert_body(alert.display_body),
             "is_dismissible": alert.is_dismissible,
             "dismiss_url": reverse("dismiss_admin_alert", args=[alert.pk]),
         }
