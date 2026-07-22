@@ -218,16 +218,16 @@ msgid "Режим экспорта"
 msgstr "Export mode"
 
 msgid "Занятия"
-msgstr "Classes"
+msgstr "Lessons"
 
 msgid "Расписание"
 msgstr "Schedule"
 
-msgid "Занятия — конкретные события за выбранный период, включая отмены и изменения"
-msgstr "Classes — specific events for the selected period, including cancellations and changes"
+msgid "Занятия — конкретные события за выбранный период"
+msgstr "Lessons — specific events for the selected period"
 
-msgid "Расписание — повторяющийся план активных расписаний; выбранный период дат не применяется"
-msgstr "Schedule — recurring plan for active schedules; the selected date period is ignored"
+msgid "Активное расписание — повторяющийся план занятий"
+msgstr "Active schedule — recurring plan for active lessons"
 
 msgid "Формат экспорта"
 msgstr "Export format"
