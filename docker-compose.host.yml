@@ -1,0 +1,16 @@
+# Для случая nginx на хост-машине
+services:
+  web:
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8000}:8000"
+    volumes:
+      - type: bind
+        source: ${STATIC_HOST_PATH:-./.deploy/data/static}
+        target: /app/static
+        bind:
+          create_host_path: true
+      - type: bind
+        source: ${MEDIA_HOST_PATH:-./.deploy/data/media}
+        target: /app/media
+        bind:
+          create_host_path: true

@@ -23,8 +23,6 @@ services:
     image: vstu_schedule:latest 
     # TODO: быстрый костыль. Загрузка больших, занимающих долгое время обработки, файлов может убить HTTP запрос
     command: gunicorn vstu_schedule.wsgi:application --bind 0.0.0.0:8000 --timeout 50 --reload # в продакшене убрать --reload
-    ports:
-      - "8000:8000"
     volumes:
       - .:/app    # Поддерживает актуальность кода без пересборки образа, но не зависимости. УБРАТЬ В ПРОДАКШЕНЕ
       - static_volume:/app/static
@@ -73,7 +71,7 @@ services:
       redis:
         condition: service_healthy
 
-  # Опциональный фронт: docker compose --profile prod up — nginx на :80 перед приложением
+  # Опциональный фронт: docker compose --profile full up — nginx на :80 перед приложением
   nginx:
     image: nginx:1.27-alpine
     restart: always
@@ -81,8 +79,8 @@ services:
       - full
     volumes:
       - ./.deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_volume:/app/static
-      - media_volume:/app/media
+      - static_volume:/app/static:ro
+      - media_volume:/app/media:ro
     ports:
       - "80:80"
     depends_on:
