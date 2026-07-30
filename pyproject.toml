@@ -1,6 +1,6 @@
 [project]
 name = "vstu-schedule"
-version = "0.1.0-alpha"
+version = "0.1.0"
 description = "Unified VSTU Schedule project"
 readme = "README.md"
 requires-python = ">=3.13"
