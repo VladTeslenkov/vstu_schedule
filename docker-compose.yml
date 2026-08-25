@@ -4,6 +4,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     env_file: .env
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -12,6 +13,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -32,6 +34,7 @@ services:
       # Скрыть .venv хоста внутри контейнера. УБРАТЬ В ПРОДАКШЕНЕ
       - /app/.venv
     env_file: .env
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -41,6 +44,7 @@ services:
   worker:
     image: vstu_schedule:latest
     command: celery -A vstu_schedule worker -l info
+    restart: unless-stopped
     environment:
       - SERVICE_NAME=worker
     volumes:
@@ -57,6 +61,7 @@ services:
 
   beat:
     image: vstu_schedule:latest
+    restart: unless-stopped
     environment:
       - SERVICE_NAME=beat
     command: celery -A vstu_schedule beat -l info -S django
