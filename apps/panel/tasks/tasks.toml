@@ -78,8 +78,8 @@ description = { ru = "Не удалять старые архивные расп
 name = "resource_ids"
 type = "str"
 default = ""
-label = { ru = "ID ресурсов", en = "Resource IDs" }
-description = { ru = "Необязательный список ID ресурсов через запятую.", en = "Optional comma-separated resource ids." }
+label = { ru = "ID файловых ресурсов (файла расписания с его версиями)", en = "File resource IDs (schedule file with versions)" }
+description = { ru = "Необязательный список ID файловых ресурсов через запятую. Используется, чтобы разобрать только часть ресурсов, а не все файлы расписаний.", en = "Optional comma-separated file resource ids (Resource.id). Used to import only a subset of file resources instead of all saved timetable files." }
 
 ["panel.tasks.clear_storage"]
 concurrency = "exclusive"
