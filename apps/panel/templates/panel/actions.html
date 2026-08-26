@@ -57,8 +57,8 @@
           <h3>{{ action.title }}</h3>
           <p>{{ action.description }}</p>
         </div>
-        <button class="btn {% if action.action_id == 'delete_archive_schedules' %}btn--danger{% else %}btn--primary{% endif %}" type="submit">
-          <i data-lucide="{% if action.action_id == 'delete_archive_schedules' %}trash-2{% else %}play{% endif %}" class="icon"></i>
+        <button class="btn {% if action.action_id == 'delete_archive_schedules' or action.action_id == 'prune_resource_versions' %}btn--danger{% else %}btn--primary{% endif %}" type="submit">
+          <i data-lucide="{% if action.action_id == 'delete_archive_schedules' or action.action_id == 'prune_resource_versions' %}trash-2{% else %}play{% endif %}" class="icon"></i>
           <span>{{ action.button_label }}</span>
         </button>
         <div class="task-status" hidden data-panel-action-status></div>
