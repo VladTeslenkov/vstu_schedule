@@ -2,7 +2,9 @@ import logging
 
 import pytest
 
+from apps.common.models import Schedule
 from apps.common.services.timetable_update.clear_storage import (
+    SCHEDULES_COMPONENT,
     TASK_LOGS_COMPONENT,
     clear_storage_by_component,
 )
@@ -39,3 +41,13 @@ def test_clear_task_logs_preserves_current_task_run():
     assert not CeleryTaskRun.objects.filter(task_id=old_run.task_id).exists()
     assert CeleryTaskRun.objects.filter(task_id=current_run.task_id).exists()
     assert list(CeleryTaskLog.objects.values_list("message", flat=True)) == ["current"]
+
+
+@pytest.mark.django_db
+def test_clear_schedules_removes_all_statuses():
+    Schedule.objects.create(status=Schedule.Status.ACTIVE)
+    Schedule.objects.create(status=Schedule.Status.ARCHIVE)
+
+    clear_storage_by_component(SCHEDULES_COMPONENT)
+
+    assert not Schedule.objects.exists()

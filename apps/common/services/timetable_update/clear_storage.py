@@ -3,12 +3,13 @@ import shutil
 
 from django.conf import settings
 
-from apps.common.models import FileVersion, Resource, Tag
+from apps.common.models import FileVersion, Resource, Schedule, Tag
 
 logger = logging.getLogger(__name__)
 
 
 TASK_LOGS_COMPONENT = "Логи задач"
+SCHEDULES_COMPONENT = "Расписания"
 
 
 def clear_storage_by_component(component: str, *, preserve_task_id: str | None = None) -> None:
@@ -16,7 +17,7 @@ def clear_storage_by_component(component: str, *, preserve_task_id: str | None =
     Очищает компонент системы по его имени.
     Вызывается из Celery-задачи panel.tasks.clear_storage.
 
-    Допустимые значения: "Вся система", "Хранилище", "База данных", "Логи задач".
+    Допустимые значения: "Вся система", "Хранилище", "База данных", "Логи задач", "Расписания".
     """
     match component:
         case "Вся система":
@@ -28,6 +29,8 @@ def clear_storage_by_component(component: str, *, preserve_task_id: str | None =
             _clear_database()
         case _ if component == TASK_LOGS_COMPONENT:
             _clear_task_logs(preserve_task_id=preserve_task_id)
+        case _ if component == SCHEDULES_COMPONENT:
+            _clear_schedules()
         case _:
             logger.warning(f"Unknown component: {component!r}")
             raise ValueError(f"Неизвестный компонент: {component!r}")
@@ -52,6 +55,12 @@ def _clear_task_logs(*, preserve_task_id: str | None = None) -> None:
         queryset = queryset.exclude(task_id=preserve_task_id)
     deleted_count, _ = queryset.delete()
     logger.info("Task logs cleared: %s records", deleted_count)
+
+
+def _clear_schedules() -> None:
+    """Удаляет все расписания."""
+    deleted_count, _ = Schedule.objects.all().delete()
+    logger.info("Schedules cleared: %s records", deleted_count)
 
 
 def _clear_local_files() -> None:

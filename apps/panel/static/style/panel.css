@@ -409,6 +409,48 @@
 .panel-page .btn--sm { padding: 4px 12px; font-size: 11px; }
 .panel-page .btn--full { width: 100%; margin-top: 4px; }
 
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-overlay[hidden] { display: none; }
+
+.modal {
+  background: var(--panel-surface-raised);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  padding: 24px;
+  max-width: 420px;
+  width: calc(100% - 32px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.modal h3 {
+  color: var(--panel-text);
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.modal p {
+  color: var(--panel-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
 /* ===== CARD ===== */
 .panel-page .card {
   background: var(--panel-surface);

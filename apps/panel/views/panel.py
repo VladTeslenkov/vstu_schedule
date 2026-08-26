@@ -14,7 +14,7 @@ from apps.panel.services.actions import PANEL_ACTIONS_BY_ID, get_panel_action
 
 logger = logging.getLogger(__name__)
 
-CLEAR_TYPES = ["Вся система", "Хранилище", "База данных", "Логи задач"]
+CLEAR_TYPES = ["Вся система", "Хранилище", "База данных", "Логи задач", "Расписания"]
 
 
 # ======================== ДЕЙСТВИЯ ========================

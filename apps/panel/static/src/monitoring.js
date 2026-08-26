@@ -18,7 +18,21 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(loadData, AUTO_REFRESH_MS);
   initSettingsForm();
   resumePendingTask();
+  initConfirmModal();
 });
+
+/* ===== МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ===== */
+function initConfirmModal() {
+  const modal = document.getElementById("confirmModal");
+  if (!modal) return;
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeConfirmModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) closeConfirmModal();
+  });
+}
 
 /* ===== ВОССТАНОВЛЕНИЕ ЗАДАЧИ ПОСЛЕ ПЕРЕЗАГРУЗКИ ===== */
 function resumePendingTask() {
@@ -295,19 +309,42 @@ async function applySettings() {
 }
 
 /* ===== ОЧИСТКА ===== */
-async function runClear() {
+function runClear() {
   const component = document.querySelector(
     'input[name="clearTarget"]:checked',
   )?.value;
   if (!component) return;
 
-  if (
-    !confirm(
-      `Вы уверены? Будет очищено: "${component}". Это действие необратимо.`,
-    )
-  )
-    return;
+  openConfirmModal(
+    `Вы уверены? Будет очищено: "${component}". Это действие необратимо.`,
+    () => executeClear(component),
+  );
+}
 
+let confirmModalHandler = null;
+
+function openConfirmModal(text, onConfirm) {
+  const modal = document.getElementById("confirmModal");
+  const textEl = document.getElementById("confirmModalText");
+  const confirmBtn = document.getElementById("confirmModalConfirmBtn");
+  textEl.textContent = text;
+  modal.hidden = false;
+
+  if (confirmModalHandler) {
+    confirmBtn.removeEventListener("click", confirmModalHandler);
+  }
+  confirmModalHandler = () => {
+    closeConfirmModal();
+    onConfirm();
+  };
+  confirmBtn.addEventListener("click", confirmModalHandler, { once: true });
+}
+
+function closeConfirmModal() {
+  document.getElementById("confirmModal").hidden = true;
+}
+
+async function executeClear(component) {
   showStatus("clearStatus", "running", `Очищаем: ${component}...`);
 
   try {
