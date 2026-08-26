@@ -55,7 +55,12 @@ class FileManager:
 
                 try:
                     file_path = file_data.download_file(self._temp_dir)
+                    # Хэш считаем по исходному скачанному файлу — до конвертации .xls в .xlsx,
+                    # т.к. xls2xlsx/openpyxl при каждой пересборке пишет новые временные метки
+                    # в метаданные и ZIP-записи, из-за чего хэш "плавает" при неизменном содержимом.
+                    new_version = file_data.get_file_version(file_path)
                     file_path = self._convert_xls_to_xlsx(file_path)
+                    new_version.mimetype = file_path.suffix
                 except Exception as e:
                     logger.error(f"Failed to download/convert file: {e}", exc_info=True)
                     continue
@@ -63,7 +68,7 @@ class FileManager:
                 resource_type = "Занятия" if ind == 0 else "Экзамены"
 
                 try:
-                    resource = self._process_file(file_data, file_path, resource_type)
+                    resource = self._process_file(file_data, file_path, new_version, resource_type)
                     if resource:
                         used_resource_ids.add(resource.id)
                 except Exception as e:
@@ -83,7 +88,7 @@ class FileManager:
     # ------------------- ПРИВАТНЫЕ МЕТОДЫ ------------------- #
 
     def _process_file(
-        self, file_data: FileData, file_path: Path, resource_type: str
+        self, file_data: FileData, file_path: Path, new_version: FileVersion, resource_type: str
     ) -> Resource | None:
         """
         Обрабатывает скачанный файл:
@@ -92,7 +97,6 @@ class FileManager:
         - если файл изменился — сохраняет локально и создаёт FileVersion
         """
         new_resource = file_data.get_resource(resource_type)
-        new_version = file_data.get_file_version(file_path)
 
         resource_from_db = Resource.objects.filter(
             path=new_resource.path, name=new_resource.name
