@@ -1,5 +1,6 @@
 import logging
 import mimetypes
+import re
 from pathlib import Path
 
 from django.conf import settings
@@ -19,12 +20,13 @@ logger = logging.getLogger(__name__)
 # ======================== МОНИТОРИНГ ========================
 
 
+SCAN_FREQUENCY_PRESETS = ("120", "180", "240", "360", "420")
+
+
 @staff_member_required
 def monitoring_panel(request: HttpRequest) -> HttpResponse:
     """Страница мониторинга состояния процесса скачивания расписания."""
-    time_update = (
-        Setting.objects.filter(key="time_update").values_list("value", flat=True).first() or "180"
-    )
+    time_update_value, time_update_display = _get_current_scan_interval_minutes()
     analyze_url = (
         Setting.objects.filter(key="analyze_url").values_list("value", flat=True).first()
         or "https://www.vstu.ru/student/raspisaniya/zanyatiy/"
@@ -35,7 +37,9 @@ def monitoring_panel(request: HttpRequest) -> HttpResponse:
         "panel/timetable_update/monitoring.html",
         {
             "active_nav": "monitoring",
-            "time_update_value": time_update,
+            "time_update_value": time_update_value,
+            "time_update_display": time_update_display,
+            "time_update_is_custom": time_update_value not in SCAN_FREQUENCY_PRESETS,
             "analyze_url_value": analyze_url,
         },
     )
@@ -181,6 +185,46 @@ def download_resource(request: HttpRequest, resource_id: int) -> FileResponse | 
 
 
 # ======================== ВСПОМОГАТЕЛЬНОЕ ========================
+
+
+def _get_current_scan_interval_minutes() -> tuple[str, str]:
+    """
+    Определяет реальную частоту сканирования по фактическому cron-расписанию задачи
+    update_timetable (а не по ранее сохранённому значению Setting, которое может
+    разойтись с расписанием, если его поменяли напрямую в настройках задачи).
+
+    Возвращает (value, display):
+      - value — значение в минутах, пригодное для сравнения с опциями combobox'а
+        (пустая строка, если расписание нельзя выразить как "каждые N минут");
+      - display — то же значение, либо человекочитаемое cron-выражение для
+        нестандартного расписания.
+    """
+    from apps.panel.models import CeleryTaskConfig
+    from apps.panel.tasks import update_timetable
+
+    config = CeleryTaskConfig.objects.filter(task_name=update_timetable.name).first()
+    if not config or not config.schedule_enabled:
+        return "180", "180"
+
+    is_standard = (
+        config.cron_minute == "0"
+        and config.cron_day_of_week == "*"
+        and config.cron_day_of_month == "*"
+        and config.cron_month_of_year == "*"
+    )
+    if is_standard:
+        if config.cron_hour == "*":
+            return "60", "60"
+        match = re.fullmatch(r"\*/(\d+)", config.cron_hour)
+        if match:
+            minutes = str(int(match.group(1)) * 60)
+            return minutes, minutes
+
+    cron_expr = (
+        f"{config.cron_minute} {config.cron_hour} {config.cron_day_of_month} "
+        f"{config.cron_month_of_year} {config.cron_day_of_week}"
+    )
+    return "", cron_expr
 
 
 def _get_scheduler_info() -> dict:

@@ -66,6 +66,9 @@
         <div class="field-group">
           <label class="field-label" for="scanFrequency">Частота сканирования (мин)</label>
           <select id="scanFrequency" class="field-select">
+            {% if time_update_is_custom %}
+              <option value="{{ time_update_value }}" selected>{{ time_update_display }} (текущее)</option>
+            {% endif %}
             <option value="120" {% if time_update_value == "120" %}selected{% endif %}>120</option>
             <option value="180" {% if time_update_value == "180" %}selected{% endif %}>180</option>
             <option value="240" {% if time_update_value == "240" %}selected{% endif %}>240</option>
