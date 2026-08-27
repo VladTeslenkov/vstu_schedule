@@ -569,6 +569,16 @@
   border: 1px solid var(--panel-danger);
 }
 
+.panel-page .badge--running {
+  background: var(--panel-accent-soft);
+  color: var(--panel-accent);
+  border: 1px solid var(--panel-accent);
+}
+
+.panel-page .run-last {
+  margin-top: 6px;
+}
+
 .panel-page .badge--muted {
   background: var(--panel-surface-raised);
   color: var(--panel-text-muted);
