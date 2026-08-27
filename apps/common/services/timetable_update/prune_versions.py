@@ -52,9 +52,7 @@ def _prune_resource_files(storage_dir: Path, resource: Resource, kept_version: F
         return 0
 
     if not kept_version.url:
-        logger.warning(
-            "Resource %s kept version has no URL, skipping storage cleanup", resource.id
-        )
+        logger.warning("Resource %s kept version has no URL, skipping storage cleanup", resource.id)
         return 0
 
     keep_name = FileData.get_file_name_from_path(kept_version.url, dell_mimetype=False)
