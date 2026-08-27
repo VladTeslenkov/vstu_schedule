@@ -171,6 +171,39 @@
       </div>
     </div>
   </div>
+
+  <div id="passwordModal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+      <h3 id="passwordModalTitle">Подтвердите действие</h3>
+      <p>Это действие связано с очисткой данных. Введите пароль своей учётной записи, чтобы продолжить.</p>
+      <form autocomplete="off" data-password-modal-form>
+        <input
+          type="text"
+          name="fake-username"
+          autocomplete="username"
+          value="{{ request.user.username }}"
+          style="display:none"
+          tabindex="-1"
+          aria-hidden="true"
+        >
+        <input
+          id="passwordModalInput"
+          class="field-input"
+          type="password"
+          name="confirm_password"
+          autocomplete="new-password"
+          data-lpignore="true"
+          data-1p-ignore
+          placeholder="Пароль"
+        >
+      </form>
+      <p class="task-status task-status--error" id="passwordModalError" hidden></p>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" id="passwordModalCancelBtn">Отмена</button>
+        <button type="button" class="btn btn--danger" id="passwordModalConfirmBtn">Подтвердить</button>
+      </div>
+    </div>
+  </div>
 {% endblock %}
 
 {% block scripts %}

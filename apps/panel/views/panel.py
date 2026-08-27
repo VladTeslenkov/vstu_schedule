@@ -56,11 +56,9 @@ def run_panel_action(request: HttpRequest) -> JsonResponse | HttpResponse:
         return JsonResponse({"status": "error", "error_message": str(exc)}, status=400)
 
     if action_id in PASSWORD_REQUIRED_ACTION_IDS:
-        password = request.POST.get("confirm_password", "")
-        if not password or not request.user.check_password(password):
-            return JsonResponse(
-                {"status": "error", "error_message": "Неверный пароль."}, status=403
-            )
+        password_error = _check_confirm_password(request)
+        if password_error is not None:
+            return password_error
 
     upload_path = ""
     if action.kind == "file":
@@ -154,6 +152,14 @@ def _task_status_response(task_id: str) -> JsonResponse:
     return JsonResponse({"status": status, "error_message": error_message})
 
 
+def _check_confirm_password(request: HttpRequest) -> JsonResponse | None:
+    """Проверяет пароль текущего пользователя, переданный в POST["confirm_password"]."""
+    password = request.POST.get("confirm_password", "")
+    if not password or not request.user.check_password(password):
+        return JsonResponse({"status": "error", "error_message": "Неверный пароль."}, status=403)
+    return None
+
+
 def _celery_disabled_response() -> JsonResponse:
     """Prevents long maintenance tasks from running inside a web request."""
     return JsonResponse(
@@ -212,6 +218,10 @@ def manage_storage(request: HttpRequest) -> JsonResponse | HttpResponse:
     if request.method == "POST" and request.POST.get("action") == "dell":
         if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
             return _celery_disabled_response()
+
+        password_error = _check_confirm_password(request)
+        if password_error is not None:
+            return password_error
 
         component = request.POST.get("component", "")
         from apps.panel.tasks import clear_storage_task

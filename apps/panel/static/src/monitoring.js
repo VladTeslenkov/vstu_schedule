@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initSettingsForm();
   resumePendingTask();
   initConfirmModal();
+  initPasswordModal();
 });
 
 /* ===== МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ===== */
@@ -317,8 +318,61 @@ function runClear() {
 
   openConfirmModal(
     `Вы уверены? Будет очищено: "${component}". Это действие необратимо.`,
-    () => executeClear(component),
+    () => {
+      openPasswordModal((password) => executeClear(component, password));
+    },
   );
+}
+
+/* ===== МОДАЛЬНОЕ ОКНО ПАРОЛЯ ===== */
+let pendingPasswordCallback = null;
+
+function openPasswordModal(onConfirm) {
+  const modal = document.getElementById("passwordModal");
+  const input = document.getElementById("passwordModalInput");
+  const error = document.getElementById("passwordModalError");
+  if (!modal || !input) return;
+
+  pendingPasswordCallback = onConfirm;
+  input.value = "";
+  error.hidden = true;
+  modal.hidden = false;
+  window.setTimeout(() => input.focus(), 0);
+}
+
+function closePasswordModal() {
+  const modal = document.getElementById("passwordModal");
+  const input = document.getElementById("passwordModalInput");
+  if (!modal) return;
+
+  modal.hidden = true;
+  if (input) input.value = "";
+  pendingPasswordCallback = null;
+}
+
+function initPasswordModal() {
+  const modal = document.getElementById("passwordModal");
+  const input = document.getElementById("passwordModalInput");
+  const error = document.getElementById("passwordModalError");
+  const cancelBtn = document.getElementById("passwordModalCancelBtn");
+  const confirmBtn = document.getElementById("passwordModalConfirmBtn");
+  if (!modal) return;
+
+  cancelBtn.addEventListener("click", closePasswordModal);
+  confirmBtn.addEventListener("click", () => {
+    const password = input.value;
+    if (!password) {
+      error.hidden = false;
+      error.textContent = "Введите пароль.";
+      return;
+    }
+    const callback = pendingPasswordCallback;
+    closePasswordModal();
+    if (callback) callback(password);
+  });
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closePasswordModal();
+  });
 }
 
 let confirmModalHandler = null;
@@ -344,13 +398,14 @@ function closeConfirmModal() {
   document.getElementById("confirmModal").hidden = true;
 }
 
-async function executeClear(component) {
+async function executeClear(component, password) {
   showStatus("clearStatus", "running", `Очищаем: ${component}...`);
 
   try {
     const formData = new FormData();
     formData.append("action", "dell");
     formData.append("component", component);
+    formData.append("confirm_password", password);
 
     const res = await fetch(`${TIMETABLE_UPDATE_API}manage_storage/`, {
       method: "POST",
@@ -361,7 +416,7 @@ async function executeClear(component) {
     const taskId = data.id || data.task_id;
 
     if (!taskId) {
-      showStatus("clearStatus", "error", "Ошибка запуска очистки");
+      showStatus("clearStatus", "error", data.error_message || "Ошибка запуска очистки");
       return;
     }
 
