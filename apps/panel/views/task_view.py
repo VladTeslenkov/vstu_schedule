@@ -5,6 +5,7 @@ import re
 import traceback
 import uuid
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, cast
 
 from celery import current_app
@@ -26,6 +27,7 @@ from apps.panel.services.task_parameters import (
     raw_task_parameters_from_post,
 )
 from apps.panel.tasks import DISPATCH_CONFIGURED_TASK_NAME
+from vstu_schedule.tasks.concurrency import active_celery_task_ids
 from vstu_schedule.tasks.descriptors import get_task_descriptor
 
 _CRON_VALUE_RE = re.compile(r"^[\d*,/\-]+$")
@@ -37,6 +39,11 @@ _STOPPABLE_STATUSES = {
     CeleryTaskRun.Status.STARTED,
     CeleryTaskRun.Status.RETRY,
 }
+RUN_STATE_QUEUED = "queued"
+RUN_STATE_RUNNING = "running"
+RUN_STATE_STALE = "stale"
+# Grace period between the `task_prerun` signal and the concurrency lock acquisition.
+_STALE_RUN_GRACE_SECONDS = 60
 
 
 @dataclass(frozen=True)
@@ -47,7 +54,9 @@ class RegisteredTask:
     can_run_without_args: bool
     required_arguments: list[str]
     latest_run: CeleryTaskRun | None
-    latest_run_can_stop: bool
+    active_run: CeleryTaskRun | None
+    active_run_state: str | None
+    active_run_can_stop: bool
     schedule_enabled: bool
 
 
@@ -255,6 +264,20 @@ def _can_stop_task_run(run: CeleryTaskRun | None) -> bool:
     return run.status in _STOPPABLE_STATUSES
 
 
+def _run_state(run: CeleryTaskRun | None, locked_task_ids: set[str] | None) -> str | None:
+    """Classify an unfinished run: queued, actually running, or abandoned by its worker."""
+    if run is None or run.status not in _STOPPABLE_STATUSES:
+        return None
+    if run.status == CeleryTaskRun.Status.PENDING:
+        return RUN_STATE_QUEUED
+    if locked_task_ids is None or run.task_id in locked_task_ids:
+        return RUN_STATE_RUNNING
+    started_at = run.started_at or run.queued_at
+    if timezone.now() - started_at < timedelta(seconds=_STALE_RUN_GRACE_SECONDS):
+        return RUN_STATE_RUNNING
+    return RUN_STATE_STALE
+
+
 def _record_task_run_log(
     run: CeleryTaskRun,
     *,
@@ -316,13 +339,17 @@ def _task_parameters(config: CeleryTaskConfig) -> tuple[Any, ...]:
 
 def _task_rows() -> list[RegisteredTask]:
     rows = []
-    latest_runs = {}
+    latest_runs: dict[str, CeleryTaskRun] = {}
+    active_runs: dict[str, CeleryTaskRun] = {}
     for run in CeleryTaskRun.objects.order_by("-queued_at"):
         latest_runs.setdefault(run.task_name, run)
+        if run.status in _STOPPABLE_STATUSES:
+            active_runs.setdefault(run.task_name, run)
+    locked_task_ids = active_celery_task_ids()
     for task_name in _registered_task_names():
         config = _task_config(task_name)
         required = _required_arguments(task_name)
-        latest_run = latest_runs.get(task_name)
+        active_run = active_runs.get(task_name)
         rows.append(
             RegisteredTask(
                 name=task_name,
@@ -330,8 +357,10 @@ def _task_rows() -> list[RegisteredTask]:
                 config=config,
                 can_run_without_args=not required,
                 required_arguments=required,
-                latest_run=latest_run,
-                latest_run_can_stop=_can_stop_task_run(latest_run),
+                latest_run=latest_runs.get(task_name),
+                active_run=active_run,
+                active_run_state=_run_state(active_run, locked_task_ids),
+                active_run_can_stop=_can_stop_task_run(active_run),
                 schedule_enabled=_schedule_enabled(task_name, config),
             )
         )
@@ -482,6 +511,7 @@ def task_log(request: HttpRequest, task_name: str) -> HttpResponse:
             "runs": runs,
             "selected_run": selected_run,
             "selected_run_can_stop": _can_stop_task_run(selected_run),
+            "selected_run_state": _run_state(selected_run, active_celery_task_ids()),
             "task_logs": task_logs,
         },
     )

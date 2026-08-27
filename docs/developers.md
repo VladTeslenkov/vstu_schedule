@@ -184,8 +184,7 @@ from vstu_schedule.tasks.decorators import project_task
 
 
 @project_task(name="panel.tasks.update_timetable", max_retries=3)
-def update_timetable(self):
-    ...
+def update_timetable(self): ...
 ```
 
 Если задача находится в `tasks.toml`, но объявлена напрямую через `shared_task`,

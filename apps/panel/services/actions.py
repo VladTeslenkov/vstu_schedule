@@ -10,6 +10,7 @@ from apps.common.services.timetable.utilities.model_helpers import (
     create_common_abstract_days,
     create_common_time_slots,
 )
+from apps.common.services.timetable_update.prune_versions import prune_resource_versions
 
 ActionKind = Literal["file", "button"]
 
@@ -116,6 +117,13 @@ PANEL_ACTIONS: tuple[PanelAction, ...] = (
         "button",
         "Удалить",
     ),
+    PanelAction(
+        "prune_resource_versions",
+        "Оставить одну версию файлов ресурсов",
+        "Для каждого ресурса оставляет только последнюю версию файла, остальные удаляет из БД и файлового хранилища.",
+        "button",
+        "Очистить",
+    ),
 )
 
 PANEL_ACTIONS_BY_ID = {action.action_id: action for action in PANEL_ACTIONS}
@@ -183,6 +191,12 @@ def run_panel_action(action_id: str, *, upload_path: str = "", mode: str = "") -
         case "delete_archive_schedules":
             deleted_count, _ = Schedule.objects.filter(status=Schedule.Status.ARCHIVE).delete()
             message = f"Архивные расписания удалены: {deleted_count}."
+        case "prune_resource_versions":
+            result = prune_resource_versions()
+            message = (
+                f"Удалено версий: {result['deleted_versions']}, "
+                f"удалено файлов: {result['deleted_files']}."
+            )
         case _:
             raise ValueError(f"Unknown panel action: {action_id}")
 

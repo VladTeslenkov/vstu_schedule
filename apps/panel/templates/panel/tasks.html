@@ -21,7 +21,7 @@
           <th>Задача</th>
           <th>Выполнение</th>
           <th>Автозапуск</th>
-          <th>Последний запуск</th>
+          <th>Запуски</th>
           <th></th>
         </tr>
       </thead>
@@ -54,12 +54,24 @@
             {% endif %}
           </td>
           <td>
+            {% if task.active_run_state == 'running' %}
+              <span class="badge badge--running">выполняется</span>
+              <div class="muted">с {{ task.active_run.started_at|date:"d.m.Y H:i:s"|default:"—" }}</div>
+            {% elif task.active_run_state == 'queued' %}
+              <span class="badge badge--warn">в очереди</span>
+              <div class="muted">с {{ task.active_run.queued_at|date:"d.m.Y H:i:s" }}</div>
+            {% elif task.active_run_state == 'stale' %}
+              <span class="badge badge--danger">нет ответа воркера</span>
+              <div class="muted">с {{ task.active_run.started_at|date:"d.m.Y H:i:s"|default:"—" }}</div>
+            {% endif %}
             {% if task.latest_run %}
-              <span class="badge {% if task.latest_run.status == 'SUCCESS' %}badge--success{% elif task.latest_run.status == 'FAILURE' %}badge--danger{% else %}badge--muted{% endif %}">
-                {{ task.latest_run.status }}
-              </span>
-              <div class="muted">{{ task.latest_run.queued_at|date:"d.m.Y H:i:s" }}</div>
-            {% else %}
+              <div class="run-last">
+                <span class="badge {% if task.latest_run.status == 'SUCCESS' %}badge--success{% elif task.latest_run.status == 'FAILURE' %}badge--danger{% elif task.latest_run.status == 'SKIPPED' %}badge--warn{% else %}badge--muted{% endif %}">
+                  {{ task.latest_run.status }}
+                </span>
+                <div class="muted">{{ task.latest_run.queued_at|date:"d.m.Y H:i:s" }}</div>
+              </div>
+            {% elif not task.active_run %}
               <span class="muted">запусков нет</span>
             {% endif %}
           </td>
@@ -72,10 +84,10 @@
                   Запустить
                 </button>
               </form>
-              {% if task.latest_run_can_stop %}
+              {% if task.active_run_can_stop %}
                 <form method="post" action="{% url 'panel_task_stop' task.name %}">
                   {% csrf_token %}
-                  <input type="hidden" name="run" value="{{ task.latest_run.id }}">
+                  <input type="hidden" name="run" value="{{ task.active_run.id }}">
                   <button class="btn btn--danger btn--sm" type="submit">
                     <i data-lucide="square" class="icon"></i>
                     Остановить

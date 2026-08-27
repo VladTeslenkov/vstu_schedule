@@ -49,7 +49,7 @@
   {% if selected_run %}
     <div class="info-grid">
       <div class="info-row"><span class="info-row__label">Task ID</span><span class="hash">{{ selected_run.task_id }}</span></div>
-      <div class="info-row"><span class="info-row__label">Статус</span><span>{{ selected_run.status }}</span></div>
+      <div class="info-row"><span class="info-row__label">Статус</span><span>{{ selected_run.status }}{% if selected_run_state == 'running' %} · выполняется{% elif selected_run_state == 'queued' %} · ожидает воркера{% elif selected_run_state == 'stale' %} · нет ответа воркера{% endif %}</span></div>
       <div class="info-row"><span class="info-row__label">Поставлена</span><span>{{ selected_run.queued_at|date:"d.m.Y H:i:s" }}</span></div>
       <div class="info-row"><span class="info-row__label">Начата</span><span>{{ selected_run.started_at|date:"d.m.Y H:i:s"|default:"—" }}</span></div>
       <div class="info-row"><span class="info-row__label">Завершена</span><span>{{ selected_run.finished_at|date:"d.m.Y H:i:s"|default:"—" }}</span></div>

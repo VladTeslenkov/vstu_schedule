@@ -57,7 +57,7 @@ def get_number_from_month_name(name: str) -> int:
     return MONTHS[name.lower()]
 
 
-def get_name_from_month_number(month_number: int | list[int]) -> str | None | list[str | None]:
+def get_name_from_month_number(month_number: int | list[int]) -> str | list[str | None] | None:
     """Returns month name from month number
 
     Returns None for not-existing month number

@@ -131,3 +131,12 @@ def celery_task_concurrency_lock(task_name: str, run_id: str | None) -> Iterator
             logger.warning(
                 "Could not release Celery concurrency lock: %s", task_name, exc_info=True
             )
+
+
+def active_celery_task_ids() -> set[str] | None:
+    """Celery task ids that currently hold a concurrency lock, or None if Redis is unavailable."""
+    try:
+        return set(_redis_client().hkeys(_ACTIVE_KEY))
+    except RedisError:
+        logger.warning("Could not read the Celery active task registry.", exc_info=True)
+        return None
