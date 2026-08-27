@@ -131,14 +131,7 @@
           <input type="radio" name="clearTarget" value="Хранилище" checked>
           <span class="clear-option__label">
             <strong>Хранилище</strong>
-            <small>Удалить файлы из DATA_STORAGE_DIR</small>
-          </span>
-        </label>
-        <label class="clear-option">
-          <input type="radio" name="clearTarget" value="База данных">
-          <span class="clear-option__label">
-            <strong>База данных</strong>
-            <small>Удалить записи Resource, FileVersion, Tag</small>
+            <small>Удалить файлы из хранилища и записи Resource, FileVersion, Tag</small>
           </span>
         </label>
         <label class="clear-option">
@@ -152,14 +145,14 @@
           <input type="radio" name="clearTarget" value="Расписания">
           <span class="clear-option__label">
             <strong>Расписания</strong>
-            <small>Удалить все расписания (Schedule)</small>
+            <small>Удалить все расписания и события (Schedule, Event)</small>
           </span>
         </label>
         <label class="clear-option">
           <input type="radio" name="clearTarget" value="Вся система">
           <span class="clear-option__label">
             <strong>Вся система</strong>
-            <small>Хранилище + база данных (Resource, FileVersion, Tag)</small>
+            <small>Полная очистка: хранилище, расписания, логи задач и справочники</small>
           </span>
         </label>
       </div>

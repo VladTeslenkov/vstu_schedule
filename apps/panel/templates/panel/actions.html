@@ -50,7 +50,7 @@
   </div>
   <div class="action-grid action-grid--compact">
     {% for action in button_actions %}
-      <form class="action-panel" method="post" action="{% url 'panel_action_run' %}" data-panel-action-form>
+      <form class="action-panel" method="post" action="{% url 'panel_action_run' %}" data-panel-action-form {% if action.action_id == 'delete_archive_schedules' or action.action_id == 'prune_resource_versions' %}data-requires-password="true"{% endif %}>
         {% csrf_token %}
         <input type="hidden" name="action_id" value="{{ action.action_id }}">
         <div class="action-panel__content">
@@ -66,13 +66,82 @@
     {% endfor %}
   </div>
 </section>
+
+<div id="passwordModal" class="modal-overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+    <h3 id="passwordModalTitle">Подтвердите действие</h3>
+    <p>Это действие связано с очисткой данных. Введите пароль своей учётной записи, чтобы продолжить.</p>
+    <form autocomplete="off" data-password-modal-form>
+      <input
+        type="text"
+        name="fake-username"
+        autocomplete="username"
+        value="{{ request.user.username }}"
+        style="display:none"
+        tabindex="-1"
+        aria-hidden="true"
+      >
+      <input
+        id="passwordModalInput"
+        class="field-input"
+        type="password"
+        name="confirm_password"
+        autocomplete="new-password"
+        data-lpignore="true"
+        data-1p-ignore
+        placeholder="Пароль"
+      >
+    </form>
+    <p class="task-status task-status--error" id="passwordModalError" hidden></p>
+    <div class="modal__actions">
+      <button type="button" class="btn btn--ghost" id="passwordModalCancelBtn">Отмена</button>
+      <button type="button" class="btn btn--danger" id="passwordModalConfirmBtn">Подтвердить</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  var passwordModal = document.getElementById("passwordModal");
+  var passwordModalInput = document.getElementById("passwordModalInput");
+  var passwordModalError = document.getElementById("passwordModalError");
+  var passwordModalCancelBtn = document.getElementById("passwordModalCancelBtn");
+  var passwordModalConfirmBtn = document.getElementById("passwordModalConfirmBtn");
+  var pendingPasswordCallback = null;
+
+  function openPasswordModal(onConfirm) {
+    pendingPasswordCallback = onConfirm;
+    passwordModalInput.value = "";
+    passwordModalError.hidden = true;
+    passwordModal.hidden = false;
+    window.setTimeout(function () { passwordModalInput.focus(); }, 0);
+  }
+
+  function closePasswordModal() {
+    passwordModal.hidden = true;
+    passwordModalInput.value = "";
+    pendingPasswordCallback = null;
+  }
+
+  passwordModalCancelBtn.addEventListener("click", closePasswordModal);
+
+  passwordModalConfirmBtn.addEventListener("click", function () {
+    var password = passwordModalInput.value;
+    if (!password) {
+      passwordModalError.hidden = false;
+      passwordModalError.textContent = "Введите пароль.";
+      return;
+    }
+    var callback = pendingPasswordCallback;
+    closePasswordModal();
+    if (callback) callback(password);
+  });
+
   document.querySelectorAll("[data-panel-action-form]").forEach(function (form) {
     var statusBox = form.querySelector("[data-panel-action-status]");
     var button = form.querySelector("button[type=submit]");
+    var requiresPassword = form.dataset.requiresPassword === "true";
 
     function setStatus(kind, text) {
       statusBox.hidden = false;
@@ -105,13 +174,16 @@
         });
     }
 
-    form.addEventListener("submit", function (event) {
-      event.preventDefault();
+    function submitAction(password) {
       button.disabled = true;
       setStatus("running", "Запуск...");
+      var formData = new FormData(form);
+      if (password) {
+        formData.append("confirm_password", password);
+      }
       fetch(form.action, {
         method: "POST",
-        body: new FormData(form),
+        body: formData,
         headers: { "X-Requested-With": "XMLHttpRequest" },
       })
         .then(function (response) { return response.json(); })
@@ -127,6 +199,15 @@
           setStatus("error", "Не удалось запустить действие.");
           button.disabled = false;
         });
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (requiresPassword) {
+        openPasswordModal(function (password) { submitAction(password); });
+        return;
+      }
+      submitAction();
     });
   });
 </script>

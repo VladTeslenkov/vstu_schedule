@@ -10,11 +10,15 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 
 from apps.common.models import Setting
-from apps.panel.services.actions import PANEL_ACTIONS_BY_ID, get_panel_action
+from apps.panel.services.actions import (
+    PANEL_ACTIONS_BY_ID,
+    PASSWORD_REQUIRED_ACTION_IDS,
+    get_panel_action,
+)
 
 logger = logging.getLogger(__name__)
 
-CLEAR_TYPES = ["Вся система", "Хранилище", "База данных", "Логи задач", "Расписания"]
+CLEAR_TYPES = ["Вся система", "Хранилище", "Логи задач", "Расписания"]
 
 
 # ======================== ДЕЙСТВИЯ ========================
@@ -50,6 +54,13 @@ def run_panel_action(request: HttpRequest) -> JsonResponse | HttpResponse:
         action = get_panel_action(action_id)
     except ValueError as exc:
         return JsonResponse({"status": "error", "error_message": str(exc)}, status=400)
+
+    if action_id in PASSWORD_REQUIRED_ACTION_IDS:
+        password = request.POST.get("confirm_password", "")
+        if not password or not request.user.check_password(password):
+            return JsonResponse(
+                {"status": "error", "error_message": "Неверный пароль."}, status=403
+            )
 
     upload_path = ""
     if action.kind == "file":

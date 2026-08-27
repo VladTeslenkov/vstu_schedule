@@ -166,7 +166,7 @@ def clear_storage_task(self: Any, component: str) -> dict[str, str]:
     Celery-задача: очистка компонента системы.
     Запускается вручную из панели управления.
 
-    :param component: "Вся система", "Хранилище" или "База данных"
+    :param component: "Вся система", "Хранилище", "Логи задач" или "Расписания"
     """
     logger.info(f"Task started: clear_storage [component={component!r}, id={self.request.id}]")
     try:

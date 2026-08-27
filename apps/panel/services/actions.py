@@ -127,6 +127,12 @@ PANEL_ACTIONS: tuple[PanelAction, ...] = (
 )
 
 PANEL_ACTIONS_BY_ID = {action.action_id: action for action in PANEL_ACTIONS}
+PASSWORD_REQUIRED_ACTION_IDS = frozenset(
+    {
+        "delete_archive_schedules",
+        "prune_resource_versions",
+    }
+)
 FILTER_OPTIONS_INVALIDATING_ACTION_IDS = frozenset(
     {
         "import_subject_reference",
