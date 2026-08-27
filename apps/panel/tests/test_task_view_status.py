@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 from django.urls import reverse
 from django.utils import timezone
@@ -42,7 +44,7 @@ def test_running_task_is_shown_even_after_a_skipped_run(admin_client, monkeypatc
 @pytest.mark.django_db
 def test_run_without_concurrency_lock_is_reported_as_stale(admin_client, monkeypatch, running_run):
     monkeypatch.setattr(task_view, "active_celery_task_ids", set)
-    running_run.started_at = timezone.now() - timezone.timedelta(hours=1)
+    running_run.started_at = timezone.now() - timedelta(hours=1)
     running_run.save(update_fields=["started_at"])
 
     response = admin_client.get(reverse("panel_tasks"))
