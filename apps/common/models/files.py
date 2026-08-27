@@ -105,6 +105,7 @@ class FileVersion(models.Model):
         max_length=255, null=True, blank=True, verbose_name="Имя файла на диске"
     )
     archived = models.BooleanField(default=False, verbose_name="Версия заархивирована")
+
     class Meta:
         db_table = "file_version"
         verbose_name = "Версия файла"

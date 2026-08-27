@@ -128,7 +128,7 @@ class FileManager:
         if last_version is None or last_version.url != new_version.url:
             logger.info(f"URL changed or no version exists for: {resource.name}")
             if last_version:
-                self._archive_file(resource, last_version) 
+                self._archive_file(resource, last_version)
             new_version.resource = resource
             new_version.save()
             self._save_file_locally(file_path, resource)
@@ -155,7 +155,6 @@ class FileManager:
         logger.debug(f"File saved to: {dest_file}")
         return dest_file
 
-    
     def _archive_file(self, resource: Resource, version: FileVersion) -> None:
         """
         Переименовывает текущий файл версии на диске, добавляя в имя
@@ -179,7 +178,9 @@ class FileManager:
 
         counter = 1
         while archived_path.exists():
-            archived_path = dest_dir / f"{current_file.stem}_{date_stamp}_{counter}{current_file.suffix}"
+            archived_path = (
+                dest_dir / f"{current_file.stem}_{date_stamp}_{counter}{current_file.suffix}"
+            )
             counter += 1
 
         current_file.rename(archived_path)
@@ -227,5 +228,3 @@ class FileManager:
 
             count += 1
         return count
-
-   
