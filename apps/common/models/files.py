@@ -101,7 +101,10 @@ class FileVersion(models.Model):
         null=True, blank=True, default=None, verbose_name="Дата изменения по данным сайта"
     )
     hashsum = models.CharField(max_length=255, verbose_name="Контрольная сумма содержимого файла")
-
+    file_name = models.CharField(
+        max_length=255, null=True, blank=True, verbose_name="Имя файла на диске"
+    )
+    archived = models.BooleanField(default=False, verbose_name="Версия заархивирована")
     class Meta:
         db_table = "file_version"
         verbose_name = "Версия файла"

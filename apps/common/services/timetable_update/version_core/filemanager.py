@@ -97,6 +97,7 @@ class FileManager:
         - если файл изменился — сохраняет локально и создаёт FileVersion
         """
         new_resource = file_data.get_resource(resource_type)
+        new_version.file_name = file_path.name
 
         resource_from_db = Resource.objects.filter(
             path=new_resource.path, name=new_resource.name
@@ -126,6 +127,8 @@ class FileManager:
         # URL изменился или версий ещё нет — создаём новую версию
         if last_version is None or last_version.url != new_version.url:
             logger.info(f"URL changed or no version exists for: {resource.name}")
+            if last_version:
+                self._archive_file(resource, last_version) 
             new_version.resource = resource
             new_version.save()
             self._save_file_locally(file_path, resource)
@@ -134,6 +137,7 @@ class FileManager:
         # URL тот же — проверяем хэш
         if last_version.hashsum != new_version.hashsum:
             logger.info(f"Hash changed for: {resource.name}")
+            self._archive_file(resource, last_version)
             new_version.resource = resource
             new_version.save()
             self._save_file_locally(file_path, resource)
@@ -150,6 +154,41 @@ class FileManager:
         shutil.copy2(file_path, dest_file)
         logger.debug(f"File saved to: {dest_file}")
         return dest_file
+
+    
+    def _archive_file(self, resource: Resource, version: FileVersion) -> None:
+        """
+        Переименовывает текущий файл версии на диске, добавляя в имя
+        дату изменения (last_changed, либо timestamp как fallback),
+        и помечает версию как заархивированную.
+        """
+        if version.archived or not version.file_name:
+            return
+
+        dest_dir = self._storage_dir / (resource.path or resource.name)
+        current_file = dest_dir / version.file_name
+
+        if not current_file.is_file():
+            logger.warning(f"Archive skipped, file not found: {current_file}")
+            return
+
+        date_source = version.last_changed or version.timestamp
+        date_stamp = date_source.strftime("%Y-%m-%d")
+        archived_name = f"{current_file.stem}_{date_stamp}{current_file.suffix}"
+        archived_path = dest_dir / archived_name
+
+        counter = 1
+        while archived_path.exists():
+            archived_path = dest_dir / f"{current_file.stem}_{date_stamp}_{counter}{current_file.suffix}"
+            counter += 1
+
+        current_file.rename(archived_path)
+
+        version.file_name = archived_path.name
+        version.archived = True
+        version.save(update_fields=["file_name", "archived"])
+
+        logger.info(f"Archived file: {current_file.name} -> {archived_path.name}")
 
     @staticmethod
     def _convert_xls_to_xlsx(file_path: Path) -> Path:
@@ -169,13 +208,24 @@ class FileManager:
             logger.warning(f"XLS conversion error for {file_path.name}: {e}")
             return file_path
 
-    @staticmethod
-    def _mark_deprecated(used_resource_ids: set[int]) -> int:
-        """Помечает устаревшими ресурсы, которых не было в текущем обновлении."""
+    def _mark_deprecated(self, used_resource_ids: set[int]) -> int:
+        """Помечает устаревшими ресурсы, которых не было в текущем обновлении,
+        и архивирует их последний файл на диске."""
         resources = Resource.objects.exclude(id__in=used_resource_ids).filter(deprecated=False)
         count = 0
         for resource in resources:
             resource.deprecated = True
             resource.save()
+
+            last_version = (
+                FileVersion.objects.filter(resource=resource)
+                .order_by("-last_changed", "-timestamp")
+                .first()
+            )
+            if last_version:
+                self._archive_file(resource, last_version)
+
             count += 1
         return count
+
+   
