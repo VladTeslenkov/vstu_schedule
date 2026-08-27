@@ -39,6 +39,12 @@ DEBUG = dotenv.get_bool("DEBUG")
 ALLOWED_HOSTS = dotenv.get_list("ALLOWED_HOSTS", default=["*"])
 CSRF_TRUSTED_ORIGINS = dotenv.get_list("CSRF_TRUSTED_ORIGINS", default=[])
 
+# Session (staff/admin login): cookie is dropped when the browser closes, and the
+# session itself expires after 30 minutes of inactivity — every request refreshes it.
+SESSION_COOKIE_AGE = 30 * 60
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = True
+
 REDIS_URL = dotenv.get("REDIS_URL", "redis://redis:6379/0")
 REDIS_CACHE_URL = dotenv.get("REDIS_CACHE_URL", "redis://redis:6379/1")
 
