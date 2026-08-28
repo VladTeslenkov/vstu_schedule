@@ -3,6 +3,7 @@ import json
 import pytest
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.templatetags.static import static
 from django.test import override_settings
 from django.urls import reverse
 
@@ -26,7 +27,7 @@ def test_schedule_page_renders(client):
     assert 'aria-controls="addition-filters-container"' in content
     assert 'aria-expanded="false"' in content
     assert '<meta name="theme-color" content="#0876cf">' in content
-    assert '<link rel="apple-touch-icon" href="/static/pwa/icon-180.png">' in content
+    assert f'<link rel="apple-touch-icon" href="{static("pwa/icon-180.png")}">' in content
     assert '<link rel="manifest" href="/manifest.ru.webmanifest">' in content
     assert 'navigator.serviceWorker.register("/sw.js")' in content
     assert "jquery" not in content.lower()
