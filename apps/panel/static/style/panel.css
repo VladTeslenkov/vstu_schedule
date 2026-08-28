@@ -757,6 +757,14 @@
   letter-spacing: 0.04em;
 }
 
+.panel-page .data-table td.path-cell {
+  max-width: 320px;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
 .panel-page .muted {
   color: var(--panel-text-muted);
   font-size: 11px;

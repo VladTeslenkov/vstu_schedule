@@ -155,7 +155,7 @@ function renderResources(resources, filter) {
       (r) => `
     <tr>
       <td title="${esc(r.name)}">${esc(r.name)}</td>
-      <td title="${esc(r.path || "")}" class="hash">${esc(r.path || "—")}</td>
+      <td title="${esc(r.path || "")}" class="hash path-cell">${esc(r.path || "—")}</td>
       <td>${r.last_update ? fmtDatetime(r.last_update) : "—"}</td>
       <td>${
         r.deprecated
