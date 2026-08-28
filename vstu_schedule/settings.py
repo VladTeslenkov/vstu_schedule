@@ -165,6 +165,17 @@ STATICFILES_DIRS = [
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Хэшируем имена статических файлов при collectstatic, чтобы клиенты
+# гарантированно получали новую версию файла после деплоя, а не старую из кэша.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "vstu_schedule.utils.storage.NonStrictManifestStaticFilesStorage",
+    },
+}
+
 # Timetable and client limits
 CLIENT_FILTER_OPTIONS_CACHE_KEY = "client:schedule:filter-options:v1"
 CLIENT_FILTER_OPTIONS_CACHE_TIMEOUT_SECONDS = 2 * 60 * 60

@@ -210,3 +210,6 @@ __marimo__/
 
 LOCAL_TODO.md
 temp/
+
+# collectstatic output (STATIC_ROOT)
+/static/
