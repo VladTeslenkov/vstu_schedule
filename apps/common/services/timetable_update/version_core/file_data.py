@@ -26,11 +26,6 @@ _CONFIG_PATH = settings.BASE_DIR / "apps" / "common" / "config" / "file_data_con
 DOWNLOAD_TIMEOUT_SECONDS = TIMETABLE_FILE_DOWNLOAD_TIMEOUT_SECONDS
 MAX_DOWNLOAD_BYTES = TIMETABLE_MAX_DOWNLOAD_BYTES
 
-# Максимальная длина одного компонента пути ресурса
-PATH_COMPONENT_MAX_LENGTH = 64
-# Символы, запрещённые в именах файлов и каталогов Windows (в Unix запрещён только "/")
-FORBIDDEN_PATH_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
-
 with _CONFIG_PATH.open(encoding="utf-8") as _f:
     _CONFIG = json.load(_f)
 
@@ -50,8 +45,6 @@ class FileData:
     _COURSE_WORDS: list[str] = _CONFIG["course_words"]
     _SENTENCE_DELIMITERS: list[str] = _CONFIG["sentence_delimiters"]
     _EXCEL_EXTENSION: list[str] = _CONFIG["excel_extensions"]
-    # Ручной словарь сокращений компонентов пути: точное имя -> аббревиатура
-    _PATH_ABBREVIATIONS: dict[str, str] = _CONFIG["path_abbreviations"]
 
     def __init__(self, path: str, url: str, last_update: str) -> None:
         self.__path = path
@@ -79,19 +72,21 @@ class FileData:
         return self.__name_from_url_with_mimetype
 
     def get_correct_path(self) -> str:
-        """
-        Возвращает относительный путь ресурса.
-        Компонент пути заменяется на аббревиатуру, если он есть в ручном словаре
-        _PATH_ABBREVIATIONS, иначе сохраняется как есть и только нормализуется:
-        из него убираются запрещённые в Unix/Windows символы, а длина ограничивается
-        PATH_COMPONENT_MAX_LENGTH символами.
-        """
-        parts = [
-            abbreviated
-            for part in self.__correct_path.strip("/").split("/")
-            if (abbreviated := self.abbreviate_path_component(part))
-        ]
-        return "/".join(parts)
+        path = self.__correct_path
+        path_parts = path.strip("/").split("/")
+        abbreviations = []
+        for part in path_parts:
+            if part.startswith("Курс"):
+                abbr = "К" + part.split()[-1]
+            elif self.__is_mostly_uppercase(part):
+                # Аббревиатуры вроде "ФЭВТ" или "ИВТ и ПО" сокращать нельзя:
+                # они и так короткие, а сокращение схлопывает разные подразделения в одну букву.
+                abbr = "_".join(part.split())
+            else:
+                words = [w for w in part.split() if len(w) > 2]
+                abbr = "".join(w[0].upper() for w in words)
+            abbreviations.append(abbr)
+        return "/".join(abbreviations)
 
     def get_resource(self, type_timetable: str) -> Resource:
         """Создаёт и возвращает несохранённый объект Resource для БД."""
@@ -188,6 +183,15 @@ class FileData:
         new_path.append(self.__get_course_string(self.__course))
         return self.elements_to_path(new_path)
 
+    @staticmethod
+    def __is_mostly_uppercase(string: str, threshold: float = 0.6) -> bool:
+        """Проверяет, что доля заглавных букв в строке превышает порог."""
+        letters = [ch for ch in string if ch.isalpha()]
+        if not letters:
+            return False
+        upper_count = sum(1 for ch in letters if ch.isupper())
+        return upper_count / len(letters) > threshold
+
     @classmethod
     def __get_file_hash(cls, file_path: Path) -> str:
         return cls.__get_bin_file_hash(file_path)
@@ -262,30 +266,6 @@ class FileData:
         if dell_mimetype:
             file_name = re.sub(r"\.[А-ЯЁA-Zа-яёa-z]*$", "", file_name)
         return file_name
-
-    @classmethod
-    def abbreviate_path_component(cls, part: str) -> str:
-        """
-        Нормализует компонент пути и заменяет его на аббревиатуру из ручного словаря,
-        если он ей точно соответствует.
-        :param part: исходный компонент пути
-        :return: аббревиатура или нормализованный компонент, возможно пустая строка
-        """
-        normalized = cls.normalize_path_component(part)
-        return cls._PATH_ABBREVIATIONS.get(normalized, normalized)
-
-    @classmethod
-    def normalize_path_component(cls, part: str) -> str:
-        """
-        Приводит компонент пути к виду, безопасному для файловых систем Unix и Windows:
-        заменяет запрещённые символы на "_", убирает лишние пробелы и завершающие точки,
-        обрезает результат до PATH_COMPONENT_MAX_LENGTH символов.
-        :param part: исходный компонент пути
-        :return: нормализованный компонент, возможно пустая строка
-        """
-        cleaned = FORBIDDEN_PATH_CHARS.sub("_", part)
-        cleaned = cls.__remove_extra_spaces(cleaned)
-        return cleaned[:PATH_COMPONENT_MAX_LENGTH].rstrip(" .")
 
     @classmethod
     def get_correct_file_name(cls, file_name: str) -> str:
