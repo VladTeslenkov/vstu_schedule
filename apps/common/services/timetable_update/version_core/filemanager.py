@@ -124,25 +124,40 @@ class FileManager:
             .first()
         )
 
+        # Гарантированная проверка на дубликат: содержимое с таким хэшом уже сохранено
+        # у этого ресурса, новая версия не нужна и файл в хранилище не кладём.
+        duplicate_version = (
+            FileVersion.objects.filter(resource=resource, hashsum=new_version.hashsum)
+            .order_by("-timestamp")
+            .first()
+        )
+        if duplicate_version is not None:
+            if last_version is not None and duplicate_version.pk == last_version.pk:
+                logger.info(f"No changes detected for: {resource.name}")
+            else:
+                logger.error(
+                    "Duplicate hashsum %s for resource %s (id=%s): "
+                    "version id=%s already stores this content, "
+                    "file %s is not saved to storage",
+                    new_version.hashsum,
+                    resource.name,
+                    resource.pk,
+                    duplicate_version.pk,
+                    file_path.name,
+                )
+            return resource
+
         # URL изменился или версий ещё нет — создаём новую версию
         if last_version is None or last_version.url != new_version.url:
             logger.info(f"URL changed or no version exists for: {resource.name}")
-            if last_version:
-                self._archive_file(resource, last_version)
-            new_version.resource = resource
-            new_version.save()
-            self._save_file_locally(file_path, resource)
-            return resource
-
-        # URL тот же — проверяем хэш
-        if last_version.hashsum != new_version.hashsum:
-            logger.info(f"Hash changed for: {resource.name}")
-            self._archive_file(resource, last_version)
-            new_version.resource = resource
-            new_version.save()
-            self._save_file_locally(file_path, resource)
         else:
-            logger.info(f"No changes detected for: {resource.name}")
+            logger.info(f"Hash changed for: {resource.name}")
+
+        if last_version is not None:
+            self._archive_file(resource, last_version)
+        new_version.resource = resource
+        new_version.save()
+        self._save_file_locally(file_path, resource)
 
         return resource
 

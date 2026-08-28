@@ -78,6 +78,10 @@ class FileData:
         for part in path_parts:
             if part.startswith("Курс"):
                 abbr = "К" + part.split()[-1]
+            elif self.__is_mostly_uppercase(part):
+                # Аббревиатуры вроде "ФЭВТ" или "ИВТ и ПО" сокращать нельзя:
+                # они и так короткие, а сокращение схлопывает разные подразделения в одну букву.
+                abbr = "_".join(part.split())
             else:
                 words = [w for w in part.split() if len(w) > 2]
                 abbr = "".join(w[0].upper() for w in words)
@@ -178,6 +182,15 @@ class FileData:
         new_path.append(self.__education_form)
         new_path.append(self.__get_course_string(self.__course))
         return self.elements_to_path(new_path)
+
+    @staticmethod
+    def __is_mostly_uppercase(string: str, threshold: float = 0.6) -> bool:
+        """Проверяет, что доля заглавных букв в строке превышает порог."""
+        letters = [ch for ch in string if ch.isalpha()]
+        if not letters:
+            return False
+        upper_count = sum(1 for ch in letters if ch.isupper())
+        return upper_count / len(letters) > threshold
 
     @classmethod
     def __get_file_hash(cls, file_path: Path) -> str:
